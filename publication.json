@@ -58,7 +58,7 @@
     "content/reading-guides.json": "0a7f836412716b1263161c1eae5e1a7cf4694d6db8e17dd6dfca5307be28e913",
     "content/research.json": "ac772b60ae82ee09cc6fb6c3ff56e32502a98ee83c8054e4c3a86e8aba0127be",
     "tools/book_content.py": "24547194fb64eeaa629335d48bed41855ff933c779e0cf14759eba3450df7d95",
-    "tools/build.py": "5a3b466be0f32ed0cff21dfba4bc151b78e6a62f9c3bce13c2fc63775da823e9",
+    "tools/build.py": "7e48807613aa7baf6ee9d5983b687eb40ecbafa14dc4128adcc293e246edadca",
     "tools/labs.py": "2ae0dc836ce9b368841169beb8ee571612114b4ed48b24e3f6357ced6353591f",
     "tools/validate_publication.py": "1dbefa411799dee03c30d078d02c22d88f5206469b83b668965dd4cf3e8c9d3e"
   },
@@ -87,5 +87,9 @@
       "sha": "368f82528645a54fb793d4d04e342629a3f51346",
       "source": "https://github.com/actions/deploy-pages/releases/tag/v5.0.1"
     }
-  ]
+  ],
+  "sourceWorkingTreeChanges": {
+    "tools/build.py": "7e48807613aa7baf6ee9d5983b687eb40ecbafa14dc4128adcc293e246edadca"
+  },
+  "sourceRevisionMeaning": "Git base revision; sourceFiles and sourceWorkingTreeChanges record exported working tree bytes."
 }

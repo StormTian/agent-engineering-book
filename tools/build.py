@@ -142,7 +142,7 @@ def build():
     body+='<p>'+link('https://github.com/bojieli/ai-agent-book','参考书官方仓库')+'</p><ul><li>'+link('downloads/agent-engineering-book.md','整本 Markdown')+'</li><li>'+link('downloads/agent-engineering-book-offline.zip','离线阅读包')+'</li><li>'+link('downloads/source-map.json','概念与源码来源清单')+'</li></ul>'
     for c in CASES:
         lp=ROOT/'content/licenses'/c['id']
-        for f in lp.glob('*'):body+='<p>'+link('licenses/'+c['id']+'/'+f.name,c['title'].split(' · ')[0]+' / '+f.name)+'</p>'
+        for f in sorted(lp.glob('*')):body+='<p>'+link('licenses/'+c['id']+'/'+f.name,c['title'].split(' · ')[0]+' / '+f.name)+'</p>'
     write_page('sources.html','版本、来源与证据','准确说明读过什么、运行过什么，以及尚未证明什么。',body,toc,'研究附录')
     for f in (ROOT/'content/courses').glob('*.html'):
         slug=f.stem;dest=DIST/'courses'/slug/'index.html';dest.parent.mkdir(parents=True,exist_ok=True)
