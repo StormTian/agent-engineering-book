@@ -1,0 +1,91 @@
+{
+  "title": "Agent 工程拆解",
+  "exportDate": "2026-10-02",
+  "sourceRevision": "00cddd3f9fdcf1a67342f65ea53b9d538e4b4fe9",
+  "repository": "StormTian/agent-engineering-book",
+  "expectedUrl": "https://stormtian.github.io/agent-engineering-book/",
+  "counts": {
+    "cases": 12,
+    "concepts": 179,
+    "conceptAnchors": 199,
+    "htmlPages": 35
+  },
+  "sourceFiles": {
+    ".github/workflows/pages.yml": "c086ddf0e0c0a40b213dd666269ddb634fe8fae7e9dc63fc4f127b0d04555e20",
+    ".gitignore": "f220e3fdf8a7df671f1b189dddc58e19948f12e30a99905e89d24da855c8d438",
+    "AGENTS.md": "b839220a824b06abc48082a5e3a599af551d940ea35b53f77c781aebc33b6f4a",
+    "README.md": "32bd11b223f7f7c1de9f1f4c89e2bc589789cc9fb3a71a538efddb24d33b77ce",
+    "content/book.css": "24454c592c46a44e292bda6cb8e5712acd8deda957aa1797d20b459b55f00b27",
+    "content/book.js": "6726da6bdf29f2d03cd0ee8511730f6f587a3590e552611b5b0269df50aba393",
+    "content/cases.json": "d517700bd05d55951c8e93cdb313b21126aee1b400120d304b473616749c342f",
+    "content/course-licenses/codex/source-license.txt": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc",
+    "content/course-licenses/codex/source-notice.txt": "9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915",
+    "content/course-licenses/codex/tooling-license.txt": "0e1fe476d6b05597f579dfd87da8c750ff0d892f098d0635221daeed4ee3e963",
+    "content/course-licenses/deer-flow/source-license.txt": "b23dff4d4bac8d17b6efaaa7e88c2b730149c4dda45699ce676b719cfdffe7e1",
+    "content/course-licenses/eino/source-license.txt": "69849221bfb90053de2134ef5e6d540287b4b98062326492f1f96f5da685524b",
+    "content/course-licenses/eino/tooling-license.txt": "0e1fe476d6b05597f579dfd87da8c750ff0d892f098d0635221daeed4ee3e963",
+    "content/course-licenses/inspect-ai/source-license.txt": "c593c2afc81388521eaeb03f0d1a4b01bc3e5147ed9cb16c1f129e5be353b6af",
+    "content/course-licenses/inspect-ai/tooling-license.txt": "0e1fe476d6b05597f579dfd87da8c750ff0d892f098d0635221daeed4ee3e963",
+    "content/course-licenses/langgraph/source-license.txt": "d9bb52f2e3540d60ff50d8f0f5b6ba649b7fd346948c4c3d086c8afb120763c7",
+    "content/course-licenses/langgraph/tooling-license.txt": "0e1fe476d6b05597f579dfd87da8c750ff0d892f098d0635221daeed4ee3e963",
+    "content/course-licenses/mini-swe-agent/source-license.txt": "0f796e58f91d1c07bb2c1b1d0f8bf3a83017c3a5dec1bdc6fae733b2cd2e875b",
+    "content/course-licenses/mini-swe-agent/tooling-license.txt": "0e1fe476d6b05597f579dfd87da8c750ff0d892f098d0635221daeed4ee3e963",
+    "content/course-licenses/openhands/source-license.txt": "14a9b631c658eee682c6c2973525fbdf808c3457176bc47513052c559cc5ce86",
+    "content/course-licenses/openhands/tooling-license.txt": "0e1fe476d6b05597f579dfd87da8c750ff0d892f098d0635221daeed4ee3e963",
+    "content/course-licenses/pi/source-license.txt": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+    "content/course-licenses/pi/tooling-license.txt": "0e1fe476d6b05597f579dfd87da8c750ff0d892f098d0635221daeed4ee3e963",
+    "content/courses/codex.html": "0e4c9c07a6940d174d5b6de03d6d4fefebf31a830121d69165c4b31a252f4279",
+    "content/courses/deer-flow.html": "68ce70462b18c85dadfbf16263efd180271721f54cc2cf0099209584a8402700",
+    "content/courses/eino.html": "c26f7a457051486bbf6ba8565ca433d40deff6a94adeacea0c14b05ddc8985e3",
+    "content/courses/inspect-ai.html": "7d57b3201b5206ed48bf07823662ca07969bc8ade8c40e1b1e28446671ba53ed",
+    "content/courses/langgraph.html": "ac61e65ffbb2dfcac1de0ac3c3552de946c9c0e5cccc57c2544f8d11095f9c4a",
+    "content/courses/mini-swe-agent.html": "4f171d18f0b4cf7780cbad3ae1bdd444f3d6096b44bfc2e27ee9338d08310656",
+    "content/courses/openhands.html": "01857782e3b5b8bf743e6d2e9b87fed7d37848a64e76d1696c05fd7ff9994674",
+    "content/courses/pi.html": "6c7f4927af6e22a5d9878501b471b6fd12ffad910048ec94b4adaf10981d9266",
+    "content/licenses/browser-use/LICENSE": "135c57671b0ee957669b05a0ca00cc06f645496d351e2e732832c6e276da9a5e",
+    "content/licenses/codex/LICENSE": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc",
+    "content/licenses/codex/NOTICE": "9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915",
+    "content/licenses/deer-flow/LICENSE": "b23dff4d4bac8d17b6efaaa7e88c2b730149c4dda45699ce676b719cfdffe7e1",
+    "content/licenses/eino/LICENSE-APACHE": "69849221bfb90053de2134ef5e6d540287b4b98062326492f1f96f5da685524b",
+    "content/licenses/inspect-ai/LICENSE": "c593c2afc81388521eaeb03f0d1a4b01bc3e5147ed9cb16c1f129e5be353b6af",
+    "content/licenses/langgraph/LICENSE": "d9bb52f2e3540d60ff50d8f0f5b6ba649b7fd346948c4c3d086c8afb120763c7",
+    "content/licenses/letta-code/LICENSE": "036e78b9d7dd33ae5b378fdda973b4aad7901c8d8371a0ae40fae1f6659a89d0",
+    "content/licenses/mini-swe-agent/LICENSE.md": "0f796e58f91d1c07bb2c1b1d0f8bf3a83017c3a5dec1bdc6fae733b2cd2e875b",
+    "content/licenses/openai-agents-python/LICENSE": "13df7812ca53ecaae1cb4a868844bb598373047ae1d580e4debfbef1dd5b6915",
+    "content/licenses/openhands/LICENSE": "14a9b631c658eee682c6c2973525fbdf808c3457176bc47513052c559cc5ce86",
+    "content/licenses/pi/LICENSE": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+    "content/licenses/smolagents/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "content/reading-guides.json": "0a7f836412716b1263161c1eae5e1a7cf4694d6db8e17dd6dfca5307be28e913",
+    "content/research.json": "ac772b60ae82ee09cc6fb6c3ff56e32502a98ee83c8054e4c3a86e8aba0127be",
+    "tools/book_content.py": "24547194fb64eeaa629335d48bed41855ff933c779e0cf14759eba3450df7d95",
+    "tools/build.py": "5a3b466be0f32ed0cff21dfba4bc151b78e6a62f9c3bce13c2fc63775da823e9",
+    "tools/labs.py": "2ae0dc836ce9b368841169beb8ee571612114b4ed48b24e3f6357ced6353591f",
+    "tools/validate_publication.py": "1dbefa411799dee03c30d078d02c22d88f5206469b83b668965dd4cf3e8c9d3e"
+  },
+  "actions": [
+    {
+      "name": "checkout",
+      "tag": "v7.0.1",
+      "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "source": "https://github.com/actions/checkout/releases/tag/v7.0.1"
+    },
+    {
+      "name": "setup-python",
+      "tag": "v7.0.0",
+      "sha": "5fda3b95a4ea91299a34e894583c3862153e4b97",
+      "source": "https://github.com/actions/setup-python/releases/tag/v7.0.0"
+    },
+    {
+      "name": "upload-pages-artifact",
+      "tag": "v5.0.0",
+      "sha": "fc324d3547104276b827a68afc52ff2a11cc49c9",
+      "source": "https://github.com/actions/upload-pages-artifact/releases/tag/v5.0.0"
+    },
+    {
+      "name": "deploy-pages",
+      "tag": "v5.0.1",
+      "sha": "368f82528645a54fb793d4d04e342629a3f51346",
+      "source": "https://github.com/actions/deploy-pages/releases/tag/v5.0.1"
+    }
+  ]
+}

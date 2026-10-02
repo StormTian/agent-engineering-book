@@ -1,0 +1,1780 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="generator" content="codebase-to-mastery">
+  <title>读懂 LangGraph：状态图如何暂停、恢复并留下分支</title>
+  <style>:root {
+  --paper: #eef3f6; --paper-deep: #e3ecef; --ink: #172d3a; --muted: #536b79;
+  --line: #d4e0e6; --card: #fff; --code: #112630; --code-ink: #e6f4f7;
+  --accent: #147d92; --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
+  --good: #16745a; --bad: #ae394b; --shadow: 0 6px 22px rgba(23,45,58,.04);
+  --radius: 12px; --measure: 72rem; --rail-width: 228px;
+  --rail: #122936; --rail-ink: #edf7f8; --lime: #b8e3a4;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scroll-behavior: smooth; }
+html, body { overflow-x: clip; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: .2em; }
+button, textarea { font: inherit; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -.025em; }
+h1 { margin: 0; max-width: 22ch; font-size: clamp(2.4rem,5vw,4.6rem); font-weight: 750; }
+h2 { margin: 0; font-size: clamp(2rem,3.6vw,3.3rem); }
+h3 { margin: 0 0 1rem; font-size: clamp(1.35rem,2.5vw,2rem); }
+p { overflow-wrap: anywhere; }
+.progress { position: fixed; inset: 0 0 auto var(--rail-width); height: 3px; z-index: 50; background: var(--paper-deep); }
+.progress span { display: block; width: 0; height: 100%; background: var(--accent); transition: width 120ms linear; }
+.course-rail { position: fixed; inset: 0 auto 0 0; z-index: 30; width: var(--rail-width); display: flex; flex-direction: column; padding: 32px 18px 22px; color: var(--rail-ink); background: var(--rail); overflow-y: auto; }
+.course-mark { display: flex; align-items: center; gap: 12px; padding: 0 8px 26px; text-decoration: none; flex-shrink: 0; }
+.brand-emblem { display: flex; align-items: flex-end; gap: 3px; width: 34px; height: 34px; padding: 8px 6px; border-radius: 9px; background: var(--lime); }
+.brand-emblem i { display: block; width: 5px; background: var(--rail); border-radius: 1px; }
+.brand-emblem i:nth-child(1) { height: 7px; }
+.brand-emblem i:nth-child(2) { height: 12px; }
+.brand-emblem i:nth-child(3) { height: 18px; }
+.brand-name { font-size: 15px; font-weight: 700; line-height: 1.35; letter-spacing: -.01em; }
+.brand-name > span { display: block; color: var(--lime); }
+.overview-link { display: flex; justify-content: space-between; align-items: center; padding: 12px; font-size: 13px; text-decoration: none; border: 1px solid #35505e; border-radius: 8px; }
+.overview-link:hover { background: #203c4b; }
+.nav-label { margin: 28px 12px 10px; color: #a5bdc9; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.module-nav { display: grid; gap: 6px; }
+.nav-dot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #c7d9e1; text-align: left; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.nav-title { min-width: 0; overflow-wrap: anywhere; }
+.nav-arrow { opacity: 0; color: var(--lime); }
+.nav-dot:hover { background: #203c4b; color: white; }
+.nav-dot.is-active { color: white; background: #244b5b; border-color: #416a7a; }
+.nav-dot.is-active .nav-arrow { opacity: 1; }
+.rail-source { display: grid; gap: 5px; margin: auto 8px 0; padding-top: 36px; font-size: 12px; overflow-wrap: anywhere; }
+.rail-source-label { color: #a5bdc9; font-size: 10px; letter-spacing: .08em; }
+.rail-source strong { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-weight: 500; }
+.key-hint { display: flex; align-items: center; gap: 5px; margin: 18px 8px 0; color: #a5bdc9; font-size: 10px; }
+.key-hint > span { margin-left: 5px; }
+kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px solid #4c6977; border-radius: 4px; text-align: center; font: 10px/1.5 ui-monospace,monospace; }
+.course-cover, .learning-panel, .course-module, .course-footer { margin-left: var(--rail-width); min-width: 0; }
+.course-cover { position: relative; display: grid; align-content: center; padding: 64px clamp(28px,4vw,64px) 46px; min-height: 520px; border-bottom: 1px solid var(--line); background: var(--card); }
+.cover-topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 32px; }
+.cover-kicker, .eyebrow, .pane-label, .quiz-kicker { margin: 0 0 10px; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.cover-topline .cover-kicker { margin: 0; }
+.format-tag, .stage-count { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.cover-subtitle, .lede { max-width: 48rem; margin: 20px 0; color: var(--muted); font-size: clamp(1rem,1.6vw,1.2rem); }
+.course-meta { display: flex; flex-wrap: wrap; gap: 16px 32px; margin: 16px 0 28px; }
+.course-meta div { min-width: 70px; }
+.course-meta dt { color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+.course-meta dd { margin: 5px 0 0; font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.cover-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.start-link { display: inline-flex; align-items: center; gap: 30px; width: fit-content; padding: 11px 16px; border-radius: 8px; background: var(--accent); color: white; text-decoration: none; font-size: 13px; font-weight: 700; }
+.motion-toggle { padding: 9px 13px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.motion-toggle[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.cover-route { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 38px; padding-top: 22px; border-top: 1px solid var(--line); font: 10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing: .12em; color: var(--muted); }
+.cover-route b { font-weight: 400; color: var(--accent); }
+.learning-panel { padding: 28px clamp(28px,4vw,64px) 56px; border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.panel-heading .eyebrow { margin: 0; }
+.learning-panel h2 { max-width: none; font-size: clamp(1.65rem,3vw,2.3rem); }
+.panel-scope { margin: 10px 0 18px; max-width: 66rem; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.learning-stages { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }
+.learning-stage { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.stage-topline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.stage-number { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; color: var(--accent); background: var(--accent-soft); font: 700 12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+.stage-kind { color: var(--muted); font: 9px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform: uppercase; letter-spacing: .08em; }
+.learning-stage h3 { margin: 0; font-size: 17px; line-height: 1.4; letter-spacing: -.02em; }
+.stage-outcome { margin: 8px 0 10px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.gate { margin: auto 0 0; padding: 8px 0 10px; border-top: 1px solid var(--line); }
+.gate > span { color: var(--accent); font-size: 10px; font-weight: 700; }
+.gate p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.stage-links { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 650; }
+.stage-links a { overflow-wrap: anywhere; text-decoration: none; }
+.stage-links a:hover { text-decoration: underline; }
+.scope-note { margin: 18px 0 0; padding: 12px 16px; box-shadow: none; font-size: 12px; }
+.scope-note p { margin-bottom: 0; color: var(--muted); }
+.recall-heading { margin: 46px 0 24px; }
+.recall-heading h3 { font-size: 24px; margin-bottom: 8px; }
+.recall-heading > p:last-child { margin: 0; color: var(--muted); font-size: 12px; }
+.concept-card { padding: 18px; margin: 10px 0; min-width: 0; box-shadow: none; }
+.concept-card > summary { font-size: 14px; }
+.concept-card > p { color: var(--muted); font-size: 13px; }
+.concept-card details { min-width: 0; }
+.recall { margin: 22px 0; }
+.recall label { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 650; }
+.recall textarea { display: block; width: 100%; resize: vertical; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); font-size: 13px; }
+.recall-answer { margin: 12px 0; padding: 14px; background: var(--accent-soft); border: 0; box-shadow: none; font-size: 13px; }
+.export-learning-notes { margin-top: 16px; padding: 11px 16px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 12px; cursor: pointer; }
+.notes-feedback { font-size: 12px; color: var(--muted); }
+.export-preview { margin: 16px 0; padding: 16px; }
+.export-preview label { display: block; margin: 12px 0; font-size: 12px; }
+.export-preview textarea { width: 100%; color: var(--ink); background: #f7fafb; font: 12px/1.6 ui-monospace,monospace; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.course-module { border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.course-module:nth-child(odd) { background: #f8fafb; }
+.screen { display: grid; grid-template-columns: minmax(0,1fr); align-content: center; min-height: 550px; max-width: var(--measure); margin: 0 auto; padding: 64px clamp(28px,4vw,64px); }
+.hero-screen { position: relative; }
+.hero-screen > p:not(.eyebrow):not(.lede) { max-width: 58rem; font-size: 15px; color: var(--muted); }
+.actor-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(14rem,100%),1fr)); gap: 14px; }
+.actor-card, .callout, .quiz, .data-flow, .component-chat, details { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.actor-card, .callout, details { padding: 20px; }
+.actor-card h4 { margin: 0 0 8px; font-size: 16px; }
+.actor-card p { margin: 0; color: var(--muted); font-size: 14px; }
+.callout { border-left: 3px solid var(--accent); font-size: 14px; }
+.callout.warning { border-left-color: var(--bad); }
+.path-chip { display: inline-flex; max-width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--accent); font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.code-translation { min-width: 0; contain: inline-size; display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); margin: 24px 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.code-pane { min-width: 0; padding: 22px; color: var(--code-ink); background: var(--code); }
+.code-pane .pane-label { color: #8cd4d9; font-family: ui-monospace,monospace; text-transform: none; letter-spacing: 0; }
+pre { margin: 0; max-width: 100%; overflow: auto; tab-size: 2; }
+pre > code { display: block; min-width: 100%; }
+code { font: 12px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.code-translation figcaption { min-width: 0; padding: 22px; background: white; font-size: 14px; }
+.quiz, .data-flow, .component-chat { padding: 24px; }
+.quiz h3 { font-size: 24px; line-height: 1.45; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-options button, .flow-step, .replay-chat { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); text-align: left; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+.quiz-options button:hover, .quiz-options button:focus-visible, .flow-step:hover, .flow-step:focus-visible { border-color: var(--accent); }
+.quiz-options button.is-correct { border-color: var(--good); background: color-mix(in srgb,var(--good) 8%,white); }
+.quiz-options button.is-wrong { border-color: var(--bad); background: color-mix(in srgb,var(--bad) 7%,white); }
+.quiz-feedback { min-height: 1.6em; margin-bottom: 0; font-size: 13px; font-weight: 600; }
+.component-chat { display: grid; gap: 12px; }
+.chat-message { width: min(34rem,85%); padding: 14px; border-radius: 10px 10px 10px 2px; background: var(--paper); font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 260ms ease, transform 260ms ease; }
+.chat-message::before { content: attr(data-speaker); display: block; margin-bottom: 4px; color: var(--muted); font: 700 10px ui-monospace,monospace; text-transform: uppercase; }
+.chat-message:nth-child(even) { justify-self: end; border-radius: 10px 10px 2px 10px; background: var(--accent-soft); }
+.chat-message.is-visible { opacity: 1; transform: none; }
+.replay-chat { width: fit-content; justify-self: center; margin-top: 6px; }
+.data-flow { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(10rem,100%),1fr)); gap: 10px; }
+.flow-step { text-align: center; }
+.flow-step.is-active { background: var(--accent); border-color: var(--accent); color: white; }
+.flow-detail { grid-column: 1 / -1; margin: 6px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+dfn { position: relative; border-bottom: 2px dotted var(--accent); font-style: normal; cursor: help; }
+dfn::after { content: attr(data-definition); position: absolute; left: 0; bottom: calc(100% + 10px); z-index: 40; width: min(18rem,70vw); padding: 12px; border-radius: 8px; color: white; background: var(--rail); box-shadow: var(--shadow); font-size: 12px; font-weight: 400; opacity: 0; pointer-events: none; transform: translateY(5px); transition: opacity 140ms ease, transform 140ms ease; }
+dfn:hover::after, dfn:focus::after { opacity: 1; transform: none; }
+details { margin-top: 16px; }
+summary { cursor: pointer; font-weight: 650; }
+.course-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 28px clamp(28px,4vw,64px); color: var(--muted); background: white; font-size: 12px; }
+.course-footer p { max-width: 40rem; margin: 0; }
+.course-footer a { color: var(--accent); }
+:focus-visible { outline: 3px solid #57b6c5; outline-offset: 4px; }
+html[data-reduced-motion="true"] *, html[data-reduced-motion="true"] *::before, html[data-reduced-motion="true"] *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+html[data-reduced-motion="true"] { scroll-behavior: auto !important; }
+html[data-reduced-motion="true"] .chat-message { opacity: 1; transform: none; }
+@media (max-width:1050px) {
+  :root { --rail-width: 204px; }
+  .learning-stages { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  :root { --rail-width: 0px; }
+  .progress { inset: 0 0 auto; }
+  .course-rail { inset: 0 0 auto; width: auto; height: 116px; padding: 12px 16px 10px; overflow: hidden; }
+  .course-mark { padding: 0; gap: 8px; width: fit-content; }
+  .brand-emblem { width: 28px; height: 28px; padding: 5px 3px; }
+  .brand-name { display: flex; gap: 4px; font-size: 13px; }
+  .brand-name > span { display: inline; }
+  .overview-link { position: absolute; right: 16px; top: 12px; padding: 5px 8px; gap: 10px; font-size: 10px; }
+  .nav-label, .key-hint, .rail-source { display: none; }
+  .module-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 13px; padding: 3px; }
+  .nav-dot { flex: 0 0 auto; width: auto; max-width: 220px; min-height: 35px; padding: 7px 10px; font-size: 11px; white-space: nowrap; border-color: #35505e; }
+  .nav-arrow { display: none; }
+  .course-cover { margin-top: 116px; min-height: auto; padding: 30px 20px; scroll-margin-top: 116px; }
+  .cover-topline { margin-bottom: 24px; }
+  .cover-kicker { font-size: 10px; }
+  .format-tag { font-size: 10px; padding: 4px 7px; }
+  h1 { font-size: 36px; }
+  h2 { font-size: 32px; }
+  .cover-subtitle { font-size: 14px; }
+  .course-meta { gap: 16px 22px; }
+  .cover-route { gap: 12px; font-size: 9px; }
+  .learning-panel { padding: 28px 20px 40px; scroll-margin-top: 132px; }
+  .learning-panel h2 { font-size: 27px; }
+  .panel-heading { align-items: flex-start; }
+  .stage-count { font-size: 10px; padding: 4px 7px; }
+  .learning-stages { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .learning-stage { padding: 18px; }
+  .learning-stage h3 { font-size: 18px; }
+  .stage-outcome { font-size: 13px; }
+  .course-module { scroll-margin-top: 132px; }
+  .concept-card { scroll-margin-top: 132px; }
+  .screen { min-height: auto; padding: 44px 20px; }
+  .hero-screen { min-height: 420px; }
+  .code-translation { grid-template-columns: minmax(0,1fr); }
+  .code-pane, .code-translation figcaption { padding: 18px; }
+  .quiz, .data-flow, .component-chat { padding: 18px; }
+  .quiz h3 { font-size: 20px; }
+  .course-footer { padding: 26px 20px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+  .chat-message { opacity: 1; transform: none; }
+}
+@media print {
+  :root { --rail-width: 0px; }
+  .course-rail, .progress, .start-link, .replay-chat, .motion-toggle, .cover-route { display: none !important; }
+  .course-cover { margin-top: 0; }
+  .course-cover, .screen { min-height: auto; page-break-after: always; }
+  .chat-message { opacity: 1; transform: none; }
+  body { background: white; }
+}
+
+/* Source tables scroll inside the lesson, so narrow screens retain every cell. */
+.table-scroll { max-width: 100%; overflow-x: auto; margin: 22px 0; border: 1px solid #d3dce5; border-radius: 8px; }
+.table-scroll table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.table-scroll th, .table-scroll td { padding: 13px 16px; border-bottom: 1px solid #dbe3ea; text-align: left; vertical-align: top; line-height: 1.7; overflow-wrap: anywhere; }
+.table-scroll th { color: #153747; background: #edf5f7; font-weight: 700; }
+.table-scroll tr:last-child td { border-bottom: 0; }
+.table-scroll:focus-visible, .code-pane pre:focus-visible { outline: 3px solid #069db0; outline-offset: 3px; }
+</style>
+</head>
+<body style="--accent: #6750C8">
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+  <aside class="course-rail" aria-label="Course navigation">
+    <a class="course-mark" href="#course-start" aria-label="Codebase to Mastery">
+      <span class="brand-emblem" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-name">Codebase<span>to Mastery</span></span>
+    </a>
+    <a class="overview-link" href="#course-start">学习总览 <span aria-hidden="true">↗</span></a>
+    <p class="nav-label">课程目录</p>
+    <nav class="module-nav" aria-label="课程目录"><button class="nav-dot" type="button" data-target="module-01" aria-label="进入 从状态图蓝图到可执行图" title="从状态图蓝图到可执行图"><span class="nav-title">从状态图蓝图到可执行图</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-02" aria-label="进入 State 与 Reducer：更新如何合并" title="State 与 Reducer：更新如何合并"><span class="nav-title">State 与 Reducer：更新如何合并</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-03" aria-label="进入 Pregel Superstep：节点何时看到变化" title="Pregel Superstep：节点何时看到变化"><span class="nav-title">Pregel Superstep：节点何时看到变化</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-04" aria-label="进入 条件路由与 ToolNode：行动如何过关" title="条件路由与 ToolNode：行动如何过关"><span class="nav-title">条件路由与 ToolNode：行动如何过关</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-05" aria-label="进入 Checkpoint 与 Interrupt：暂停后如何恢复" title="Checkpoint 与 Interrupt：暂停后如何恢复"><span class="nav-title">Checkpoint 与 Interrupt：暂停后如何恢复</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-06" aria-label="进入 Streaming 与 Replay：怎样复核一次运行" title="Streaming 与 Replay：怎样复核一次运行"><span class="nav-title">Streaming 与 Replay：怎样复核一次运行</span><span class="nav-arrow" aria-hidden="true">↗</span></button></nav>
+    <div class="rail-source"><span class="rail-source-label">学习源码</span><strong>roadmap-langgraph-course-source</strong></div>
+    <p class="key-hint"><kbd>J</kbd><kbd>K</kbd><span>切换章节</span></p>
+  </aside>
+
+  <header class="course-cover" id="course-start">
+    <div class="cover-topline"><p class="cover-kicker">源码掌握工坊</p><span class="format-tag">离线交互课</span></div>
+    <h1>读懂 LangGraph：状态图如何暂停、恢复并留下分支</h1>
+    <p class="cover-subtitle">沿真实源码，从 StateGraph、Reducer 与 Pregel superstep，一路追到工具路由、Checkpoint、Interrupt / Resume 与时间旅行。</p>
+    <dl class="course-meta">
+      <div><dt>学习源码</dt><dd>roadmap-langgraph-course-source</dd></div>
+      <div><dt>源码版本</dt><dd>aa742fb31e28</dd></div>
+      <div><dt>章节</dt><dd>6</dd></div>
+    </dl>
+    <div class="cover-actions"><a class="start-link" href="#learning-path">开始学习 <span aria-hidden="true">→</span></a>
+    <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">减少动效</button></div>
+    <div class="cover-route" aria-hidden="true"><span>READ</span><b>→</b><span>TRACE</span><b>→</b><span>REASON</span><b>→</b><span>TEACH BACK</span></div>
+  </header>
+
+  <section id="learning-path" class="learning-panel" data-kit-id="325e57fd-6017-4774-b149-7fa1dc11e504"><div class="panel-heading"><p class="eyebrow">The mastery path</p><span class="stage-count">4 个学习阶段</span></div><h2>由浅入深的学习路径</h2><p class="panel-scope">声明 state/reducer→构建与编译图→Pregel superstep→路由工具节点→checkpoint/interrupt→resume、stream 与历史分叉</p><div class="learning-stages"><article class="learning-stage"><div class="stage-topline"><span class="stage-number">01</span><span class="stage-kind">orient</span></div><h3>建立地图</h3><p class="stage-outcome">解释入口、角色和控制面。</p><div class="gate"><span>先想一想</span><p>画出主线并指出真正开始执行的位置。</p></div><div class="stage-links"><a href="#module-01">进入课程</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">02</span><span class="stage-kind">trace</span></div><h3>逐步追踪</h3><p class="stage-outcome">追踪调用、数据与状态变化。</p><div class="gate"><span>先想一想</span><p>从一个输入写出调用和状态表，并定位源码。</p></div><div class="stage-links"><a href="#module-02">State 与 Reducer：更新如何合并</a> <a href="#module-03">Pregel Superstep：节点何时看到变化</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">03</span><span class="stage-kind">reason</span></div><h3>解释边界</h3><p class="stage-outcome">分析许可、失败、持久化与恢复。</p><div class="gate"><span>先想一想</span><p>解释两个不同层级的故障，并给出证据与反例。</p></div><div class="stage-links"><a href="#module-04">条件路由与 ToolNode：行动如何过关</a> <a href="#module-05">Checkpoint 与 Interrupt：暂停后如何恢复</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">04</span><span class="stage-kind">teach-back</span></div><h3>复述与迁移</h3><p class="stage-outcome">将契约迁移到自建 Agent 与评测系统。</p><div class="gate"><span>先想一想</span><p>不看答案写出完整主线与未验证边界，再对照评分依据。</p></div><div class="stage-links"><a href="#module-06">进入课程</a><span aria-hidden="true">→</span></div></article></div><details class="scope-note"><summary>实践范围与边界</summary><p>局部重建按消息ID归并与两阶段 superstep；再扩展 interrupt 重入副作用去重，不复刻完整调度器。</p></details><div class="recall-heading"><p class="eyebrow">Recall &amp; connect</p><h3>概念地图与主动回忆</h3><p>回答保存在本机浏览器；阅读和自评不代表已掌握。</p></div><details class="concept-card" id="concept-c01-01"><summary>Builder 与可执行图分开</summary><p>StateGraph 描述状态 schema、节点和边；节点返回局部更新，compile 后得到可调用对象。构图阶段检查连接与类型，运行阶段处理实际状态和异常。
+
+类比工作流图时不要忽略编译配置：相同 builder 可以带不同 checkpointer 或 interrupt 设置，产生不同执行行为。尚未 compile 的对象不能替代运行对象。</p><p>前置概念: —</p><a href="#module-01">能够解释“Builder 与可执行图分开”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-01-0"><label for="recall-c01-01-0">同一 builder 编译两次一定行为相同吗？</label><textarea id="recall-c01-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/langgraph/graph/state.py:131-145，对照状态、身份、异常和保存边界。</li></ul><p>不一定。checkpointer、interrupt、store 等编译参数影响执行。先冻结图定义与编译选项，再比较行为。</p><ul><li>明确本题契约：Builder 与可执行图分开</li><li>依据源码解释原因：不一定。checkpointer、interrupt、store 等编译参数影响执行。先冻结图定义与编译选项，再比较行为。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/langgraph/graph/state.py:131-145</p><p>白话翻译
+        节点通过共享 state 交换信息，但每个节点只交回局部更新。StateGraph 只是构造器；没有 compile()，就不存在可调用或可流式运行的图。</p><pre><code>class StateGraph(Generic[StateT, ContextT, InputT, OutputT]):
+    &quot;&quot;&quot;A graph whose nodes communicate by reading and writing to a shared state.
+
+    The signature of each node is `State -&gt; Partial&lt;State&gt;`.
+
+    Each state key can optionally be annotated with a reducer function that
+    will be used to aggregate the values of that key received from multiple nodes.
+    The signature of a reducer function is `(Value, Value) -&gt; Value`.
+
+    !!! warning
+
+        `StateGraph` is a builder class and cannot be used directly for execution.
+        You must first call `.compile()` to create an executable graph that supports
+        methods like `invoke()`, `stream()`, `astream()`, and `ainvoke()`. See the
+        `CompiledStateGraph` documentation for more details.</code></pre></details></details><details class="concept-card" id="concept-c01-02"><summary>子图是节点也是边界</summary><p>编译后的子图可以加入父图节点。嵌套并不是把所有内部节点复制进父图：状态接口、执行命名空间和观测层级需要分别理解。
+
+先画父节点的输入输出，再进入子图看局部读写；事件流若带子图信息，应保留对应身份。图的嵌套结构不自动证明两个层级拥有同一 checkpoint 寿命。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“子图是节点也是边界”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-02-0"><label for="recall-c01-02-0">看到一个子图节点，追踪应先做什么？</label><textarea id="recall-c01-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/tests/test_stream_events_v3_e2e.py:59-77，对照状态、身份、异常和保存边界。</li></ul><p>先确认父图向该节点传递与接收的状态字段，再看子图内部节点和 checkpoint/namespace 边界；不能仅从图名合并全部历史。</p><ul><li>明确本题契约：子图是节点也是边界</li><li>依据源码解释原因：先确认父图向该节点传递与接收的状态字段，再看子图内部节点和 checkpoint/namespace 边界；不能仅从图名合并全部历史。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/tests/test_stream_events_v3_e2e.py:59-77</p><p>白话翻译
+        这个上游端到端测试先把内部图编译，再把它当成外部图的一个节点。START 与 END 是入口和终点标记；真正的业务工作由两个 node 完成。</p><pre><code>    def process_node(state: AgentState) -&gt; dict[str, Any]:
+        return {&quot;value&quot;: state[&quot;value&quot;] + &quot;_processed&quot;, &quot;items&quot;: [&quot;processed&quot;]}
+
+    inner_builder: StateGraph = StateGraph(AgentState, input_schema=AgentState)
+    inner_builder.add_node(&quot;process_node&quot;, process_node)
+    inner_builder.add_edge(START, &quot;process_node&quot;)
+    inner_builder.add_edge(&quot;process_node&quot;, END)
+    inner_graph = inner_builder.compile()
+
+    def router_node(state: AgentState) -&gt; dict[str, Any]:
+        return {&quot;value&quot;: state[&quot;value&quot;] + &quot;_routed&quot;, &quot;items&quot;: [&quot;routed&quot;]}
+
+    outer_builder: StateGraph = StateGraph(AgentState, input_schema=AgentState)
+    outer_builder.add_node(&quot;router&quot;, router_node)
+    outer_builder.add_node(&quot;inner&quot;, inner_graph)
+    outer_builder.add_edge(START, &quot;router&quot;)
+    outer_builder.add_edge(&quot;router&quot;, &quot;inner&quot;)
+    outer_builder.add_edge(&quot;inner&quot;, END)
+    return outer_builder.compile()</code></pre></details></details><details class="concept-card" id="concept-c01-03"><summary>compile 固定运行条件</summary><p>编译把 schema、通道、节点与运行选项交给 CompiledStateGraph。读源码应把静态结构和运行时配置放在两列，而不是只看 add_edge。
+
+外部 thread_id 不属于图拓扑，却决定带 checkpointer 的恢复上下文。没有固定编译和调用配置，两个看起来相同的示例不构成可比实验。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“compile 固定运行条件”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-03-0"><label for="recall-c01-03-0">重复同一个输入却读到旧状态，先核对什么？</label><textarea id="recall-c01-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/langgraph/graph/state.py:1177-1192，对照状态、身份、异常和保存边界。</li></ul><p>核对 checkpointer 是否启用、thread_id/namespace 与调用配置，再区分新运行和恢复；同输入不意味着空历史。</p><ul><li>明确本题契约：compile 固定运行条件</li><li>依据源码解释原因：核对 checkpointer 是否启用、thread_id/namespace 与调用配置，再区分新运行和恢复；同输入不意味着空历史。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/langgraph/graph/state.py:1177-1192</p><p>白话翻译
+        编译边界不只是换名字：它把 checkpointer、暂停点、缓存等运行策略固定进一个 CompiledStateGraph。从此调用的是可执行对象，而不是继续修改蓝图。</p><pre><code>    def compile(
+        self,
+        checkpointer: Checkpointer = None,
+        *,
+        cache: BaseCache | None = None,
+        store: BaseStore | None = None,
+        interrupt_before: All | list[str] | None = None,
+        interrupt_after: All | list[str] | None = None,
+        debug: bool = False,
+        name: str | None = None,
+        transformers: Sequence[Callable[[tuple[str, ...]], Any]] | None = None,
+    ) -&gt; CompiledStateGraph[StateT, ContextT, InputT, OutputT]:
+        &quot;&quot;&quot;Compiles the `StateGraph` into a `CompiledStateGraph` object.
+
+        The compiled graph implements the `Runnable` interface and can be invoked,
+        streamed, batched, and run asynchronously.</code></pre></details></details><details class="concept-card" id="concept-c02-01"><summary>Reducer 决定更新语义</summary><p>普通状态字段常按最后值通道处理；Annotated 字段可以声明 reducer，例如 operator.add 归并列表。节点返回局部更新不等于覆盖整个 state。
+
+两个并行节点同时写入一个字段时，是否允许、如何合并，取决于通道与 reducer 契约。不要把所有字段都当 JSON 字典最后写赢；这会隐藏图的并发不变量。</p><p>前置概念: c01-01</p><a href="#module-02">能够解释“Reducer 决定更新语义”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-01-0"><label for="recall-c02-01-0">两个节点都写 items，结果一定是最后一个列表吗？</label><textarea id="recall-c02-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/tests/test_stream_events_v3_e2e.py:42-44，对照状态、身份、异常和保存边界。</li></ul><p>先查 items 的 reducer；add 归并与最后值语义不同。明确通道是否接受并发写入，再预测结果。</p><ul><li>明确本题契约：Reducer 决定更新语义</li><li>依据源码解释原因：先查 items 的 reducer；add 归并与最后值语义不同。明确通道是否接受并发写入，再预测结果。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/tests/test_stream_events_v3_e2e.py:42-44</p><p>白话翻译
+        value 没有额外合并标注；items 明确用 operator.add 把旧列表与新列表相加。两个 node 都写 items 时，不应把它当普通覆盖字段。</p><pre><code>class AgentState(TypedDict):
+    value: str
+    items: Annotated[list[str], operator.add]</code></pre></details></details><details class="concept-card" id="concept-c02-02"><summary>add_messages 按ID而非正文</summary><p>add_messages 为消息补齐身份，按消息ID归并：新ID追加，同ID更新可以替换，RemoveMessage 另有删除语义。它不是普通列表拼接。
+
+同一消息内容相同但ID不同仍是两条；内容改变但ID相同可能是修订。迁移事件记录时丢ID会把修订变成重复，模型上下文也随之改变。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“add_messages 按ID而非正文”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-02-0"><label for="recall-c02-02-0">ID=1 的消息更新正文，会出现两条ID=1吗？</label><textarea id="recall-c02-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/langgraph/graph/message.py:202-234，对照状态、身份、异常和保存边界。</li></ul><p>按 add_messages 的正常归并路径替换原ID位置；新ID才追加。删除消息按 RemoveMessage 的专门协议处理。</p><ul><li>明确本题契约：add_messages 按ID而非正文</li><li>依据源码解释原因：按 add_messages 的正常归并路径替换原ID位置；新ID才追加。删除消息按 RemoveMessage 的专门协议处理。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/langgraph/graph/message.py:202-234</p><p>白话翻译
+        没有 ID 的消息先获分配 ID；新 ID 追加，已有 ID 替换，RemoveMessage 标记删除。这个 reducer 维护的是“可更新的消息集合”，不只是 left + right。</p><pre><code>    # assign missing ids
+    for m in left:
+        if m.id is None:
+            m.id = str(uuid.uuid4())
+    for idx, m in enumerate(right):
+        if m.id is None:
+            m.id = str(uuid.uuid4())
+        if isinstance(m, RemoveMessage) and m.id == REMOVE_ALL_MESSAGES:
+            remove_all_idx = idx
+
+    if remove_all_idx is not None:
+        return right[remove_all_idx + 1 :]
+
+    # merge
+    merged = left.copy()
+    merged_by_id = {m.id: i for i, m in enumerate(merged)}
+    ids_to_remove = set()
+    for m in right:
+        if (existing_idx := merged_by_id.get(m.id)) is not None:
+            if isinstance(m, RemoveMessage):
+                ids_to_remove.add(m.id)
+            else:
+                ids_to_remove.discard(m.id)
+                merged[existing_idx] = m
+        else:
+            if isinstance(m, RemoveMessage):
+                raise ValueError(
+                    f&quot;Attempting to delete a message with an ID that doesn&#x27;t exist (&#x27;{m.id}&#x27;)&quot;
+                )
+
+            merged_by_id[m.id] = len(merged)
+            merged.append(m)
+    merged = [m for m in merged if m.id not in ids_to_remove]</code></pre></details></details><details class="concept-card" id="concept-c02-03"><summary>测试用例帮助冻结边界</summary><p>同ID替换的测试是可定位的契约样例。它支持理解归并行为，但本教程只引用该测试源码，没有把引用当执行通过记录。
+
+为自己的应用补验证时，固定新ID追加、同ID替换和删除不存在ID三类输入。先定义希望保持的消息身份，再选择 reducer；不要只用一条聊天成功示例验收。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“测试用例帮助冻结边界”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-03-0"><label for="recall-c02-03-0">读取 test_messages_state 能报告运行通过吗？</label><textarea id="recall-c02-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/tests/test_messages_state.py:55-60，对照状态、身份、异常和保存边界。</li></ul><p>不能。静态测试源码说明预期；执行结果必须有真实命令、环境、退出码与输出。本包教学模型另列证据层。</p><ul><li>明确本题契约：测试用例帮助冻结边界</li><li>依据源码解释原因：不能。静态测试源码说明预期；执行结果必须有真实命令、环境、退出码与输出。本包教学模型另列证据层。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/tests/test_messages_state.py:55-60</p><p>白话翻译
+        新写入沿用 ID 1，结果不是两条消息，而是原位置的内容被更新。</p><pre><code>def test_update_existing_message():
+    left = [HumanMessage(content=&quot;Hello&quot;, id=&quot;1&quot;)]
+    right = HumanMessage(content=&quot;Hello again&quot;, id=&quot;1&quot;)
+    result = add_messages(left, right)
+    expected_result = [HumanMessage(content=&quot;Hello again&quot;, id=&quot;1&quot;)]
+    assert result == expected_result</code></pre></details></details><details class="concept-card" id="concept-c03-01"><summary>Superstep 分计划、执行和提交</summary><p>Pregel 先根据上一步通道值选择任务，在本步执行节点，最后统一提交写入；本步节点的更新通常在下步才对其他任务可见。
+
+这让同时运行的节点基于一致的旧状态推理。把其中一个任务先写入共享 state，再让另一个即时读取，会产生受完成顺序影响的不同语义。</p><p>前置概念: c02-01</p><a href="#module-03">能够解释“Superstep 分计划、执行和提交”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-01-0"><label for="recall-c03-01-0">A/B 同步开始，B能直接看到A本步刚写的值吗？</label><textarea id="recall-c03-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/langgraph/pregel/main.py:454-477，对照状态、身份、异常和保存边界。</li></ul><p>按主线 superstep 语义，本步执行看到已提交状态；A本步写入在更新阶段提交，下一步才用于调度与读取。</p><ul><li>明确本题契约：Superstep 分计划、执行和提交</li><li>依据源码解释原因：按主线 superstep 语义，本步执行看到已提交状态；A本步写入在更新阶段提交，下一步才用于调度与读取。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/langgraph/pregel/main.py:454-477</p><p>白话翻译
+        Plan 看“上一轮哪些 channel 变了”来选 actor；Execution 让本轮 actor 工作；Update 才把所有写入提交。运行结束条件不是“某个节点返回了”，而是再也没有 actor 被选中或达到步数上限。</p><pre><code>    &quot;&quot;&quot;Pregel manages the runtime behavior for LangGraph applications.
+
+    ## Overview
+
+    Pregel combines [**actors**](https://en.wikipedia.org/wiki/Actor_model)
+    and **channels** into a single application.
+    **Actors** read data from channels and write data to channels.
+    Pregel organizes the execution of the application into multiple steps,
+    following the **Pregel Algorithm**/**Bulk Synchronous Parallel** model.
+
+    Each step consists of three phases:
+
+    - **Plan**: Determine which **actors** to execute in this step. For example,
+        in the first step, select the **actors** that subscribe to the special
+        **input** channels; in subsequent steps,
+        select the **actors** that subscribe to channels updated in the previous step.
+    - **Execution**: Execute all selected **actors** in parallel,
+        until all complete, or one fails, or a timeout is reached. During this
+        phase, channel updates are invisible to actors until the next step.
+    - **Update**: Update the channels with the values written by the **actors**
+        in this step.
+
+    Repeat until no **actors** are selected for execution, or a maximum number of
+    steps is reached.</code></pre></details></details><details class="concept-card" id="concept-c03-02"><summary>任务准备不是节点已经完成</summary><p>循环根据 checkpoint、pending writes、触发条件和任务配置准备本步工作。准备好的任务可能还会命中缓存、重试或被 interrupt 阻止执行。
+
+调试重复调用时区分任务ID、调度、实际执行、写入提交四阶段。仅在日志出现节点名不能证明节点代码已经产生副作用。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“任务准备不是节点已经完成”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-02-0"><label for="recall-c03-02-0">监控看到 scheduled，能认为外部API已调用吗？</label><textarea id="recall-c03-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/langgraph/pregel/_loop.py:611-629，对照状态、身份、异常和保存边界。</li></ul><p>不能。继续核对实际执行、缓存/中断/重试和提交事件。任务准备与外部副作用发生分别观察。</p><ul><li>明确本题契约：任务准备不是节点已经完成</li><li>依据源码解释原因：不能。继续核对实际执行、缓存/中断/重试和提交事件。任务准备与外部副作用发生分别观察。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/langgraph/pregel/_loop.py:611-629</p><p>白话翻译
+        runtime 不是简单沿一条 Python 调用栈向下走。它用 checkpoint、pending writes、channel 变化和触发映射算出本轮 task 集合，重试与缓存策略也在这里进入调度。</p><pre><code>        # prepare next tasks
+        self.tasks = prepare_next_tasks(
+            self.checkpoint,
+            self.checkpoint_pending_writes,
+            self.nodes,
+            self.channels,
+            self.managed,
+            self.config,
+            self.step,
+            self.stop,
+            for_execution=True,
+            manager=self.manager,
+            store=self.store,
+            checkpointer=self.checkpointer,
+            trigger_to_nodes=self.trigger_to_nodes,
+            updated_channels=self.updated_channels,
+            retry_policy=self.retry_policy,
+            cache_policy=self.cache_policy,
+        )</code></pre></details></details><details class="concept-card" id="concept-c03-03"><summary>统一提交使下一步有稳定状态</summary><p>after_tick 汇总已完成任务的写入、应用通道更新并推进 checkpoint。发出 values 和清理 pending writes 属于步边界，而不是每个函数调用随意覆盖。
+
+节点失败、重试和保存失败需要分层定位。只看最后流块无法知道哪些写入已被接受；要结合状态快照与任务错误判断可恢复点。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“统一提交使下一步有稳定状态”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-03-0"><label for="recall-c03-03-0">节点输出已打印，checkpoint一定已保存吗？</label><textarea id="recall-c03-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/langgraph/pregel/_loop.py:683-718，对照状态、身份、异常和保存边界。</li></ul><p>不一定。节点输出、通道提交、流事件和存储成功是不同观察点；检查步边界与 checkpointer 记录。</p><ul><li>明确本题契约：统一提交使下一步有稳定状态</li><li>依据源码解释原因：不一定。节点输出、通道提交、流事件和存储成功是不同观察点；检查步边界与 checkpointer 记录。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/langgraph/pregel/_loop.py:683-718</p><p>白话翻译
+        after_tick() 汇总 task writes，交给 channel 规则应用；必要时发出完整 values，再清 pending writes、退出 replay 标志并保存本轮 checkpoint。</p><pre><code>    def after_tick(self) -&gt; None:
+        # finish superstep
+        writes = [w for t in self.tasks.values() for w in t.writes]
+        self._delta_channels_with_overwrite.update(
+            ch
+            for ch, v in writes
+            if isinstance(self.specs.get(ch), DeltaChannel) and _get_overwrite(v)[0]
+        )
+        # all tasks have finished
+        self.updated_channels = apply_writes(
+            self.checkpoint,
+            self.channels,
+            self.tasks.values(),
+            self.checkpointer_get_next_version,
+            self.trigger_to_nodes,
+        )
+        # produce values output
+        if not self.updated_channels.isdisjoint(
+            (self.output_keys,)
+            if isinstance(self.output_keys, str)
+            else self.output_keys
+        ):
+            self._emit(
+                &quot;values&quot;, map_output_values, self.output_keys, writes, self.channels
+            )
+        # capture delta-channel writes for exit-mode accumulator before clearing
+        if self._exit_delta_writes is not None:
+            for tid, ch, v in self.checkpoint_pending_writes:
+                if isinstance(self.specs.get(ch), DeltaChannel):
+                    self._exit_delta_writes.append((self.step, tid, ch, v))
+        # clear pending writes
+        self.checkpoint_pending_writes.clear()
+        # only replay (re-execute) done tasks on the first tick
+        self.is_replaying = False
+        # save checkpoint
+        self._put_checkpoint({&quot;source&quot;: &quot;loop&quot;})</code></pre></details></details><details class="concept-card" id="concept-c04-01"><summary>路由看结构化 tool_calls</summary><p>tools_condition 查看最后消息是否携带工具调用，从而转向 tools 或 END。自然语言说“调用了搜索”不能代替结构化调用字段。
+
+输入可能是消息列表、带 messages 的状态或对应对象。接入自定义状态时先确认路由读取的消息键，避免因字段名错位而意外结束。</p><p>前置概念: c03-01</p><a href="#module-04">能够解释“路由看结构化 tool_calls”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-01-0"><label for="recall-c04-01-0">assistant 正文写“搜索中”却无 tool_calls，会走tools吗？</label><textarea id="recall-c04-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/prebuilt/langgraph/prebuilt/tool_node.py:1648-1659，对照状态、身份、异常和保存边界。</li></ul><p>主线路由依据结构化 tool_calls，不依据正文。先核对消息类型与键，再检查模型绑定工具是否正确。</p><ul><li>明确本题契约：路由看结构化 tool_calls</li><li>依据源码解释原因：主线路由依据结构化 tool_calls，不依据正文。先核对消息类型与键，再检查模型绑定工具是否正确。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/prebuilt/langgraph/prebuilt/tool_node.py:1648-1659</p><p>白话翻译
+        函数兼容消息列表、字典 State 与有 messages 属性的对象；最终只检查最后消息。存在 tool calls 就返回 tools，否则返回终点标记。</p><pre><code>    if isinstance(state, list):
+        ai_message = state[-1]
+    elif (isinstance(state, dict) and (messages := state.get(messages_key, []))) or (
+        messages := getattr(state, messages_key, [])
+    ):
+        ai_message = messages[-1]
+    else:
+        msg = f&quot;No messages found in input state to tool_edge: {state}&quot;
+        raise ValueError(msg)
+    if hasattr(ai_message, &quot;tool_calls&quot;) and len(ai_message.tool_calls) &gt; 0:
+        return &quot;tools&quot;
+    return &quot;__end__&quot;</code></pre></details></details><details class="concept-card" id="concept-c04-02"><summary>ToolNode 与模型职责分离</summary><p>ToolNode 将请求分派给可用工具，处理并行与错误策略，并可以读取图 state/store 注入参数。工具描述、模型决定和执行节点是三个责任。
+
+state 注入是调用数据通道，不等于工具拥有全部用户权限。执行外部写入时仍需应用鉴权、幂等和审计，框架路由不能替代业务控制。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“ToolNode 与模型职责分离”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-02-0"><label for="recall-c04-02-0">把工具绑定模型后，是否可以删除 ToolNode？</label><textarea id="recall-c04-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/prebuilt/langgraph/prebuilt/tool_node.py:622-635，对照状态、身份、异常和保存边界。</li></ul><p>绑定通常只让模型产生请求；仍需执行并生成对应工具结果的机制。若换自定义执行器，也要保持请求身份与错误契约。</p><ul><li>明确本题契约：ToolNode 与模型职责分离</li><li>依据源码解释原因：绑定通常只让模型产生请求；仍需执行并生成对应工具结果的机制。若换自定义执行器，也要保持请求身份与错误契约。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/prebuilt/langgraph/prebuilt/tool_node.py:622-635</p><p>白话翻译
+        ToolNode 是工具工作间，而不是模型。它处理调用、状态注入、持久 store、并行与错误；当前源码还明确把“自定义细粒度工作流”和标准 ReAct agent 分成两个入口。</p><pre><code>class ToolNode(RunnableCallable):
+    &quot;&quot;&quot;A node for executing tools in LangGraph workflows.
+
+    Handles tool execution patterns including function calls, state injection,
+    persistent storage, and control flow. Manages parallel execution,
+    error handling.
+
+    Use `ToolNode` when building custom workflows that require fine-grained control over
+    tool execution—for example, custom routing logic, specialized error handling, or
+    non-standard agent architectures.
+
+    For standard ReAct-style agents, use [`create_agent`][langchain.agents.create_agent]
+    instead. It uses `ToolNode` internally with sensible defaults for the agent loop,
+    conditional routing, and error handling.</code></pre></details></details><details class="concept-card" id="concept-c04-03"><summary>静态中断发生在工具执行前</summary><p>编译配置 interrupt_before 指定节点暂停；循环可以在任务已计划但 runner 尚未执行时停住。这个位置适合审阅即将执行的动作。
+
+暂停不代表取消，也不自动提供用户授权。恢复条件与审批信息由应用定义；必须核对暂停时的下一步任务和实际执行计数，证明工具还未运行。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“静态中断发生在工具执行前”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-03-0"><label for="recall-c04-03-0">interrupt_before tools 后打印 pending task，工具已执行了吗？</label><textarea id="recall-c04-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/langgraph/pregel/_loop.py:666-671，对照状态、身份、异常和保存边界。</li></ul><p>先核对 runner 是否启动。静态中断主线发生在执行前，pending 不证明运行；恢复还需应用明确提供的继续条件。</p><ul><li>明确本题契约：静态中断发生在工具执行前</li><li>依据源码解释原因：先核对 runner 是否启动。静态中断主线发生在执行前，pending 不证明运行；恢复还需应用明确提供的继续条件。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/langgraph/pregel/_loop.py:666-671</p><p>白话翻译
+        任务已被 Plan 选中，但 runner 尚未执行它；命中名单就把状态标成 interrupt_before 并抛出控制信号。下一章的动态 interrupt() 则发生在节点函数内部。</p><pre><code>        # before execution, check if we should interrupt
+        if self.interrupt_before and should_interrupt(
+            self.checkpoint, self.interrupt_before, self.tasks.values()
+        ):
+            self.status = &quot;interrupt_before&quot;
+            raise GraphInterrupt()</code></pre></details></details><details class="concept-card" id="concept-c05-01"><summary>thread、namespace、checkpoint 三层身份</summary><p>内存实现按 thread_id、checkpoint namespace 和 checkpoint_id 组织版本，再保存任务写入。thread_id 指一条历史范围，不是每一步唯一的快照ID。
+
+两个用户共用 thread_id 可能混合历史；同线程不同子图命名空间也不能只用字符串拼成一列。持久化适配器必须保持版本与命名空间契约。</p><p>前置概念: c04-01</p><a href="#module-05">能够解释“thread、namespace、checkpoint 三层身份”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-01-0"><label for="recall-c05-01-0">只保存thread_id就能精确回到某一步吗？</label><textarea id="recall-c05-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/checkpoint/langgraph/checkpoint/memory/__init__.py:33-42，对照状态、身份、异常和保存边界。</li></ul><p>不能。thread确定历史范围，还需 checkpoint_id 和 namespace 定位具体版本；同时验证身份隔离。</p><ul><li>明确本题契约：thread、namespace、checkpoint 三层身份</li><li>依据源码解释原因：不能。thread确定历史范围，还需 checkpoint_id 和 namespace 定位具体版本；同时验证身份隔离。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/checkpoint/langgraph/checkpoint/memory/__init__.py:33-42</p><p>白话翻译
+        当前课程引用的测试使用内存 saver，是为了可控地观察语义。源码明确把它限定为调试或测试用途，因此不能据此声称进程重启、并发、备份或生产恢复已解决。</p><pre><code>class InMemorySaver(
+    BaseCheckpointSaver[str], AbstractContextManager, AbstractAsyncContextManager
+):
+    &quot;&quot;&quot;An in-memory checkpoint saver.
+
+    This checkpoint saver stores checkpoints in memory using a `defaultdict`.
+
+    Note:
+        Only use `InMemorySaver` for debugging or testing purposes.
+        For production use cases we recommend installing [langgraph-checkpoint-postgres](https://pypi.org/project/langgraph-checkpoint-postgres/) and using `PostgresSaver` / `AsyncPostgresSaver`.</code></pre></details></details><details class="concept-card" id="concept-c05-02"><summary>Memory saver 是测试存储</summary><p>源码明确把内存 checkpointer 用于调试测试。进程结束后无独立持久介质保证，不能把一次 resume 成功推广为跨进程可靠恢复。
+
+教程选择它解释索引结构；生产持久化候选应另测事务、失败重试、版本兼容与并发。存储API可替换不等于故障语义完全一致。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“Memory saver 是测试存储”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-02-0"><label for="recall-c05-02-0">Notebook 中恢复成功，重启机器后一定能恢复吗？</label><textarea id="recall-c05-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/langgraph/graph/state.py:1194-1214，对照状态、身份、异常和保存边界。</li></ul><p>不一定。核对存储介质与生命周期；内存对象并未证明持久性，跨进程恢复必须用对应存储独立实测。</p><ul><li>明确本题契约：Memory saver 是测试存储</li><li>依据源码解释原因：不一定。核对存储介质与生命周期；内存对象并未证明持久性，跨进程恢复必须用对应存储独立实测。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/langgraph/graph/state.py:1194-1214</p><p>白话翻译
+        checkpointer 是版本化状态后端，thread_id 是检索键。不同运行用不同 ID 隔离；复用同一 ID 会沿该谱系继续积累状态。它并不指向某个唯一 checkpoint。</p><pre><code>        Args:
+            checkpointer: A checkpoint saver object or flag.
+
+                If provided, this `Checkpointer` serves as a fully versioned &quot;short-term memory&quot; for the graph,
+                allowing it to be paused, resumed, and replayed from any point.
+
+                If `None`, it may inherit the parent graph&#x27;s checkpointer when used as a subgraph.
+
+                If `False`, it will not use or inherit any checkpointer.
+
+                **Important**: When a checkpointer is enabled, you should pass a `thread_id`
+                in the config when invoking the graph:
+
+                ```python
+                config = {&quot;configurable&quot;: {&quot;thread_id&quot;: &quot;my-thread&quot;}}
+                graph.invoke(inputs, config)
+                ```
+
+                The `thread_id` is the key used to store and retrieve checkpoints. Use a
+                unique ID for independent runs, or reuse the same ID to accumulate state
+                across invocations (e.g., for conversation memory).</code></pre></details></details><details class="concept-card" id="concept-c05-03"><summary>动态 interrupt 会重入节点</summary><p>interrupt 在节点内部暂停，Command 的 resume 值在重执行时按调用顺序匹配。恢复通常从节点开头重跑，而非从 Python 停止行继续。
+
+在 interrupt 前发送邮件或扣款会有重复风险。把副作用放到可幂等节点、使用稳定请求ID，或将审批与行动拆开；调用次序改变也可能破坏已有恢复值匹配。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“动态 interrupt 会重入节点”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-03-0"><label for="recall-c05-03-0">interrupt前计数加1，恢复后一定只加一次吗？</label><textarea id="recall-c05-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/checkpoint/langgraph/checkpoint/memory/__init__.py:68-83，对照状态、身份、异常和保存边界。</li></ul><p>不能这样保证，节点可能重入。副作用要幂等或拆分；确认 resume 值和 interrupt 顺序匹配。</p><ul><li>明确本题契约：动态 interrupt 会重入节点</li><li>依据源码解释原因：不能这样保证，节点可能重入。副作用要幂等或拆分；确认 resume 值和 interrupt 顺序匹配。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/checkpoint/langgraph/checkpoint/memory/__init__.py:68-83</p><p>白话翻译
+        存储键把 thread、checkpoint namespace 与 checkpoint ID 分层；writes 还细到 task 和 write index。仅用“一个聊天 ID 对应一份 JSON”来理解，会漏掉历史页与分支。</p><pre><code>    # thread ID -&gt;  checkpoint NS -&gt; checkpoint ID -&gt; checkpoint mapping
+    storage: defaultdict[
+        str,
+        dict[str, dict[str, tuple[tuple[str, bytes], tuple[str, bytes], str | None]]],
+    ]
+    # (thread ID, checkpoint NS, checkpoint ID) -&gt; (task ID, write idx)
+    writes: defaultdict[
+        tuple[str, str, str],
+        dict[tuple[str, int], tuple[str, str, tuple[str, bytes], str]],
+    ]
+    blobs: dict[
+        tuple[
+            str, str, str, str | int | float
+        ],  # thread id, checkpoint ns, channel, version
+        tuple[str, bytes],
+    ]</code></pre></details></details><details class="concept-card" id="concept-c06-01"><summary>StateSnapshot 表达下一步与错误</summary><p>快照除了 values，还包含 next、config、parent_config、tasks 和 interrupts。状态内容正确与运行是否结束是不同问题。
+
+定位卡住时先看 next 和 task error，再看值；历史父配置能说明快照沿革。只截取 values 会丢失重试与暂停信息。</p><p>前置概念: c05-01</p><a href="#module-06">能够解释“StateSnapshot 表达下一步与错误”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-01-0"><label for="recall-c06-01-0">values已包含答案，图一定结束了吗？</label><textarea id="recall-c06-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/langgraph/types.py:711-729，对照状态、身份、异常和保存边界。</li></ul><p>不一定。检查 next、tasks、interrupts 和运行状态，values只是当前数据，不是完整生命周期证明。</p><ul><li>明确本题契约：StateSnapshot 表达下一步与错误</li><li>依据源码解释原因：不一定。检查 next、tasks、interrupts 和运行状态，values只是当前数据，不是完整生命周期证明。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/langgraph/types.py:711-729</p><p>白话翻译
+        一帧包含已提交 channel values、下一批 node、可再次寻址的 config、父帧、tasks 与未解决 interrupts。调试时不要只打印最终字典；next 和 tasks 才能解释图为何停在这里。</p><pre><code>class StateSnapshot(NamedTuple):
+    &quot;&quot;&quot;Snapshot of the state of the graph at the beginning of a step.&quot;&quot;&quot;
+
+    values: dict[str, Any] | Any
+    &quot;&quot;&quot;Current values of channels.&quot;&quot;&quot;
+    next: tuple[str, ...]
+    &quot;&quot;&quot;The name of the node to execute in each task for this step.&quot;&quot;&quot;
+    config: RunnableConfig
+    &quot;&quot;&quot;Config used to fetch this snapshot.&quot;&quot;&quot;
+    metadata: CheckpointMetadata | None
+    &quot;&quot;&quot;Metadata associated with this snapshot.&quot;&quot;&quot;
+    created_at: str | None
+    &quot;&quot;&quot;Timestamp of snapshot creation.&quot;&quot;&quot;
+    parent_config: RunnableConfig | None
+    &quot;&quot;&quot;Config used to fetch the parent snapshot, if any.&quot;&quot;&quot;
+    tasks: tuple[PregelTask, ...]
+    &quot;&quot;&quot;Tasks to execute in this step. If already attempted, may contain an error.&quot;&quot;&quot;
+    interrupts: tuple[Interrupt, ...]
+    &quot;&quot;&quot;Interrupts that occurred in this step that are pending resolution.&quot;&quot;&quot;</code></pre></details></details><details class="concept-card" id="concept-c06-02"><summary>流事件可报告中断与部分结果</summary><p>一次运行中断仍可能已有前序步骤的状态值和流事件。流式UI需要表现部分产物及暂停原因，不能把看到文本当完整完成。
+
+事件类型和订阅版本是观测契约；本课冻结的测试说明该版本预期，未测真实网络传输或事件恰好一次。重连时仍应结合持久快照。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“流事件可报告中断与部分结果”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-02-0"><label for="recall-c06-02-0">客户端已收到部分values，中断时要丢弃全部吗？</label><textarea id="recall-c06-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/tests/test_stream_events_v3_e2e.py:470-492，对照状态、身份、异常和保存边界。</li></ul><p>按应用定义区分已提交部分状态和未完成任务；保留中断原因与可恢复配置，不能宣称完整成功或随意丢掉有效证据。</p><ul><li>明确本题契约：流事件可报告中断与部分结果</li><li>依据源码解释原因：按应用定义区分已提交部分状态和未完成任务；保留中断原因与可恢复配置，不能宣称完整成功或随意丢掉有效证据。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/tests/test_stream_events_v3_e2e.py:470-492</p><p>白话翻译
+        当前提交的上游测试检查了两层证据：run 被标为 interrupted 且暴露 interrupts；与此同时，output 与 values 投影仍包含暂停前已经完成的 step1。</p><pre><code>    def test_interrupt_sets_flags_and_surfaces_interrupts(self) -&gt; None:
+        &quot;&quot;&quot;Interrupted run has correct flags and interrupt payloads.&quot;&quot;&quot;
+        graph = _make_interrupt_graph()
+        config: dict[str, Any] = {&quot;configurable&quot;: {&quot;thread_id&quot;: &quot;int-1&quot;}}
+        run = graph.stream_events({&quot;value&quot;: &quot;x&quot;, &quot;items&quot;: []}, config, version=&quot;v3&quot;)
+
+        output = run.output
+        assert output is not None
+        assert run.interrupted is True
+        assert len(run.interrupts) &gt; 0
+        assert output[&quot;items&quot;] == [&quot;step1&quot;]
+        assert &quot;_step1&quot; in output[&quot;value&quot;]
+
+    def test_interrupt_values_snapshot_has_partial_state(self) -&gt; None:
+        &quot;&quot;&quot;Values snapshots captured before the interrupt reflect partial state.&quot;&quot;&quot;
+        graph = _make_interrupt_graph()
+        config: dict[str, Any] = {&quot;configurable&quot;: {&quot;thread_id&quot;: &quot;int-2&quot;}}
+        run = graph.stream_events({&quot;value&quot;: &quot;x&quot;, &quot;items&quot;: []}, config, version=&quot;v3&quot;)
+
+        snapshots = list(run.values)
+        assert len(snapshots) &gt;= 1
+        last = snapshots[-1]
+        assert &quot;step1&quot; in last[&quot;items&quot;]</code></pre></details></details><details class="concept-card" id="concept-c06-03"><summary>历史分叉不等于从零运行</summary><p>time-travel 示例选择旧 checkpoint 后再次 resume，形成新答案分支；已在该 checkpoint 之前完成的节点不必全部重跑，而暂停节点可重入。
+
+分叉产生图历史分支，不自动撤销文件、数据库或远程操作。迁移到 Agent Runtime 时，必须另外定义副作用账本与幂等，不能把状态时间旅行叫作现实世界回滚。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“历史分叉不等于从零运行”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-03-0"><label for="recall-c06-03-0">从旧checkpoint分叉，新旧答案如何处理？</label><textarea id="recall-c06-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 libs/langgraph/tests/test_time_travel.py:339-371，对照状态、身份、异常和保存边界。</li></ul><p>保留父配置与不同分支的版本身份；根据起点决定重执行范围。外部副作用需独立管理，checkpoint不会自动撤销。</p><ul><li>明确本题契约：历史分叉不等于从零运行</li><li>依据源码解释原因：保留父配置与不同分支的版本身份；根据起点决定重执行范围。外部副作用需独立管理，checkpoint不会自动撤销。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">libs/langgraph/tests/test_time_travel.py:339-371</p><p>白话翻译
+        测试先用 old_answer 完成原运行，再找到 next == (&quot;ask_human&quot;,) 的历史帧。用该帧 config 调用后，ask_human 再次暂停，node_a 没重跑，并出现来源为 fork 的最新 checkpoint。</p><pre><code>    # --- Original run: invoke until interrupt, then resume to complete ---
+    graph.invoke({&quot;value&quot;: []}, config)
+    graph.invoke(Command(resume=&quot;old_answer&quot;), config)
+
+    original_history = list(graph.get_state_history(config))
+    original = _checkpoint_summary(original_history)
+    assert [(s[&quot;source&quot;], s[&quot;next&quot;], s[&quot;values&quot;]) for s in original] == [
+        (&quot;loop&quot;, (), {&quot;value&quot;: [&quot;a&quot;, &quot;human:old_answer&quot;, &quot;b&quot;]}),
+        (&quot;loop&quot;, (&quot;node_b&quot;,), {&quot;value&quot;: [&quot;a&quot;, &quot;human:old_answer&quot;]}),
+        (&quot;loop&quot;, (&quot;ask_human&quot;,), {&quot;value&quot;: [&quot;a&quot;]}),
+        (&quot;loop&quot;, (&quot;node_a&quot;,), {&quot;value&quot;: []}),
+        (&quot;input&quot;, (&quot;__start__&quot;,), {&quot;value&quot;: []}),
+    ]
+
+    # --- Replay from checkpoint before ask_human ---
+    before_ask = next(s for s in original_history if s.next == (&quot;ask_human&quot;,))
+
+    called.clear()
+    replay_result = graph.invoke(None, before_ask.config)
+    assert replay_result[&quot;__interrupt__&quot;][0].value == &quot;What is your input?&quot;
+    assert &quot;ask_human&quot; in called
+    assert &quot;node_a&quot; not in called  # before the replay point, not re-executed
+
+    # A fork checkpoint is now the latest — it branches from the replay point
+    post_replay = _checkpoint_summary(list(graph.get_state_history(config)))
+    assert [(s[&quot;source&quot;], s[&quot;next&quot;]) for s in post_replay] == [
+        (&quot;fork&quot;, (&quot;ask_human&quot;,)),  # &lt;-- new fork (latest)
+        (&quot;loop&quot;, ()),  # original done
+        (&quot;loop&quot;, (&quot;node_b&quot;,)),
+        (&quot;loop&quot;, (&quot;ask_human&quot;,)),  # branch point
+        (&quot;loop&quot;, (&quot;node_a&quot;,)),
+        (&quot;input&quot;, (&quot;__start__&quot;,)),
+    ]</code></pre></details></details><button type="button" class="export-learning-notes">导出回忆记录</button><p class="notes-feedback" aria-live="polite"></p><details class="export-preview" hidden><summary>可复制的导出记录</summary><label for="export-data">尚未评价的回忆记录（JSON）</label><textarea id="export-data" readonly rows="6"></textarea><a class="export-download" download="code-learning-recall.json">下载 JSON</a></details></section>
+  <main id="course"><section class="course-module" id="module-01" data-title="从状态图蓝图到可执行图">
+  <div class="screen hero-screen" data-number="01">
+    <p class="eyebrow">Module 1 · Build &amp; compile</p>
+    <h2><code>StateGraph</code> 是线路图，不是正在行驶的列车</h2>
+    <p class="lede">学完这一节，你能把 state、node、edge、builder 与 compiled graph 分开，并从一个输入追到真正可执行的图。</p>
+    <p><dfn data-definition="State 是一轮运行中由节点共同读取、局部更新的结构化数据。">State</dfn> 是全图共享的工作台；<dfn data-definition="Builder 用来声明节点、边与约束，本身不是执行器。">builder</dfn> 只画线路；<dfn data-definition="编译把声明式图校验并转换成可 invoke、stream 的运行对象。">compile</dfn> 才把线路图交给调度系统。</p>
+    <div class="callout"><strong>先记住：</strong>节点不必返回完整 State；它返回自己负责的 <code>Partial&lt;State&gt;</code>。后续模块会解释这些局部写入何时、怎样合并。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The contract</p>
+    <h3>源码先把“画图”和“跑图”切成两层</h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/graph/state.py" data-lines="131-145">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class StateGraph(Generic[StateT, ContextT, InputT, OutputT]):
+    """A graph whose nodes communicate by reading and writing to a shared state.
+
+    The signature of each node is `State -&gt; Partial&lt;State&gt;`.
+
+    Each state key can optionally be annotated with a reducer function that
+    will be used to aggregate the values of that key received from multiple nodes.
+    The signature of a reducer function is `(Value, Value) -&gt; Value`.
+
+    !!! warning
+
+        `StateGraph` is a builder class and cannot be used directly for execution.
+        You must first call `.compile()` to create an executable graph that supports
+        methods like `invoke()`, `stream()`, `astream()`, and `ainvoke()`. See the
+        `CompiledStateGraph` documentation for more details.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>节点通过共享 state 交换信息，但每个节点只交回局部更新。<span class="path-chip">StateGraph</span> 只是构造器；没有 <span class="path-chip">compile()</span>，就不存在可调用或可流式运行的图。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">A real assembly</p>
+    <h3>节点、边与子图共同组成一张可编译蓝图</h3>
+    <figure class="code-translation" data-source="libs/langgraph/tests/test_stream_events_v3_e2e.py" data-lines="59-77">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def process_node(state: AgentState) -&gt; dict[str, Any]:
+        return {"value": state["value"] + "_processed", "items": ["processed"]}
+
+    inner_builder: StateGraph = StateGraph(AgentState, input_schema=AgentState)
+    inner_builder.add_node("process_node", process_node)
+    inner_builder.add_edge(START, "process_node")
+    inner_builder.add_edge("process_node", END)
+    inner_graph = inner_builder.compile()
+
+    def router_node(state: AgentState) -&gt; dict[str, Any]:
+        return {"value": state["value"] + "_routed", "items": ["routed"]}
+
+    outer_builder: StateGraph = StateGraph(AgentState, input_schema=AgentState)
+    outer_builder.add_node("router", router_node)
+    outer_builder.add_node("inner", inner_graph)
+    outer_builder.add_edge(START, "router")
+    outer_builder.add_edge("router", "inner")
+    outer_builder.add_edge("inner", END)
+    return outer_builder.compile()</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>这个上游端到端测试先把内部图编译，再把它当成外部图的一个节点。<span class="path-chip">START</span> 与 <span class="path-chip">END</span> 是入口和终点标记；真正的业务工作由两个 node 完成。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="StateGraph 从声明到运行的数据流">
+      <button type="button" class="flow-step is-active" data-detail="State schema 规定共享工作台有哪些字段及其合并方式。">1. State schema</button>
+      <button type="button" class="flow-step" data-detail="add_node 把函数或已编译子图登记为可调度节点。">2. Nodes</button>
+      <button type="button" class="flow-step" data-detail="add_edge 从 START 开始声明允许的下一站，直到 END。">3. Edges</button>
+      <button type="button" class="flow-step" data-detail="compile 校验入口、目标与 interrupt 名称，并生成可执行图。">4. Compile</button>
+      <button type="button" class="flow-step" data-detail="invoke 或 stream 才把输入送进运行时；builder 不会自己跑。">5. Invoke / stream</button>
+      <p class="flow-detail" aria-live="polite">State schema 规定共享工作台有哪些字段及其合并方式。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Executable boundary</p>
+    <h3><code>compile()</code> 返回的才是 Runnable</h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/graph/state.py" data-lines="1177-1192">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def compile(
+        self,
+        checkpointer: Checkpointer = None,
+        *,
+        cache: BaseCache | None = None,
+        store: BaseStore | None = None,
+        interrupt_before: All | list[str] | None = None,
+        interrupt_after: All | list[str] | None = None,
+        debug: bool = False,
+        name: str | None = None,
+        transformers: Sequence[Callable[[tuple[str, ...]], Any]] | None = None,
+    ) -&gt; CompiledStateGraph[StateT, ContextT, InputT, OutputT]:
+        """Compiles the `StateGraph` into a `CompiledStateGraph` object.
+
+        The compiled graph implements the `Runnable` interface and can be invoked,
+        streamed, batched, and run asynchronously.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>编译边界不只是换名字：它把 checkpointer、暂停点、缓存等运行策略固定进一个 <span class="path-chip">CompiledStateGraph</span>。从此调用的是可执行对象，而不是继续修改蓝图。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Schema</h4><p>共享数据的字段和合并契约。</p></article>
+      <article class="actor-card"><h4>Node</h4><p>读取 state，返回局部更新。</p></article>
+      <article class="actor-card"><h4>Edge</h4><p>声明完成后可能去哪里。</p></article>
+      <article class="actor-card"><h4>Compiled graph</h4><p>接受输入并交给 runtime 调度。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>先定位“蓝图错了”还是“运行停了”</h3>
+    <p>把 LangGraph 想成地铁：State 是随车工单，node 是站点作业，edge 是线路，compiled graph 是通车后的调度系统。线路图上有站，不代表列车已经到站。</p>
+    <div class="quiz" data-explanation="StateGraph 的源码明示 builder 不能直接执行；应先完成节点与边的声明并 compile，再对 CompiledStateGraph 调用 invoke 或 stream。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>你已经 <code>add_node</code> 和 <code>add_edge</code>，现在想送入输入。下一步最准确的是？</h3>
+      <div class="quiz-options">
+        <button type="button">直接调用 builder，让它自动选择运行时</button>
+        <button type="button" data-correct="true">先 <code>compile()</code>，再对返回的图调用 <code>invoke()</code> 或 <code>stream()</code></button>
+        <button type="button">把每个节点改成返回完整 State，才能开始执行</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-02" data-title="State 与 Reducer：更新如何合并">
+  <div class="screen hero-screen" data-number="02">
+    <p class="eyebrow">Module 2 · State &amp; reducers</p>
+    <h2>共享 State 像总账，Reducer 是每一栏的记账规则</h2>
+    <p class="lede">学完这一节，你能解释节点为何只返回局部更新、普通字段为何保留最后值，以及列表或消息为何可能追加、替换或删除。</p>
+    <p><dfn data-definition="Reducer 接收旧值与新写入，并根据字段自己的规则产出合并值。">Reducer</dfn> 不是整个图共用的一把锤子；它绑定到某个 state key。<dfn data-definition="Channel 是运行时承载字段值、更新类型与合并行为的通信单元。">Channel</dfn> 则是 runtime 真正读写的栏位。</p>
+    <div class="callout"><strong>关键区别：</strong>“节点返回什么”是 update；“最终 State 变成什么”由该字段的 channel / reducer 决定。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Schema becomes channels</p>
+    <h3>同一张 State 表里，不同字段可以有不同合并法</h3>
+    <figure class="code-translation" data-source="libs/langgraph/tests/test_stream_events_v3_e2e.py" data-lines="42-44">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class AgentState(TypedDict):
+    value: str
+    items: Annotated[list[str], operator.add]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">value</span> 没有额外合并标注；<span class="path-chip">items</span> 明确用 <span class="path-chip">operator.add</span> 把旧列表与新列表相加。两个 node 都写 items 时，不应把它当普通覆盖字段。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/graph/state.py" data-lines="1864-1873">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    elif channel := _is_field_channel(annotation):
+        channel.key = name
+        return channel
+    elif channel := _is_field_binop(annotation):
+        channel.key = name
+        return channel
+
+    fallback: LastValue = LastValue(annotation)
+    fallback.key = name
+    return fallback</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>构建器先寻找显式 channel，再寻找二元运算 reducer；都没有时才回退为 <span class="path-chip">LastValue</span>。所以“普通字段覆盖、带 reducer 字段聚合”来自 schema 解析，不是 node 自己猜的。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Messages are not plain append</p>
+    <h3><code>add_messages</code> 先统一形状，再按 ID 决定命运</h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/graph/message.py" data-lines="202-234">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    # assign missing ids
+    for m in left:
+        if m.id is None:
+            m.id = str(uuid.uuid4())
+    for idx, m in enumerate(right):
+        if m.id is None:
+            m.id = str(uuid.uuid4())
+        if isinstance(m, RemoveMessage) and m.id == REMOVE_ALL_MESSAGES:
+            remove_all_idx = idx
+
+    if remove_all_idx is not None:
+        return right[remove_all_idx + 1 :]
+
+    # merge
+    merged = left.copy()
+    merged_by_id = {m.id: i for i, m in enumerate(merged)}
+    ids_to_remove = set()
+    for m in right:
+        if (existing_idx := merged_by_id.get(m.id)) is not None:
+            if isinstance(m, RemoveMessage):
+                ids_to_remove.add(m.id)
+            else:
+                ids_to_remove.discard(m.id)
+                merged[existing_idx] = m
+        else:
+            if isinstance(m, RemoveMessage):
+                raise ValueError(
+                    f"Attempting to delete a message with an ID that doesn't exist ('{m.id}')"
+                )
+
+            merged_by_id[m.id] = len(merged)
+            merged.append(m)
+    merged = [m for m in merged if m.id not in ids_to_remove]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>没有 ID 的消息先获分配 ID；新 ID 追加，已有 ID 替换，<span class="path-chip">RemoveMessage</span> 标记删除。这个 reducer 维护的是“可更新的消息集合”，不只是 <span class="path-chip">left + right</span>。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Executable evidence</p>
+    <h3>上游测试把“追加”和“同 ID 更新”分开断言</h3>
+    <figure class="code-translation" data-source="libs/langgraph/tests/test_messages_state.py" data-lines="29-37">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def test_add_single_message():
+    left = [HumanMessage(content="Hello", id="1")]
+    right = AIMessage(content="Hi there!", id="2")
+    result = add_messages(left, right)
+    expected_result = [
+        HumanMessage(content="Hello", id="1"),
+        AIMessage(content="Hi there!", id="2"),
+    ]
+    assert result == expected_result</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>新消息 ID 为 2，结果保留旧消息 1 并追加消息 2。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="libs/langgraph/tests/test_messages_state.py" data-lines="55-60">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def test_update_existing_message():
+    left = [HumanMessage(content="Hello", id="1")]
+    right = HumanMessage(content="Hello again", id="1")
+    result = add_messages(left, right)
+    expected_result = [HumanMessage(content="Hello again", id="1")]
+    assert result == expected_result</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>新写入沿用 ID 1，结果不是两条消息，而是原位置的内容被更新。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="消息 reducer 的合并步骤">
+      <button type="button" class="flow-step is-active" data-detail="左侧是当前 messages，右侧是节点这次返回的消息更新。">1. Old + update</button>
+      <button type="button" class="flow-step" data-detail="输入先统一为消息列表，缺失 ID 会被补齐。">2. Normalize</button>
+      <button type="button" class="flow-step" data-detail="按 ID 查找：新 ID 追加，已有 ID 替换，删除消息进入移除集合。">3. Match IDs</button>
+      <button type="button" class="flow-step" data-detail="移除被标记的消息，得到下个 superstep 可见的字段值。">4. Commit field</button>
+      <p class="flow-detail" aria-live="polite">左侧是当前 messages，右侧是节点这次返回的消息更新。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>读 node 输出时，别跳过字段的记账规则</h3>
+    <p>总账比喻的边界也很重要：Reducer 只解决内存状态如何合并，不自动处理数据库、邮件或付款等外部副作用。</p>
+    <div class="quiz" data-explanation="add_messages 先建立已有 ID 到位置的映射；新写入若命中已有 ID，会替换原位置，而不是无条件追加第二条。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>State 已有 <code>HumanMessage(id="1", content="旧")</code>，节点返回同 ID、内容为“新”的消息。结果是什么？</h3>
+      <div class="quiz-options">
+        <button type="button">保留两条 ID 都为 1 的消息</button>
+        <button type="button" data-correct="true">原位置被同 ID 的新消息替换</button>
+        <button type="button">整个 State 被节点返回值覆盖，只剩裸字符串</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-03" data-title="Pregel Superstep：节点何时看到变化">
+  <div class="screen hero-screen" data-number="03">
+    <p class="eyebrow">Module 3 · Runtime semantics</p>
+    <h2>Pregel 像回合制控制室：先点名、再作业、最后统一上账</h2>
+    <p class="lede">学完这一节，你能解释为什么同一轮并行节点看不到彼此刚写的值，以及 checkpoint 与暂停检查为什么出现在 step 边界。</p>
+    <p><dfn data-definition="Superstep 是 Pregel 的一个同步回合，依次完成计划、执行与统一更新。">Superstep</dfn> 把并行任务框在可推理的回合里；<dfn data-definition="Bulk Synchronous Parallel 是并行执行后在同步屏障统一提交结果的模型。">BSP</dfn> 的同步屏障让写入可见时点变得明确。</p>
+    <div class="callout"><strong>不是自由抢写：</strong>同一 superstep 的 actor 可以并行执行，但它们的 channel update 要到 Update 阶段才一起生效。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Three-phase clock</p>
+    <h3>运行时文档把每轮拆成 Plan、Execution、Update</h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/pregel/main.py" data-lines="454-477">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    """Pregel manages the runtime behavior for LangGraph applications.
+
+    ## Overview
+
+    Pregel combines [**actors**](https://en.wikipedia.org/wiki/Actor_model)
+    and **channels** into a single application.
+    **Actors** read data from channels and write data to channels.
+    Pregel organizes the execution of the application into multiple steps,
+    following the **Pregel Algorithm**/**Bulk Synchronous Parallel** model.
+
+    Each step consists of three phases:
+
+    - **Plan**: Determine which **actors** to execute in this step. For example,
+        in the first step, select the **actors** that subscribe to the special
+        **input** channels; in subsequent steps,
+        select the **actors** that subscribe to channels updated in the previous step.
+    - **Execution**: Execute all selected **actors** in parallel,
+        until all complete, or one fails, or a timeout is reached. During this
+        phase, channel updates are invisible to actors until the next step.
+    - **Update**: Update the channels with the values written by the **actors**
+        in this step.
+
+    Repeat until no **actors** are selected for execution, or a maximum number of
+    steps is reached.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Plan 看“上一轮哪些 channel 变了”来选 actor；Execution 让本轮 actor 工作；Update 才把所有写入提交。运行结束条件不是“某个节点返回了”，而是再也没有 actor 被选中或达到步数上限。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="Pregel 一个 superstep 的三阶段数据流">
+      <button type="button" class="flow-step is-active" data-detail="Plan 根据 checkpoint、已更新 channels 与触发关系准备本轮 tasks。">1. Plan</button>
+      <button type="button" class="flow-step" data-detail="Execution 运行所有选中的 tasks；它们只看到回合开始时已提交的 channel 值。">2. Execute</button>
+      <button type="button" class="flow-step" data-detail="同步屏障等待本轮成功任务完成；失败、超时或 interrupt 会改变收尾路径。">3. Barrier</button>
+      <button type="button" class="flow-step" data-detail="Update 用 channel / reducer 统一应用 writes，产生下一轮可见状态。">4. Update</button>
+      <button type="button" class="flow-step" data-detail="保存 checkpoint，检查 interrupt_after，再进入下一次 Plan。">5. Persist / next</button>
+      <p class="flow-detail" aria-live="polite">Plan 根据 checkpoint、已更新 channels 与触发关系准备本轮 tasks。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Plan in code</p>
+    <h3><code>tick()</code> 先依据 checkpoint 与已更新 channel 准备任务</h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/pregel/_loop.py" data-lines="611-629">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        # prepare next tasks
+        self.tasks = prepare_next_tasks(
+            self.checkpoint,
+            self.checkpoint_pending_writes,
+            self.nodes,
+            self.channels,
+            self.managed,
+            self.config,
+            self.step,
+            self.stop,
+            for_execution=True,
+            manager=self.manager,
+            store=self.store,
+            checkpointer=self.checkpointer,
+            trigger_to_nodes=self.trigger_to_nodes,
+            updated_channels=self.updated_channels,
+            retry_policy=self.retry_policy,
+            cache_policy=self.cache_policy,
+        )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>runtime 不是简单沿一条 Python 调用栈向下走。它用 checkpoint、pending writes、channel 变化和触发映射算出本轮 task 集合，重试与缓存策略也在这里进入调度。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Update in code</p>
+    <h3>所有任务完成后，才统一应用 writes 并保存 checkpoint</h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/pregel/_loop.py" data-lines="683-718">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def after_tick(self) -&gt; None:
+        # finish superstep
+        writes = [w for t in self.tasks.values() for w in t.writes]
+        self._delta_channels_with_overwrite.update(
+            ch
+            for ch, v in writes
+            if isinstance(self.specs.get(ch), DeltaChannel) and _get_overwrite(v)[0]
+        )
+        # all tasks have finished
+        self.updated_channels = apply_writes(
+            self.checkpoint,
+            self.channels,
+            self.tasks.values(),
+            self.checkpointer_get_next_version,
+            self.trigger_to_nodes,
+        )
+        # produce values output
+        if not self.updated_channels.isdisjoint(
+            (self.output_keys,)
+            if isinstance(self.output_keys, str)
+            else self.output_keys
+        ):
+            self._emit(
+                "values", map_output_values, self.output_keys, writes, self.channels
+            )
+        # capture delta-channel writes for exit-mode accumulator before clearing
+        if self._exit_delta_writes is not None:
+            for tid, ch, v in self.checkpoint_pending_writes:
+                if isinstance(self.specs.get(ch), DeltaChannel):
+                    self._exit_delta_writes.append((self.step, tid, ch, v))
+        # clear pending writes
+        self.checkpoint_pending_writes.clear()
+        # only replay (re-execute) done tasks on the first tick
+        self.is_replaying = False
+        # save checkpoint
+        self._put_checkpoint({"source": "loop"})</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">after_tick()</span> 汇总 task writes，交给 channel 规则应用；必要时发出完整 values，再清 pending writes、退出 replay 标志并保存本轮 checkpoint。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Component conversation</p>
+    <h3>控制室里，每个角色只负责一个交接点</h3>
+    <div class="component-chat" aria-label="StateGraph 与 Pregel 运行组件的一轮交接">
+      <div class="chat-message" data-speaker="Compiled graph">这是输入、运行配置、节点表、channel 与触发关系。</div>
+      <div class="chat-message" data-speaker="Pregel planner">我读取 checkpoint 和上轮变化，选出本轮 tasks。</div>
+      <div class="chat-message" data-speaker="Nodes">我们并行读取已提交 state，各自产生局部 writes；此时看不到彼此的新写入。</div>
+      <div class="chat-message" data-speaker="Channels / reducers">同步屏障后，我按字段规则把 writes 合并进 checkpoint state。</div>
+      <div class="chat-message" data-speaker="Checkpointer">我保存新 step；下一轮 planner 再从这份已提交状态出发。</div>
+      <button type="button" class="replay-chat">重放控制室交接</button>
+    </div>
+    <div class="quiz" data-explanation="Pregel 文档明确说 Execution 阶段的 channel update 对其他 actor 不可见，直到下一个 step；同轮节点应基于回合开始时已提交的状态推理。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>A 与 B 在同一 superstep 并行运行，B 写入 <code>score=9</code>。A 本轮能立即读到 9 吗？</h3>
+      <div class="quiz-options">
+        <button type="button">能，任何 node 写入都会立刻修改共享字典</button>
+        <button type="button" data-correct="true">不能；写入在 Update 后才对下一 superstep 可见</button>
+        <button type="button">只有 A 比 B 慢时才能读到</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-04" data-title="条件路由与 ToolNode：行动如何过关">
+  <div class="screen hero-screen" data-number="04">
+    <p class="eyebrow">Module 4 · Route &amp; act</p>
+    <h2>工具调用像转运包裹：先分流，再过执行闸门</h2>
+    <p class="lede">学完这一节，你能从最后一条 AIMessage 判断下一站，区分路由函数与 ToolNode，并把副作用前暂停放在正确的节点边界。</p>
+    <p><dfn data-definition="条件边根据当前 State 的结果选择下一节点，而不是固定沿同一条边前进。">条件路由</dfn> 决定包裹去工具区还是终点；<dfn data-definition="ToolNode 是执行工具调用、注入状态并处理工具结果的预构建图节点。">ToolNode</dfn> 才真正打开包裹、运行工具。</p>
+    <div class="callout"><strong>路由不等于授权：</strong>检测到 tool call 只说明“要去 tools 节点”。是否允许副作用，需要 interrupt、审批策略或更细的工具边界。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The junction</p>
+    <h3><code>tools_condition</code> 只看最后一条消息有没有 tool calls</h3>
+    <figure class="code-translation" data-source="libs/prebuilt/langgraph/prebuilt/tool_node.py" data-lines="1648-1659">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    if isinstance(state, list):
+        ai_message = state[-1]
+    elif (isinstance(state, dict) and (messages := state.get(messages_key, []))) or (
+        messages := getattr(state, messages_key, [])
+    ):
+        ai_message = messages[-1]
+    else:
+        msg = f"No messages found in input state to tool_edge: {state}"
+        raise ValueError(msg)
+    if hasattr(ai_message, "tool_calls") and len(ai_message.tool_calls) &gt; 0:
+        return "tools"
+    return "__end__"</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>函数兼容消息列表、字典 State 与有 messages 属性的对象；最终只检查最后消息。存在 tool calls 就返回 <span class="path-chip">tools</span>，否则返回终点标记。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The workshop</p>
+    <h3><code>ToolNode</code> 承接执行、注入、错误与控制流</h3>
+    <figure class="code-translation" data-source="libs/prebuilt/langgraph/prebuilt/tool_node.py" data-lines="622-635">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class ToolNode(RunnableCallable):
+    """A node for executing tools in LangGraph workflows.
+
+    Handles tool execution patterns including function calls, state injection,
+    persistent storage, and control flow. Manages parallel execution,
+    error handling.
+
+    Use `ToolNode` when building custom workflows that require fine-grained control over
+    tool execution—for example, custom routing logic, specialized error handling, or
+    non-standard agent architectures.
+
+    For standard ReAct-style agents, use [`create_agent`][langchain.agents.create_agent]
+    instead. It uses `ToolNode` internally with sensible defaults for the agent loop,
+    conditional routing, and error handling.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>ToolNode 是工具工作间，而不是模型。它处理调用、状态注入、持久 store、并行与错误；当前源码还明确把“自定义细粒度工作流”和标准 ReAct agent 分成两个入口。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Model node</h4><p>生成 AIMessage，可能带 tool calls。</p></article>
+      <article class="actor-card"><h4>Condition</h4><p>只决定 tools 或 END。</p></article>
+      <article class="actor-card"><h4>ToolNode</h4><p>执行并产出 ToolMessage / Command。</p></article>
+      <article class="actor-card"><h4>Loop edge</h4><p>把工具结果送回模型继续判断。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Guard before side effects</p>
+    <h3>上游测试把工具循环与“执行前暂停”放在同一张图里</h3>
+    <figure class="code-translation" data-source="libs/langgraph/tests/test_pregel.py" data-lines="3825-3848">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def should_continue(data: BaseState) -&gt; str:
+        # Logic to decide whether to continue in the loop or exit
+        if not data["messages"][-1].tool_calls:
+            return "exit"
+        else:
+            return "continue"
+
+    # define graphs w/ and w/o interrupt
+    workflow = StateGraph(BaseState)
+    workflow.add_node("agent", agent)
+    workflow.add_node("tools", ToolNode(tools))
+    workflow.set_entry_point("agent")
+    workflow.add_conditional_edges(
+        "agent", should_continue, {"continue": "tools", "exit": END}
+    )
+    workflow.add_edge("tools", "agent")
+
+    # graph w/o interrupt
+    app = workflow.compile(checkpointer=sync_checkpointer)
+
+    # graph w/ interrupt
+    app_w_interrupt = workflow.compile(
+        checkpointer=sync_checkpointer, interrupt_before=["tools"]
+    )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>同一 builder 可以编译成两种运行策略：一种直接进 tools，另一种在 tools 任务执行前暂停。路由图没变，改变的是编译时的 runtime 闸门。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="带工具闸门的条件循环">
+      <button type="button" class="flow-step is-active" data-detail="Model node 把回答写进 messages；回答可能包含一个或多个 tool calls。">1. Model output</button>
+      <button type="button" class="flow-step" data-detail="条件函数检查最后一条消息：没有调用就去 END，有调用就去 tools。">2. Route</button>
+      <button type="button" class="flow-step" data-detail="若 compiled graph 配置 interrupt_before tools，runtime 在工具 task 之前暂停。">3. Gate</button>
+      <button type="button" class="flow-step" data-detail="获准继续后 ToolNode 执行调用，把结果写成工具输出。">4. Execute tools</button>
+      <button type="button" class="flow-step" data-detail="固定边把状态送回 agent，模型基于真实工具结果决定继续或结束。">5. Loop back</button>
+      <p class="flow-detail" aria-live="polite">Model node 把回答写进 messages；回答可能包含一个或多个 tool calls。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Runtime checkpoint</p>
+    <h3>静态 interrupt 是任务前的红灯</h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/pregel/_loop.py" data-lines="666-671">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        # before execution, check if we should interrupt
+        if self.interrupt_before and should_interrupt(
+            self.checkpoint, self.interrupt_before, self.tasks.values()
+        ):
+            self.status = "interrupt_before"
+            raise GraphInterrupt()</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>任务已被 Plan 选中，但 runner 尚未执行它；命中名单就把状态标成 <span class="path-chip">interrupt_before</span> 并抛出控制信号。下一章的动态 <span class="path-chip">interrupt()</span> 则发生在节点函数内部。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="条件路由只根据 tool_calls 选择 tools 或 END；interrupt_before=[tools] 才在 ToolNode 执行前形成 runtime 断点，但它本身不会理解某个工具是否安全。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>你要确保写数据库的工具在执行前停住。哪项描述最贴合当前源码？</h3>
+      <div class="quiz-options">
+        <button type="button">只用 <code>tools_condition</code>，它会自动审批高风险工具</button>
+        <button type="button" data-correct="true">路由到 tools，并在编译时设 <code>interrupt_before=["tools"]</code>；另行决定是否批准</button>
+        <button type="button">把工具结果写进 messages 后再暂停，等同于执行前审批</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-05" data-title="Checkpoint 与 Interrupt：暂停后如何恢复">
+  <div class="screen hero-screen" data-number="05">
+    <p class="eyebrow">Module 5 · Pause &amp; resume</p>
+    <h2>Checkpoint 像存档页，<code>thread_id</code> 像存档册编号</h2>
+    <p class="lede">学完这一节，你能区分 thread 与单个 checkpoint，解释动态 interrupt 如何把问题交给客户端，以及 resume 为什么会从节点开头重跑。</p>
+    <p><dfn data-definition="Checkpointer 按运行配置保存和读取图状态、任务与写入，使暂停、恢复和 replay 有持久锚点。">Checkpointer</dfn> 保存一系列存档页；<dfn data-definition="thread_id 是组织与检索同一运行谱系 checkpoint 的配置键，不是某一页 checkpoint 的 ID。">thread_id</dfn> 指向存档册；<dfn data-definition="动态 interrupt 是节点内发出的可恢复暂停，携带给客户端的值。">interrupt</dfn> 是一张等待回复的表单。</p>
+    <div class="callout"><strong>最重要的副作用边界：</strong>恢复不是从 <code>interrupt()</code> 的下一行继续，而是从该节点开头重执行；放在 interrupt 之前的外部副作用必须可安全重做。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Identity and history</p>
+    <h3>Checkpointer 开启后，调用方应显式提供 <code>thread_id</code></h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/graph/state.py" data-lines="1194-1214">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        Args:
+            checkpointer: A checkpoint saver object or flag.
+
+                If provided, this `Checkpointer` serves as a fully versioned "short-term memory" for the graph,
+                allowing it to be paused, resumed, and replayed from any point.
+
+                If `None`, it may inherit the parent graph's checkpointer when used as a subgraph.
+
+                If `False`, it will not use or inherit any checkpointer.
+
+                **Important**: When a checkpointer is enabled, you should pass a `thread_id`
+                in the config when invoking the graph:
+
+                ```python
+                config = {"configurable": {"thread_id": "my-thread"}}
+                graph.invoke(inputs, config)
+                ```
+
+                The `thread_id` is the key used to store and retrieve checkpoints. Use a
+                unique ID for independent runs, or reuse the same ID to accumulate state
+                across invocations (e.g., for conversation memory).</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>checkpointer 是版本化状态后端，<span class="path-chip">thread_id</span> 是检索键。不同运行用不同 ID 隔离；复用同一 ID 会沿该谱系继续积累状态。它并不指向某个唯一 checkpoint。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">A teaching saver</p>
+    <h3><code>InMemorySaver</code> 适合课程，不是生产承诺</h3>
+    <figure class="code-translation" data-source="libs/checkpoint/langgraph/checkpoint/memory/__init__.py" data-lines="33-42">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class InMemorySaver(
+    BaseCheckpointSaver[str], AbstractContextManager, AbstractAsyncContextManager
+):
+    """An in-memory checkpoint saver.
+
+    This checkpoint saver stores checkpoints in memory using a `defaultdict`.
+
+    Note:
+        Only use `InMemorySaver` for debugging or testing purposes.
+        For production use cases we recommend installing [langgraph-checkpoint-postgres](https://pypi.org/project/langgraph-checkpoint-postgres/) and using `PostgresSaver` / `AsyncPostgresSaver`.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>当前课程引用的测试使用内存 saver，是为了可控地观察语义。源码明确把它限定为调试或测试用途，因此不能据此声称进程重启、并发、备份或生产恢复已解决。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="libs/checkpoint/langgraph/checkpoint/memory/__init__.py" data-lines="68-83">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    # thread ID -&gt;  checkpoint NS -&gt; checkpoint ID -&gt; checkpoint mapping
+    storage: defaultdict[
+        str,
+        dict[str, dict[str, tuple[tuple[str, bytes], tuple[str, bytes], str | None]]],
+    ]
+    # (thread ID, checkpoint NS, checkpoint ID) -&gt; (task ID, write idx)
+    writes: defaultdict[
+        tuple[str, str, str],
+        dict[tuple[str, int], tuple[str, str, tuple[str, bytes], str]],
+    ]
+    blobs: dict[
+        tuple[
+            str, str, str, str | int | float
+        ],  # thread id, checkpoint ns, channel, version
+        tuple[str, bytes],
+    ]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>存储键把 thread、checkpoint namespace 与 checkpoint ID 分层；writes 还细到 task 和 write index。仅用“一个聊天 ID 对应一份 JSON”来理解，会漏掉历史页与分支。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Dynamic interrupt</p>
+    <h3>节点把问题抛给客户端，客户端用 <code>Command</code> 回答</h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/types.py" data-lines="890-909">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    """Interrupt the graph with a resumable exception from within a node.
+
+    The `interrupt` function enables human-in-the-loop workflows by pausing graph
+    execution and surfacing a value to the client. This value can communicate context
+    or request input required to resume execution.
+
+    In a given node, the first invocation of this function raises a `GraphInterrupt`
+    exception, halting execution. The provided `value` is included with the exception
+    and sent to the client executing the graph.
+
+    A client resuming the graph must use the [`Command`][langgraph.types.Command]
+    primitive to specify a value for the interrupt and continue execution.
+    The graph resumes from the start of the node, **re-executing** all logic.
+
+    If a node contains multiple `interrupt` calls, LangGraph matches resume values
+    to interrupts based on their order in the node. This list of resume values
+    is scoped to the specific task executing the node and is not shared across tasks.
+
+    To use an `interrupt`, you must enable a checkpointer, as the feature relies
+    on persisting the graph state.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>第一次执行 <span class="path-chip">interrupt(value)</span> 会发出控制异常并把 value 暴露给客户端。恢复必须带 Command；runtime 重进同一 node，并按调用顺序把 resume value 交还给对应 interrupt。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="动态 interrupt 与 resume 数据流">
+      <button type="button" class="flow-step is-active" data-detail="启用 checkpointer，并用稳定 thread_id 调用图。">1. Persisted run</button>
+      <button type="button" class="flow-step" data-detail="节点执行到 interrupt(value)，首次调用抛出 GraphInterrupt 并保存可恢复状态。">2. Interrupt</button>
+      <button type="button" class="flow-step" data-detail="客户端读取 interrupt value，收集人工决定或外部输入。">3. Human / client</button>
+      <button type="button" class="flow-step" data-detail="同一 thread 配置下发送 Command(resume=answer)。">4. Resume command</button>
+      <button type="button" class="flow-step" data-detail="节点从开头重执行；对应 interrupt 返回 answer，随后产生局部 state update。">5. Re-execute</button>
+      <p class="flow-detail" aria-live="polite">启用 checkpointer，并用稳定 thread_id 调用图。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The proof in tests</p>
+    <h3>恢复成功，但 interrupt 所在节点确实执行了第二次</h3>
+    <figure class="code-translation" data-source="libs/langgraph/tests/test_time_travel.py" data-lines="258-268">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    config = {"configurable": {"thread_id": "1"}}
+
+    # Run until interrupt
+    result = graph.invoke({"value": []}, config)
+    assert "__interrupt__" in result
+    assert call_count["ask_human"] == 1
+
+    # Resume
+    result = graph.invoke(Command(resume="hello"), config)
+    assert result == {"value": ["a", "human:hello", "b"]}
+    assert call_count["ask_human"] == 2  # re-executes on resume</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>静态测试证据明确断言：暂停前 <span class="path-chip">ask_human</span> 被调用一次；resume 后完整结果继续生成，但调用计数变成两次。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="interrupt 的源码文档明确说 resume 会从节点开头重执行。若发邮件发生在 interrupt 之前，恢复时可能再次发送；应把不可重复副作用移到批准之后，或设计幂等键 / 事务保护。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>节点先发送邮件，再调用 <code>interrupt("确认？")</code>。用户恢复后最大的风险是什么？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">节点从头重跑，邮件可能重复发送</button>
+        <button type="button">resume 会从 interrupt 下一行继续，因此绝不会重复</button>
+        <button type="button">thread_id 会自动撤销第一次邮件</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-06" data-title="Streaming 与 Replay：怎样复核一次运行">
+  <div class="screen hero-screen" data-number="06">
+    <p class="eyebrow">Module 6 · Observe &amp; branch</p>
+    <h2>运行历史像飞行记录器，但 replay 会剪出一条新胶片</h2>
+    <p class="lede">学完这一节，你能用 stream 看暂停前的部分状态，用 StateSnapshot 定位下一任务，并解释从旧 checkpoint 重放为何保留旧结果又生成新分支。</p>
+    <p><dfn data-definition="StateSnapshot 是某一步开始时的状态视图，包含 values、next、config、tasks、interrupts 等。">StateSnapshot</dfn> 是可寻址的存档帧；<dfn data-definition="Replay 是用历史 checkpoint 的 config 重新执行其后的图，而不是修改旧记录。">replay</dfn> 从某一帧重新放映；<dfn data-definition="Fork 是 replay 从历史点产生的新 checkpoint 分支。">fork</dfn> 让旧答案与新答案都能被复核。</p>
+    <div class="callout"><strong>证据边界：</strong>stream、snapshot 与 history 能说明状态和控制流发生了什么；它们不能单独证明模型答案正确、工具副作用成功或业务结果合规。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">A checkpoint frame</p>
+    <h3>快照不只保存 values，还保存“接下来做什么”</h3>
+    <figure class="code-translation" data-source="libs/langgraph/langgraph/types.py" data-lines="711-729">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class StateSnapshot(NamedTuple):
+    """Snapshot of the state of the graph at the beginning of a step."""
+
+    values: dict[str, Any] | Any
+    """Current values of channels."""
+    next: tuple[str, ...]
+    """The name of the node to execute in each task for this step."""
+    config: RunnableConfig
+    """Config used to fetch this snapshot."""
+    metadata: CheckpointMetadata | None
+    """Metadata associated with this snapshot."""
+    created_at: str | None
+    """Timestamp of snapshot creation."""
+    parent_config: RunnableConfig | None
+    """Config used to fetch the parent snapshot, if any."""
+    tasks: tuple[PregelTask, ...]
+    """Tasks to execute in this step. If already attempted, may contain an error."""
+    interrupts: tuple[Interrupt, ...]
+    """Interrupts that occurred in this step that are pending resolution."""</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>一帧包含已提交 channel values、下一批 node、可再次寻址的 config、父帧、tasks 与未解决 interrupts。调试时不要只打印最终字典；<span class="path-chip">next</span> 和 <span class="path-chip">tasks</span> 才能解释图为何停在这里。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Partial truth while paused</p>
+    <h3>Interrupt 不会抹掉此前已提交的 step</h3>
+    <figure class="code-translation" data-source="libs/langgraph/tests/test_stream_events_v3_e2e.py" data-lines="470-492">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def test_interrupt_sets_flags_and_surfaces_interrupts(self) -&gt; None:
+        """Interrupted run has correct flags and interrupt payloads."""
+        graph = _make_interrupt_graph()
+        config: dict[str, Any] = {"configurable": {"thread_id": "int-1"}}
+        run = graph.stream_events({"value": "x", "items": []}, config, version="v3")
+
+        output = run.output
+        assert output is not None
+        assert run.interrupted is True
+        assert len(run.interrupts) &gt; 0
+        assert output["items"] == ["step1"]
+        assert "_step1" in output["value"]
+
+    def test_interrupt_values_snapshot_has_partial_state(self) -&gt; None:
+        """Values snapshots captured before the interrupt reflect partial state."""
+        graph = _make_interrupt_graph()
+        config: dict[str, Any] = {"configurable": {"thread_id": "int-2"}}
+        run = graph.stream_events({"value": "x", "items": []}, config, version="v3")
+
+        snapshots = list(run.values)
+        assert len(snapshots) &gt;= 1
+        last = snapshots[-1]
+        assert "step1" in last["items"]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>当前提交的上游测试检查了两层证据：run 被标为 interrupted 且暴露 interrupts；与此同时，output 与 values 投影仍包含暂停前已经完成的 step1。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Output</h4><p>截至停止点可交付的状态，不等于完整成功。</p></article>
+      <article class="actor-card"><h4>Interrupted</h4><p>说明控制流暂停，不说明原因已解决。</p></article>
+      <article class="actor-card"><h4>Values stream</h4><p>逐 step 的完整状态投影。</p></article>
+      <article class="actor-card"><h4>Interrupts</h4><p>客户端仍需处理的暂停请求。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Replay creates a fork</p>
+    <h3>从 ask_human 之前重放，旧完成分支仍然保留</h3>
+    <figure class="code-translation" data-source="libs/langgraph/tests/test_time_travel.py" data-lines="339-371">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    # --- Original run: invoke until interrupt, then resume to complete ---
+    graph.invoke({"value": []}, config)
+    graph.invoke(Command(resume="old_answer"), config)
+
+    original_history = list(graph.get_state_history(config))
+    original = _checkpoint_summary(original_history)
+    assert [(s["source"], s["next"], s["values"]) for s in original] == [
+        ("loop", (), {"value": ["a", "human:old_answer", "b"]}),
+        ("loop", ("node_b",), {"value": ["a", "human:old_answer"]}),
+        ("loop", ("ask_human",), {"value": ["a"]}),
+        ("loop", ("node_a",), {"value": []}),
+        ("input", ("__start__",), {"value": []}),
+    ]
+
+    # --- Replay from checkpoint before ask_human ---
+    before_ask = next(s for s in original_history if s.next == ("ask_human",))
+
+    called.clear()
+    replay_result = graph.invoke(None, before_ask.config)
+    assert replay_result["__interrupt__"][0].value == "What is your input?"
+    assert "ask_human" in called
+    assert "node_a" not in called  # before the replay point, not re-executed
+
+    # A fork checkpoint is now the latest — it branches from the replay point
+    post_replay = _checkpoint_summary(list(graph.get_state_history(config)))
+    assert [(s["source"], s["next"]) for s in post_replay] == [
+        ("fork", ("ask_human",)),  # &lt;-- new fork (latest)
+        ("loop", ()),  # original done
+        ("loop", ("node_b",)),
+        ("loop", ("ask_human",)),  # branch point
+        ("loop", ("node_a",)),
+        ("input", ("__start__",)),
+    ]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>测试先用 old_answer 完成原运行，再找到 <span class="path-chip">next == ("ask_human",)</span> 的历史帧。用该帧 config 调用后，ask_human 再次暂停，node_a 没重跑，并出现来源为 fork 的最新 checkpoint。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="从历史 checkpoint replay 并形成分支">
+      <button type="button" class="flow-step is-active" data-detail="原分支用 old_answer 完成，历史中保留 input、各 loop step 与最终状态。">1. Original branch</button>
+      <button type="button" class="flow-step" data-detail="从 history 选出 next 为 ask_human 的 StateSnapshot，而不是凭日志文本猜位置。">2. Select snapshot</button>
+      <button type="button" class="flow-step" data-detail="用 snapshot.config 调用 None，runtime 从该 checkpoint 后重放。">3. Replay</button>
+      <button type="button" class="flow-step" data-detail="ask_human 再次触发；此前的 node_a 不重跑。">4. Re-fire interrupt</button>
+      <button type="button" class="flow-step" data-detail="最新 history 出现 source=fork，原来已完成的 old_answer 分支仍在。">5. Preserve + fork</button>
+      <p class="flow-detail" aria-live="polite">原分支用 old_answer 完成，历史中保留 input、各 loop step 与最终状态。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Audit the new branch</p>
+    <h3>新答案完成新分支，不会把旧答案静默改写</h3>
+    <figure class="code-translation" data-source="libs/langgraph/tests/test_time_travel.py" data-lines="373-392">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    # --- Resume with a new answer ---
+    called.clear()
+    final_result = graph.invoke(Command(resume="new_answer"), config)
+    assert final_result["value"] == ["a", "human:new_answer", "b"]
+    assert "ask_human" in called
+    assert "node_b" in called
+
+    final = _checkpoint_summary(list(graph.get_state_history(config)))
+    assert [(s["source"], s["next"], s["values"]) for s in final] == [
+        # New branch (from fork)
+        ("loop", (), {"value": ["a", "human:new_answer", "b"]}),
+        ("loop", ("node_b",), {"value": ["a", "human:new_answer"]}),
+        ("fork", ("ask_human",), {"value": ["a"]}),
+        # Original branch (preserved)
+        ("loop", (), {"value": ["a", "human:old_answer", "b"]}),
+        ("loop", ("node_b",), {"value": ["a", "human:old_answer"]}),
+        ("loop", ("ask_human",), {"value": ["a"]}),
+        ("loop", ("node_a",), {"value": []}),
+        ("input", ("__start__",), {"value": []}),
+    ]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>new_answer 分支重新执行 ask_human 与 node_b；最终 history 同时列出新完成分支、fork 点和 old_answer 原分支。这是“可审计分叉”，不是覆盖历史。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="上游测试从 ask_human 前的 snapshot replay：node_a 位于分支点之前，因此不重跑；ask_human 会重新触发；fork checkpoint 与原完成分支都保留在 history 中。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>从 <code>next == ("ask_human",)</code> 的历史快照 replay，最准确的预期是？</h3>
+      <div class="quiz-options">
+        <button type="button">从 START 全部重跑，并删除旧分支</button>
+        <button type="button" data-correct="true"><code>node_a</code> 不重跑，<code>ask_human</code> 再触发，并新增 fork</button>
+        <button type="button">直接返回原最终值，不执行任何后续节点</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section></main>
+
+  <footer class="course-footer">
+    <p>源码摘录授权见 <a href="source-license.txt">上游许可</a>；课程工具许可见 <a href="tooling-license.txt">MIT</a>。</p>
+    <p>基于已检查的源码。摘录保留原文件与连续行号，学习结论可回到证据。</p>
+    <a href="#course-start">返回顶部 ↑</a>
+  </footer>
+  <script>(() => {
+  const modules = [...document.querySelectorAll('.course-module')];
+  const dots = [...document.querySelectorAll('.nav-dot')];
+  const progress = document.querySelector('#progress-bar');
+  const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let userReducedMotion = false;
+  try { userReducedMotion = localStorage.getItem('code-learning:reduce-motion') === 'true'; } catch (_) {}
+  let reduceMotion = systemReducedMotion || userReducedMotion;
+  const motionToggle = document.querySelector('#motion-toggle');
+  const applyMotion = () => {
+    reduceMotion = systemReducedMotion || userReducedMotion;
+    document.documentElement.dataset.reducedMotion = String(reduceMotion);
+    if (motionToggle) {
+      motionToggle.setAttribute('aria-pressed', String(reduceMotion));
+      motionToggle.disabled = systemReducedMotion;
+    }
+  };
+  applyMotion();
+  motionToggle?.addEventListener('click', () => {
+    userReducedMotion = !userReducedMotion;
+    try { localStorage.setItem('code-learning:reduce-motion', String(userReducedMotion)); } catch (_) {}
+    applyMotion();
+  });
+
+  let activeModuleId;
+  const setActiveModule = (id) => {
+    if (activeModuleId === id) return;
+    activeModuleId = id;
+    dots.forEach((dot) => {
+      const active = dot.dataset.target === id;
+      dot.classList.toggle('is-active', active);
+      if (active) dot.setAttribute('aria-current', 'step');
+      else dot.removeAttribute('aria-current');
+      const nav = dot.parentElement;
+      if (active && nav.scrollWidth > nav.clientWidth) {
+        nav.scrollTo({ left: dot.offsetLeft - nav.offsetLeft - (nav.clientWidth - dot.offsetWidth) / 2,
+          behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    });
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      document.getElementById(dot.dataset.target)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  });
+
+  const updateProgress = () => {
+    const available = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = available > 0 ? Math.min(1, Math.max(0, window.scrollY / available)) : 0;
+    if (progress) progress.style.width = `${ratio * 100}%`;
+    const current = currentModuleIndex();
+    if (modules.length) setActiveModule(current >= 0 ? modules[current].id : null);
+  };
+  document.addEventListener('scroll', updateProgress, { passive: true });
+
+  const currentModuleIndex = () => {
+    const center = window.scrollY + window.innerHeight * 0.45;
+    let best = -1;
+    modules.forEach((module, index) => {
+      if (module.offsetTop <= center) best = index;
+    });
+    return best;
+  };
+  updateProgress();
+
+  document.addEventListener('keydown', (event) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) return;
+    if (document.activeElement?.closest('[data-code-scroll], .table-scroll')) return;
+    const forward = event.key === 'j' || event.key === 'J' || event.key === 'ArrowDown';
+    const backward = event.key === 'k' || event.key === 'K' || event.key === 'ArrowUp';
+    if (!forward && !backward) return;
+    const offset = forward ? 1 : -1;
+    const target = modules[Math.min(modules.length - 1, Math.max(0, currentModuleIndex() + offset))];
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+  });
+
+  document.querySelectorAll('dfn[data-definition]').forEach((term) => {
+    term.tabIndex = 0;
+    term.setAttribute('aria-label', `${term.textContent}: ${term.dataset.definition}`);
+  });
+
+  document.querySelectorAll('.code-translation').forEach((translation) => {
+    const label = translation.querySelector('.source-label');
+    if (label) {
+      const range = (translation.dataset.lines || '').replace('-', '–');
+      label.textContent = `源码 · ${translation.dataset.source || 'unknown source'}:${range}`;
+    }
+    const code = translation.querySelector('pre');
+    if (code) {
+      code.tabIndex = 0;
+      code.setAttribute('data-code-scroll', '');
+      code.setAttribute('aria-label', '源码摘录，可用方向键滚动');
+    }
+  });
+
+  document.querySelectorAll('.table-scroll').forEach((table) => {
+    table.tabIndex = 0;
+    table.setAttribute('aria-label', '对照表，可用方向键横向滚动');
+  });
+
+  document.querySelectorAll('.quiz').forEach((quiz) => {
+    const choices = [...quiz.querySelectorAll('.quiz-options button')];
+    const feedback = quiz.querySelector('.quiz-feedback');
+    choices.forEach((choice) => {
+      choice.addEventListener('click', () => {
+        choices.forEach((item) => item.classList.remove('is-correct', 'is-wrong'));
+        const correct = choice.dataset.correct === 'true';
+        choice.classList.add(correct ? 'is-correct' : 'is-wrong');
+        feedback.textContent = `${correct ? '正确。' : '再想一想。'}${quiz.dataset.explanation || ''}`;
+      });
+    });
+  });
+
+  const playChat = (chat) => {
+    const messages = [...chat.querySelectorAll('.chat-message')];
+    messages.forEach((message) => message.classList.remove('is-visible'));
+    messages.forEach((message, index) => {
+      if (reduceMotion) message.classList.add('is-visible');
+      else window.setTimeout(() => message.classList.add('is-visible'), 180 + index * 520);
+    });
+  };
+
+  document.querySelectorAll('.component-chat').forEach((chat) => {
+    playChat(chat);
+    chat.querySelector('.replay-chat')?.addEventListener('click', () => playChat(chat));
+  });
+
+  document.querySelectorAll('.data-flow').forEach((flow) => {
+    const steps = [...flow.querySelectorAll('.flow-step')];
+    const detail = flow.querySelector('.flow-detail');
+    steps.forEach((step) => {
+      step.addEventListener('click', () => {
+        steps.forEach((item) => item.classList.remove('is-active'));
+        step.classList.add('is-active');
+        if (detail) detail.textContent = step.dataset.detail || '';
+      });
+    });
+  });
+
+  const panel = document.querySelector('.learning-panel');
+  if (panel) {
+    const conceptCards = [...panel.querySelectorAll('.concept-card')];
+    const conceptNames = new Map(conceptCards.map(card => [card.id.replace('concept-', ''), card.querySelector('summary')?.textContent]));
+    conceptCards.forEach(card => {
+      const prerequisites = [...card.children].find(el => el.tagName === 'P' && el.textContent.startsWith('前置概念:'));
+      if (!prerequisites) return;
+      const ids = prerequisites.textContent.replace('前置概念:', '').trim().split(',').map(id => id.trim());
+      if (!ids.every(id => conceptNames.has(id))) return;
+      prerequisites.replaceChildren(document.createTextNode('前置概念：'));
+      ids.forEach((id, index) => {
+        if (index) prerequisites.append(document.createTextNode('、'));
+        const link = document.createElement('a');
+        link.href = `#concept-${id}`;
+        link.textContent = conceptNames.get(id);
+        link.className = 'concept-prerequisite';
+        link.addEventListener('click', () => { document.getElementById(`concept-${id}`).open = true; });
+        prerequisites.append(link);
+      });
+    });
+    const storageKey = `code-learning:${panel.dataset.kitId}`;
+    const sourceRevision = document.querySelectorAll('.course-meta dd')[1]?.textContent || 'unknown';
+    const feedback = panel.querySelector('.notes-feedback');
+    const zh = document.documentElement.lang.startsWith('zh');
+    let notes = {};
+    try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) { notes = {}; }
+    if (!notes || typeof notes !== 'object' || Array.isArray(notes)) notes = {};
+    panel.querySelectorAll('.recall').forEach((recall) => {
+      const field = recall.querySelector('textarea');
+      const key = recall.dataset.recallId;
+      field.value = typeof notes[key]?.response === 'string' ? notes[key].response : '';
+      field.addEventListener('input', () => {
+        notes[key] = { response: field.value, sourceRevision, recordedAt: new Date().toISOString(), kind: 'provisional-recall' };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(notes));
+          if (feedback) feedback.textContent = zh ? '回忆已保存到本机浏览器；尚未评价掌握程度。' : 'Recall saved in this browser; mastery has not been assessed.';
+        } catch (_) {
+          if (feedback) feedback.textContent = zh ? '浏览器未允许保存；可导出本次记录。' : 'Browser storage is unavailable; export this session to keep it.';
+        }
+      });
+    });
+    let exportURL;
+    panel.querySelector('.export-learning-notes')?.addEventListener('click', () => {
+      const content = { kitId: panel.dataset.kitId, sourceRevision, assessment: 'unassessed', notes };
+      const text = JSON.stringify(content, null, 2);
+      const preview = panel.querySelector('.export-preview');
+      if (preview) {
+        preview.hidden = false;
+        preview.open = true;
+        preview.querySelector('textarea').value = text;
+        if (exportURL) URL.revokeObjectURL(exportURL);
+        exportURL = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+        preview.querySelector('.export-download').href = exportURL;
+        if (feedback) feedback.textContent = zh ? '记录已准备好：可以下载 JSON，或从下方文本框复制。' : 'Records are ready: download JSON or copy the text below.';
+      }
+    });
+    window.addEventListener('pagehide', () => { if (exportURL) URL.revokeObjectURL(exportURL); });
+  }
+})();
+</script>
+</body>
+</html>
+

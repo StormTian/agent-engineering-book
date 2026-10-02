@@ -1,0 +1,1905 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="generator" content="codebase-to-mastery">
+  <title>读懂 Pi：一条终端指令如何驱动编码 Agent</title>
+  <style>:root {
+  --paper: #eef3f6; --paper-deep: #e3ecef; --ink: #172d3a; --muted: #536b79;
+  --line: #d4e0e6; --card: #fff; --code: #112630; --code-ink: #e6f4f7;
+  --accent: #147d92; --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
+  --good: #16745a; --bad: #ae394b; --shadow: 0 6px 22px rgba(23,45,58,.04);
+  --radius: 12px; --measure: 72rem; --rail-width: 228px;
+  --rail: #122936; --rail-ink: #edf7f8; --lime: #b8e3a4;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scroll-behavior: smooth; }
+html, body { overflow-x: clip; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: .2em; }
+button, textarea { font: inherit; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -.025em; }
+h1 { margin: 0; max-width: 22ch; font-size: clamp(2.4rem,5vw,4.6rem); font-weight: 750; }
+h2 { margin: 0; font-size: clamp(2rem,3.6vw,3.3rem); }
+h3 { margin: 0 0 1rem; font-size: clamp(1.35rem,2.5vw,2rem); }
+p { overflow-wrap: anywhere; }
+.progress { position: fixed; inset: 0 0 auto var(--rail-width); height: 3px; z-index: 50; background: var(--paper-deep); }
+.progress span { display: block; width: 0; height: 100%; background: var(--accent); transition: width 120ms linear; }
+.course-rail { position: fixed; inset: 0 auto 0 0; z-index: 30; width: var(--rail-width); display: flex; flex-direction: column; padding: 32px 18px 22px; color: var(--rail-ink); background: var(--rail); overflow-y: auto; }
+.course-mark { display: flex; align-items: center; gap: 12px; padding: 0 8px 26px; text-decoration: none; flex-shrink: 0; }
+.brand-emblem { display: flex; align-items: flex-end; gap: 3px; width: 34px; height: 34px; padding: 8px 6px; border-radius: 9px; background: var(--lime); }
+.brand-emblem i { display: block; width: 5px; background: var(--rail); border-radius: 1px; }
+.brand-emblem i:nth-child(1) { height: 7px; }
+.brand-emblem i:nth-child(2) { height: 12px; }
+.brand-emblem i:nth-child(3) { height: 18px; }
+.brand-name { font-size: 15px; font-weight: 700; line-height: 1.35; letter-spacing: -.01em; }
+.brand-name > span { display: block; color: var(--lime); }
+.overview-link { display: flex; justify-content: space-between; align-items: center; padding: 12px; font-size: 13px; text-decoration: none; border: 1px solid #35505e; border-radius: 8px; }
+.overview-link:hover { background: #203c4b; }
+.nav-label { margin: 28px 12px 10px; color: #a5bdc9; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.module-nav { display: grid; gap: 6px; }
+.nav-dot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #c7d9e1; text-align: left; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.nav-title { min-width: 0; overflow-wrap: anywhere; }
+.nav-arrow { opacity: 0; color: var(--lime); }
+.nav-dot:hover { background: #203c4b; color: white; }
+.nav-dot.is-active { color: white; background: #244b5b; border-color: #416a7a; }
+.nav-dot.is-active .nav-arrow { opacity: 1; }
+.rail-source { display: grid; gap: 5px; margin: auto 8px 0; padding-top: 36px; font-size: 12px; overflow-wrap: anywhere; }
+.rail-source-label { color: #a5bdc9; font-size: 10px; letter-spacing: .08em; }
+.rail-source strong { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-weight: 500; }
+.key-hint { display: flex; align-items: center; gap: 5px; margin: 18px 8px 0; color: #a5bdc9; font-size: 10px; }
+.key-hint > span { margin-left: 5px; }
+kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px solid #4c6977; border-radius: 4px; text-align: center; font: 10px/1.5 ui-monospace,monospace; }
+.course-cover, .learning-panel, .course-module, .course-footer { margin-left: var(--rail-width); min-width: 0; }
+.course-cover { position: relative; display: grid; align-content: center; padding: 64px clamp(28px,4vw,64px) 46px; min-height: 520px; border-bottom: 1px solid var(--line); background: var(--card); }
+.cover-topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 32px; }
+.cover-kicker, .eyebrow, .pane-label, .quiz-kicker { margin: 0 0 10px; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.cover-topline .cover-kicker { margin: 0; }
+.format-tag, .stage-count { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.cover-subtitle, .lede { max-width: 48rem; margin: 20px 0; color: var(--muted); font-size: clamp(1rem,1.6vw,1.2rem); }
+.course-meta { display: flex; flex-wrap: wrap; gap: 16px 32px; margin: 16px 0 28px; }
+.course-meta div { min-width: 70px; }
+.course-meta dt { color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+.course-meta dd { margin: 5px 0 0; font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.cover-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.start-link { display: inline-flex; align-items: center; gap: 30px; width: fit-content; padding: 11px 16px; border-radius: 8px; background: var(--accent); color: white; text-decoration: none; font-size: 13px; font-weight: 700; }
+.motion-toggle { padding: 9px 13px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.motion-toggle[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.cover-route { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 38px; padding-top: 22px; border-top: 1px solid var(--line); font: 10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing: .12em; color: var(--muted); }
+.cover-route b { font-weight: 400; color: var(--accent); }
+.learning-panel { padding: 28px clamp(28px,4vw,64px) 56px; border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.panel-heading .eyebrow { margin: 0; }
+.learning-panel h2 { max-width: none; font-size: clamp(1.65rem,3vw,2.3rem); }
+.panel-scope { margin: 10px 0 18px; max-width: 66rem; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.learning-stages { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }
+.learning-stage { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.stage-topline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.stage-number { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; color: var(--accent); background: var(--accent-soft); font: 700 12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+.stage-kind { color: var(--muted); font: 9px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform: uppercase; letter-spacing: .08em; }
+.learning-stage h3 { margin: 0; font-size: 17px; line-height: 1.4; letter-spacing: -.02em; }
+.stage-outcome { margin: 8px 0 10px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.gate { margin: auto 0 0; padding: 8px 0 10px; border-top: 1px solid var(--line); }
+.gate > span { color: var(--accent); font-size: 10px; font-weight: 700; }
+.gate p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.stage-links { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 650; }
+.stage-links a { overflow-wrap: anywhere; text-decoration: none; }
+.stage-links a:hover { text-decoration: underline; }
+.scope-note { margin: 18px 0 0; padding: 12px 16px; box-shadow: none; font-size: 12px; }
+.scope-note p { margin-bottom: 0; color: var(--muted); }
+.recall-heading { margin: 46px 0 24px; }
+.recall-heading h3 { font-size: 24px; margin-bottom: 8px; }
+.recall-heading > p:last-child { margin: 0; color: var(--muted); font-size: 12px; }
+.concept-card { padding: 18px; margin: 10px 0; min-width: 0; box-shadow: none; }
+.concept-card > summary { font-size: 14px; }
+.concept-card > p { color: var(--muted); font-size: 13px; }
+.concept-card details { min-width: 0; }
+.recall { margin: 22px 0; }
+.recall label { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 650; }
+.recall textarea { display: block; width: 100%; resize: vertical; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); font-size: 13px; }
+.recall-answer { margin: 12px 0; padding: 14px; background: var(--accent-soft); border: 0; box-shadow: none; font-size: 13px; }
+.export-learning-notes { margin-top: 16px; padding: 11px 16px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 12px; cursor: pointer; }
+.notes-feedback { font-size: 12px; color: var(--muted); }
+.export-preview { margin: 16px 0; padding: 16px; }
+.export-preview label { display: block; margin: 12px 0; font-size: 12px; }
+.export-preview textarea { width: 100%; color: var(--ink); background: #f7fafb; font: 12px/1.6 ui-monospace,monospace; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.course-module { border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.course-module:nth-child(odd) { background: #f8fafb; }
+.screen { display: grid; grid-template-columns: minmax(0,1fr); align-content: center; min-height: 550px; max-width: var(--measure); margin: 0 auto; padding: 64px clamp(28px,4vw,64px); }
+.hero-screen { position: relative; }
+.hero-screen > p:not(.eyebrow):not(.lede) { max-width: 58rem; font-size: 15px; color: var(--muted); }
+.actor-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(14rem,100%),1fr)); gap: 14px; }
+.actor-card, .callout, .quiz, .data-flow, .component-chat, details { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.actor-card, .callout, details { padding: 20px; }
+.actor-card h4 { margin: 0 0 8px; font-size: 16px; }
+.actor-card p { margin: 0; color: var(--muted); font-size: 14px; }
+.callout { border-left: 3px solid var(--accent); font-size: 14px; }
+.callout.warning { border-left-color: var(--bad); }
+.path-chip { display: inline-flex; max-width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--accent); font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.code-translation { min-width: 0; contain: inline-size; display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); margin: 24px 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.code-pane { min-width: 0; padding: 22px; color: var(--code-ink); background: var(--code); }
+.code-pane .pane-label { color: #8cd4d9; font-family: ui-monospace,monospace; text-transform: none; letter-spacing: 0; }
+pre { margin: 0; max-width: 100%; overflow: auto; tab-size: 2; }
+pre > code { display: block; min-width: 100%; }
+code { font: 12px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.code-translation figcaption { min-width: 0; padding: 22px; background: white; font-size: 14px; }
+.quiz, .data-flow, .component-chat { padding: 24px; }
+.quiz h3 { font-size: 24px; line-height: 1.45; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-options button, .flow-step, .replay-chat { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); text-align: left; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+.quiz-options button:hover, .quiz-options button:focus-visible, .flow-step:hover, .flow-step:focus-visible { border-color: var(--accent); }
+.quiz-options button.is-correct { border-color: var(--good); background: color-mix(in srgb,var(--good) 8%,white); }
+.quiz-options button.is-wrong { border-color: var(--bad); background: color-mix(in srgb,var(--bad) 7%,white); }
+.quiz-feedback { min-height: 1.6em; margin-bottom: 0; font-size: 13px; font-weight: 600; }
+.component-chat { display: grid; gap: 12px; }
+.chat-message { width: min(34rem,85%); padding: 14px; border-radius: 10px 10px 10px 2px; background: var(--paper); font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 260ms ease, transform 260ms ease; }
+.chat-message::before { content: attr(data-speaker); display: block; margin-bottom: 4px; color: var(--muted); font: 700 10px ui-monospace,monospace; text-transform: uppercase; }
+.chat-message:nth-child(even) { justify-self: end; border-radius: 10px 10px 2px 10px; background: var(--accent-soft); }
+.chat-message.is-visible { opacity: 1; transform: none; }
+.replay-chat { width: fit-content; justify-self: center; margin-top: 6px; }
+.data-flow { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(10rem,100%),1fr)); gap: 10px; }
+.flow-step { text-align: center; }
+.flow-step.is-active { background: var(--accent); border-color: var(--accent); color: white; }
+.flow-detail { grid-column: 1 / -1; margin: 6px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+dfn { position: relative; border-bottom: 2px dotted var(--accent); font-style: normal; cursor: help; }
+dfn::after { content: attr(data-definition); position: absolute; left: 0; bottom: calc(100% + 10px); z-index: 40; width: min(18rem,70vw); padding: 12px; border-radius: 8px; color: white; background: var(--rail); box-shadow: var(--shadow); font-size: 12px; font-weight: 400; opacity: 0; pointer-events: none; transform: translateY(5px); transition: opacity 140ms ease, transform 140ms ease; }
+dfn:hover::after, dfn:focus::after { opacity: 1; transform: none; }
+details { margin-top: 16px; }
+summary { cursor: pointer; font-weight: 650; }
+.course-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 28px clamp(28px,4vw,64px); color: var(--muted); background: white; font-size: 12px; }
+.course-footer p { max-width: 40rem; margin: 0; }
+.course-footer a { color: var(--accent); }
+:focus-visible { outline: 3px solid #57b6c5; outline-offset: 4px; }
+html[data-reduced-motion="true"] *, html[data-reduced-motion="true"] *::before, html[data-reduced-motion="true"] *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+html[data-reduced-motion="true"] { scroll-behavior: auto !important; }
+html[data-reduced-motion="true"] .chat-message { opacity: 1; transform: none; }
+@media (max-width:1050px) {
+  :root { --rail-width: 204px; }
+  .learning-stages { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  :root { --rail-width: 0px; }
+  .progress { inset: 0 0 auto; }
+  .course-rail { inset: 0 0 auto; width: auto; height: 116px; padding: 12px 16px 10px; overflow: hidden; }
+  .course-mark { padding: 0; gap: 8px; width: fit-content; }
+  .brand-emblem { width: 28px; height: 28px; padding: 5px 3px; }
+  .brand-name { display: flex; gap: 4px; font-size: 13px; }
+  .brand-name > span { display: inline; }
+  .overview-link { position: absolute; right: 16px; top: 12px; padding: 5px 8px; gap: 10px; font-size: 10px; }
+  .nav-label, .key-hint, .rail-source { display: none; }
+  .module-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 13px; padding: 3px; }
+  .nav-dot { flex: 0 0 auto; width: auto; max-width: 220px; min-height: 35px; padding: 7px 10px; font-size: 11px; white-space: nowrap; border-color: #35505e; }
+  .nav-arrow { display: none; }
+  .course-cover { margin-top: 116px; min-height: auto; padding: 30px 20px; scroll-margin-top: 116px; }
+  .cover-topline { margin-bottom: 24px; }
+  .cover-kicker { font-size: 10px; }
+  .format-tag { font-size: 10px; padding: 4px 7px; }
+  h1 { font-size: 36px; }
+  h2 { font-size: 32px; }
+  .cover-subtitle { font-size: 14px; }
+  .course-meta { gap: 16px 22px; }
+  .cover-route { gap: 12px; font-size: 9px; }
+  .learning-panel { padding: 28px 20px 40px; scroll-margin-top: 132px; }
+  .learning-panel h2 { font-size: 27px; }
+  .panel-heading { align-items: flex-start; }
+  .stage-count { font-size: 10px; padding: 4px 7px; }
+  .learning-stages { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .learning-stage { padding: 18px; }
+  .learning-stage h3 { font-size: 18px; }
+  .stage-outcome { font-size: 13px; }
+  .course-module { scroll-margin-top: 132px; }
+  .concept-card { scroll-margin-top: 132px; }
+  .screen { min-height: auto; padding: 44px 20px; }
+  .hero-screen { min-height: 420px; }
+  .code-translation { grid-template-columns: minmax(0,1fr); }
+  .code-pane, .code-translation figcaption { padding: 18px; }
+  .quiz, .data-flow, .component-chat { padding: 18px; }
+  .quiz h3 { font-size: 20px; }
+  .course-footer { padding: 26px 20px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+  .chat-message { opacity: 1; transform: none; }
+}
+@media print {
+  :root { --rail-width: 0px; }
+  .course-rail, .progress, .start-link, .replay-chat, .motion-toggle, .cover-route { display: none !important; }
+  .course-cover { margin-top: 0; }
+  .course-cover, .screen { min-height: auto; page-break-after: always; }
+  .chat-message { opacity: 1; transform: none; }
+  body { background: white; }
+}
+
+/* Source tables scroll inside the lesson, so narrow screens retain every cell. */
+.table-scroll { max-width: 100%; overflow-x: auto; margin: 22px 0; border: 1px solid #d3dce5; border-radius: 8px; }
+.table-scroll table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.table-scroll th, .table-scroll td { padding: 13px 16px; border-bottom: 1px solid #dbe3ea; text-align: left; vertical-align: top; line-height: 1.7; overflow-wrap: anywhere; }
+.table-scroll th { color: #153747; background: #edf5f7; font-weight: 700; }
+.table-scroll tr:last-child td { border-bottom: 0; }
+.table-scroll:focus-visible, .code-pane pre:focus-visible { outline: 3px solid #069db0; outline-offset: 3px; }
+</style>
+</head>
+<body style="--accent: #7C3AED">
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+  <aside class="course-rail" aria-label="Course navigation">
+    <a class="course-mark" href="#course-start" aria-label="Codebase to Mastery">
+      <span class="brand-emblem" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-name">Codebase<span>to Mastery</span></span>
+    </a>
+    <a class="overview-link" href="#course-start">学习总览 <span aria-hidden="true">↗</span></a>
+    <p class="nav-label">课程目录</p>
+    <nav class="module-nav" aria-label="课程目录"><button class="nav-dot" type="button" data-target="module-01" aria-label="进入 按下 Enter 之后" title="按下 Enter 之后"><span class="nav-title">按下 Enter 之后</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-02" aria-label="进入 五个角色，谁负责什么" title="五个角色，谁负责什么"><span class="nav-title">五个角色，谁负责什么</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-03" aria-label="进入 Agent 循环：回答、工具、再回答" title="Agent 循环：回答、工具、再回答"><span class="nav-title">Agent 循环：回答、工具、再回答</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-04" aria-label="进入 能力不等于许可：工具与信任边界" title="能力不等于许可：工具与信任边界"><span class="nav-title">能力不等于许可：工具与信任边界</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-05" aria-label="进入 会话树：保存、分支与压缩" title="会话树：保存、分支与压缩"><span class="nav-title">会话树：保存、分支与压缩</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-06" aria-label="进入 扩展 Pi 与排查失败" title="扩展 Pi 与排查失败"><span class="nav-title">扩展 Pi 与排查失败</span><span class="nav-arrow" aria-hidden="true">↗</span></button></nav>
+    <div class="rail-source"><span class="rail-source-label">学习源码</span><strong>roadmap-pi-course-source</strong></div>
+    <p class="key-hint"><kbd>J</kbd><kbd>K</kbd><span>切换章节</span></p>
+  </aside>
+
+  <header class="course-cover" id="course-start">
+    <div class="cover-topline"><p class="cover-kicker">源码掌握工坊</p><span class="format-tag">离线交互课</span></div>
+    <h1>读懂 Pi：一条终端指令如何驱动编码 Agent</h1>
+    <p class="cover-subtitle">沿真实源码，从按下 Enter、模型流式响应和工具执行，一路追到会话分支、压缩与安全扩展。</p>
+    <dl class="course-meta">
+      <div><dt>学习源码</dt><dd>roadmap-pi-course-source</dd></div>
+      <div><dt>源码版本</dt><dd>36b60d2e8985</dd></div>
+      <div><dt>章节</dt><dd>6</dd></div>
+    </dl>
+    <div class="cover-actions"><a class="start-link" href="#learning-path">开始学习 <span aria-hidden="true">→</span></a>
+    <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">减少动效</button></div>
+    <div class="cover-route" aria-hidden="true"><span>READ</span><b>→</b><span>TRACE</span><b>→</b><span>REASON</span><b>→</b><span>TEACH BACK</span></div>
+  </header>
+
+  <section id="learning-path" class="learning-panel" data-kit-id="27df99ac-4b56-4966-96c0-648c77ee993b"><div class="panel-heading"><p class="eyebrow">The mastery path</p><span class="stage-count">4 个学习阶段</span></div><h2>由浅入深的学习路径</h2><p class="panel-scope">用户在终端输入“读取配置并解释失败原因”→消息预处理→Agent循环→工具结果→会话树保存。</p><div class="learning-stages"><article class="learning-stage"><div class="stage-topline"><span class="stage-number">01</span><span class="stage-kind">orient</span></div><h3>建立地图</h3><p class="stage-outcome">解释入口、角色和控制面。</p><div class="gate"><span>先想一想</span><p>画出主线并指出真正开始执行的位置。</p></div><div class="stage-links"><a href="#module-01">进入课程</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">02</span><span class="stage-kind">trace</span></div><h3>逐步追踪</h3><p class="stage-outcome">追踪调用、数据与状态变化。</p><div class="gate"><span>先想一想</span><p>从一个输入写出调用和状态表，并定位源码。</p></div><div class="stage-links"><a href="#module-02">五个角色，谁负责什么</a> <a href="#module-03">Agent 循环：回答、工具、再回答</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">03</span><span class="stage-kind">reason</span></div><h3>解释边界</h3><p class="stage-outcome">分析许可、失败、持久化与恢复。</p><div class="gate"><span>先想一想</span><p>解释两个不同层级的故障，并给出证据与反例。</p></div><div class="stage-links"><a href="#module-04">能力不等于许可：工具与信任边界</a> <a href="#module-05">会话树：保存、分支与压缩</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">04</span><span class="stage-kind">teach-back</span></div><h3>复述与迁移</h3><p class="stage-outcome">将契约迁移到自建 Agent 与评测系统。</p><div class="gate"><span>先想一想</span><p>不看答案写出完整主线与未验证边界，再对照评分依据。</p></div><div class="stage-links"><a href="#module-06">进入课程</a><span aria-hidden="true">→</span></div></article></div><details class="scope-note"><summary>实践范围与边界</summary><p>追加日志的 parentId/leaf 与当前分支投影；不包含模型、真实磁盘崩溃一致性。</p></details><div class="recall-heading"><p class="eyebrow">Recall &amp; connect</p><h3>概念地图与主动回忆</h3><p>回答保存在本机浏览器；阅读和自评不代表已掌握。</p></div><details class="concept-card" id="concept-c01-01"><summary>终端入口与串行等待</summary><p>输入界面的循环等待 session.prompt 完成，异常交回 showError。可见的 Enter 并没有直接触发 Provider；这解释了为何界面收到输入而模型没有请求，仍可能是前置失败。
+
+先画两条线：普通新请求进入 prompt；已有运行的新输入进入 steer/follow-up。不要因为界面允许继续打字就推断 Agent 支持两个主运行并发修改同一状态。排查时保存输入类型、是否正在流式运行和具体错误阶段。</p><p>前置概念: —</p><a href="#module-01">能够解释“终端入口与串行等待”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-01-0"><label for="recall-c01-01-0">按 Enter 后没有网络请求，如何定位？</label><textarea id="recall-c01-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/modes/interactive/interactive-mode.ts:1136-1145，对照状态、身份、异常和保存边界。</li></ul><p>先确认输入是否为扩展命令，再查压缩门禁、输入钩子、模型与认证；只有经过这些阶段才检查 Provider。不能凭输入已显示就判模型失败。</p><ul><li>明确本题契约：终端入口与串行等待</li><li>依据源码解释原因：先确认输入是否为扩展命令，再查压缩门禁、输入钩子、模型与认证；只有经过这些阶段才检查 Provider。不能凭输入已显示就判模型失败。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/modes/interactive/interactive-mode.ts:1136-1145</p><p>白话翻译
+        交互模式持续等待输入。每次拿到一条普通消息，就等待 session.prompt() 完成；若前置检查或运行失败，错误回到界面显示。</p><pre><code>		// Main interactive loop
+		while (true) {
+			const userInput = await this.getUserInput();
+			try {
+				await this.session.prompt(userInput);
+			} catch (error: unknown) {
+				const errorMessage = error instanceof Error ? error.message : &quot;Unknown error occurred&quot;;
+				this.showError(errorMessage);
+			}
+		}</code></pre></details></details><details class="concept-card" id="concept-c01-02"><summary>预处理顺序的行为含义</summary><p>扩展命令先有机会处理输入，然后检查压缩状态，输入钩子可能改写或消耗消息，之后才展开Skill与模板。这是一条会改变语义的有序链。
+
+例如钩子把一条命令改成另一条，模板展开读取的就是新内容；若提前展开，行为可能不同。分析时同时保留原始输入与最终模型消息，避免把扩展生成文字当作用户原话。自定义处理已经完成也可能不需要模型请求。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“预处理顺序的行为含义”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-02-0"><label for="recall-c01-02-0">修改输入钩子后模板未展开，是不是模板加载失败？</label><textarea id="recall-c01-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/agent-session.ts:1255-1291，对照状态、身份、异常和保存边界。</li></ul><p>先检查钩子是否将输入标为handled，以及改写后的内容是否仍匹配模板；只有仍需下游处理时再查模板资源。</p><ul><li>明确本题契约：预处理顺序的行为含义</li><li>依据源码解释原因：先检查钩子是否将输入标为handled，以及改写后的内容是否仍匹配模板；只有仍需下游处理时再查模板资源。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/agent-session.ts:1255-1291</p><p>白话翻译
+        斜杠命令先尝试由 Extension 接管；压缩进行中会拒绝新主请求；输入钩子可以处理或改写内容；最后才展开 Skill 与 Prompt Template。顺序变化会改变可见行为。</p><pre><code>		try {
+			// Handle extension commands first (execute immediately, even during streaming)
+			// Extension commands manage their own LLM interaction via pi.sendMessage()
+			if (expandPromptTemplates &amp;&amp; text.startsWith(&quot;/&quot;)) {
+				const handled = await this._tryExecuteExtensionCommand(text);
+				if (handled) {
+					// Extension command executed, no prompt to send
+					preflightResult?.(true);
+					return;
+				}
+			}
+
+			if (this._compactionAbortController !== undefined) {
+				throw new Error(
+					&quot;Cannot submit a prompt while compaction is in progress. Wait for compaction to finish and retry.&quot;,
+				);
+			}
+
+			// Emit input event for extension interception (before skill/template expansion)
+			const processedInput = await this._runInputHandlers(
+				text,
+				options?.images,
+				options?.source ?? &quot;interactive&quot;,
+				this.isStreaming ? options?.streamingBehavior : undefined,
+			);
+			if (!processedInput) {
+				preflightResult?.(true);
+				return;
+			}
+			const { text: currentText, images: currentImages } = processedInput;
+
+			// Expand skill commands (/skill:name args) and prompt templates (/template args)
+			let expandedText = currentText;
+			if (expandPromptTemplates) {
+				expandedText = this._expandSkillCommand(expandedText);
+				expandedText = expandPromptTemplate(expandedText, [...this.promptTemplates]);
+			}</code></pre></details></details><details class="concept-card" id="concept-c01-03"><summary>请求拒绝与排队的区别</summary><p>await表示当前交互路径在等待，但运行是否允许新输入还受Agent状态和Session预处理约束。输入被拒绝、排队、改写和执行是四种不同结果。
+
+消息队列改变的是下一次何时进入循环，不自动给予越过压缩门禁或认证检查的权限。读源码时从prompt向上追调用者，再向下追Agent.prompt的运行保护，防止把UI线程的响应性与Agent状态并发安全混为一谈。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“请求拒绝与排队的区别”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-03-0"><label for="recall-c01-03-0">用户连续输入两次，什么证据能区分拒绝与排队？</label><textarea id="recall-c01-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/modes/interactive/interactive-mode.ts:1136-1145，对照状态、身份、异常和保存边界。</li></ul><p>读取输入反馈、queue状态和后续消息进入循环的时点；拒绝应有明确错误，排队应有可追踪的队列与消费事件。最终一段文字不够。</p><ul><li>明确本题契约：请求拒绝与排队的区别</li><li>依据源码解释原因：读取输入反馈、queue状态和后续消息进入循环的时点；拒绝应有明确错误，排队应有可追踪的队列与消费事件。最终一段文字不够。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/modes/interactive/interactive-mode.ts:1136-1145</p><p>白话翻译
+        交互模式持续等待输入。每次拿到一条普通消息，就等待 session.prompt() 完成；若前置检查或运行失败，错误回到界面显示。</p><pre><code>		// Main interactive loop
+		while (true) {
+			const userInput = await this.getUserInput();
+			try {
+				await this.session.prompt(userInput);
+			} catch (error: unknown) {
+				const errorMessage = error instanceof Error ? error.message : &quot;Unknown error occurred&quot;;
+				this.showError(errorMessage);
+			}
+		}</code></pre></details></details><details class="concept-card" id="concept-c02-01"><summary>包边界与修改归属</summary><p>coding-agent是产品层，agent是可复用循环，ai是模型协议适配；TUI负责终端交互。包名并非部署服务端口。
+
+若工具结果未回到下一轮，先查agent循环与消息追加；若供应商流不能解析，查ai；若终端展示错误而持久消息正确，查coding-agent/TUI。沿输入输出定位责任可以减少跨层补丁。框架层不应为界面颜色而改变决策语义。</p><p>前置概念: c01-01</p><a href="#module-02">能够解释“包边界与修改归属”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-01-0"><label for="recall-c02-01-0">新增一个Provider，应从哪层开始？</label><textarea id="recall-c02-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 README.md:13-19，对照状态、身份、异常和保存边界。</li></ul><p>从ai的模型与流接口接入，并验证统一消息/事件格式；coding-agent负责选择和配置，Agent Core不应硬编码该供应商。</p><ul><li>明确本题契约：包边界与修改归属</li><li>依据源码解释原因：从ai的模型与流接口接入，并验证统一消息/事件格式；coding-agent负责选择和配置，Agent Core不应硬编码该供应商。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">README.md:13-19</p><p>白话翻译
+        coding-agent 是可直接使用的产品层；agent 提供可复用循环；ai 把不同 Provider 统一到共同消息与流接口。改 UI 不应落到 Provider，改工具循环也不该塞进 TUI。</p><pre><code># Pi Agent Harness
+
+This is the home of the Pi agent harness project including our self extensible coding agent.
+
+* **[@earendil-works/pi-coding-agent](packages/coding-agent)**: Interactive coding agent CLI
+* **[@earendil-works/pi-agent-core](packages/agent)**: Agent runtime with tool calling and state management
+* **[@earendil-works/pi-ai](packages/ai)**: Unified multi-provider LLM API (OpenAI, Anthropic, Google, …)</code></pre></details></details><details class="concept-card" id="concept-c02-02"><summary>同一运行时的多种入口</summary><p>默认交互模式创建InteractiveMode；CLI其他模式是对同一运行时的不同呈现。不能把终端、RPC或打印模式当成三个独立的大脑。
+
+要复用执行语义，应保持输入归一化和事件消费契约，再更换宿主入口。不同入口可能有不同取消、流显示与错误反馈，必须分别测试；一个CLI成功不自动证明另一个传输模式无误。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“同一运行时的多种入口”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-02-0"><label for="recall-c02-02-0">把CLI换成网页时，哪些东西可以复用？</label><textarea id="recall-c02-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/main.ts:929-944，对照状态、身份、异常和保存边界。</li></ul><p>循环、消息契约和工具装配可复用；网页连接、身份、事件显示、取消和重连需要应用层设计与验证。</p><ul><li>明确本题契约：同一运行时的多种入口</li><li>依据源码解释原因：循环、消息契约和工具装配可复用；网页连接、身份、事件显示、取消和重连需要应用层设计与验证。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/main.ts:929-944</p><p>白话翻译
+        命令行模式不是不同的 Agent 大脑，而是同一运行时的不同入口。默认交互模式创建 InteractiveMode，并带上诊断、初始消息和界面设置。</p><pre><code>	if (appMode === &quot;rpc&quot;) {
+		printTimings();
+		await runRpcMode(runtime);
+	} else if (appMode === &quot;interactive&quot;) {
+		const interactiveMode = new InteractiveMode(runtime, {
+			migratedProviders,
+			startupDiagnostics,
+			modelFallbackMessage,
+			autoTrustOnReloadCwd,
+			initialMessage,
+			initialImages,
+			initialMessages: parsed.messages,
+			verbose: parsed.verbose,
+			tuiMode: parsed.tuiMode,
+			initialThemeSetting: parsed.useTheme,
+		});</code></pre></details></details><details class="concept-card" id="concept-c02-03"><summary>注入模型与上下文转换</summary><p>sdk把模型、思考配置、消息转换和stream函数注入Agent。依赖注入意味着循环可以使用替身模型，而无需连接真实网络。
+
+Agent上下文与LLM消息并不总是一一对应，transformContext与convertToLlm可能筛选或改写。调试“模型不知道某信息”时，要同时观察持久记录和最终请求；记录存在不代表信息已传入Provider。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“注入模型与上下文转换”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-03-0"><label for="recall-c02-03-0">会话文件有证据，模型仍不知道，应核对什么？</label><textarea id="recall-c02-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/sdk.ts:306-325，对照状态、身份、异常和保存边界。</li></ul><p>核对有效分支投影、压缩、transformContext和convertToLlm之后的实际消息；不能直接由文件存在推断模型已收到。</p><ul><li>明确本题契约：注入模型与上下文转换</li><li>依据源码解释原因：核对有效分支投影、压缩、transformContext和convertToLlm之后的实际消息；不能直接由文件存在推断模型已收到。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/sdk.ts:306-325</p><p>白话翻译
+        Coding Agent 把选中的模型、思考级别、消息转换和 Provider 流函数注入通用 Agent。Agent Core 不硬编码某一家模型；真正的网络调用由 modelRuntime.streamSimple 承接。</p><pre><code>	agent = new Agent({
+		initialState: {
+			systemPrompt: &quot;&quot;,
+			model,
+			thinkingLevel,
+			tools: [],
+		},
+		convertToLlm: convertToLlmWithBlockImages,
+		streamFn: async (model, context, options) =&gt; {
+			const providerRetrySettings = settingsManager.getProviderRetrySettings();
+			const httpIdleTimeoutMs = settingsManager.getHttpIdleTimeoutMs();
+			// SDKs treat timeout=0 as 0ms (immediate timeout), not &quot;no timeout&quot;.
+			// Use max int32 to effectively disable the timeout.
+			const effectiveTimeoutMs = httpIdleTimeoutMs === 0 ? 2147483647 : httpIdleTimeoutMs;
+			const timeoutMs = options?.timeoutMs ?? providerRetrySettings.timeoutMs ?? effectiveTimeoutMs;
+			const websocketConnectTimeoutMs =
+				options?.websocketConnectTimeoutMs ?? settingsManager.getWebSocketConnectTimeoutMs();
+			const headerRunner = extensionRunnerRef.current;
+			return modelRuntime.streamSimple(model, context, {
+				...options,</code></pre></details></details><details class="concept-card" id="concept-c03-01"><summary>主运行保护</summary><p>Agent.prompt拒绝同时启动第二个主运行，从而保护一份Agent状态。普通文本先规范化再进入统一路径。
+
+这不是跨进程或跨用户锁，也不意味着外部工具调用只能串行。要分析竞争，分别画主运行、工具批次和输入队列三个层次。复制两个Agent实例也仍可能访问同一个外部文件。</p><p>前置概念: c02-01</p><a href="#module-03">能够解释“主运行保护”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-01-0"><label for="recall-c03-01-0">同一个Agent正在工作，直接再调用prompt会怎样？</label><textarea id="recall-c03-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/agent/src/agent.ts:363-374，对照状态、身份、异常和保存边界。</li></ul><p>触发运行保护，不能启动第二条主循环；如要引导或跟进，应使用对应队列与入口，而非绕过状态检查。</p><ul><li>明确本题契约：主运行保护</li><li>依据源码解释原因：触发运行保护，不能启动第二条主循环；如要引导或跟进，应使用对应队列与入口，而非绕过状态检查。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/agent/src/agent.ts:363-374</p><p>白话翻译
+        同一个 Agent 不允许两个主运行同时改状态。新输入要么等待，要么明确进入 steer/follow-up 队列；普通文本先规范化成消息，再进入统一运行路径。</p><pre><code>	/** Start a new prompt from text, a single message, or a batch of messages. */
+	async prompt(message: AgentMessage | AgentMessage[]): Promise&lt;void&gt;;
+	async prompt(input: string, images?: ImageContent[]): Promise&lt;void&gt;;
+	async prompt(input: string | AgentMessage | AgentMessage[], images?: ImageContent[]): Promise&lt;void&gt; {
+		if (this.activeRun) {
+			throw new Error(
+				&quot;Agent is already processing a prompt. Use steer() or followUp() to queue messages, or wait for completion.&quot;,
+			);
+		}
+		const messages = this.normalizePromptInput(input, images);
+		await this.runPromptMessages(messages);
+	}</code></pre></details></details><details class="concept-card" id="concept-c03-02"><summary>模型与工具的闭环</summary><p>模型先返回assistant消息，其中ToolCall决定是否进入工具执行。工具结果追加到当前上下文及本轮新增消息，下一次模型生成才有可引用的真实结果。
+
+调用提议与执行结果必须配对；工具返回错误也应形成模型可理解的结果。模型写“已经测试通过”不能替代实际工具输出。追踪时按message、tool call、tool result和下一次请求逐项核对。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“模型与工具的闭环”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-02-0"><label for="recall-c03-02-0">assistant提出read，但最终答案引用了不存在的文件，先查哪里？</label><textarea id="recall-c03-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/agent/src/agent-loop.ts:217-249，对照状态、身份、异常和保存边界。</li></ul><p>先查工具是否注册、实际执行、是否返回错误，以及tool result是否进入下一轮上下文；最后再评估模型如何使用正确结果。</p><ul><li>明确本题契约：模型与工具的闭环</li><li>依据源码解释原因：先查工具是否注册、实际执行、是否返回错误，以及tool result是否进入下一轮上下文；最后再评估模型如何使用正确结果。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/agent/src/agent-loop.ts:217-249</p><p>白话翻译
+        模型先产出 Assistant Message。若其中含 Tool Call，Pi 执行后把 Tool Result 同时加入当前上下文和本次新增消息。下一轮模型因此能基于真实输出继续，而不是假装命令已经成功。</p><pre><code>			// Stream assistant response
+			const message = await streamAssistantResponse(currentContext, config, signal, emit, streamFunction);
+			newMessages.push(message);
+
+			if (message.stopReason === &quot;error&quot; || message.stopReason === &quot;aborted&quot;) {
+				await emit({ type: &quot;turn_end&quot;, message, toolResults: [] });
+				await emit({ type: &quot;agent_end&quot;, messages: newMessages });
+				return;
+			}
+
+			// Check for tool calls
+			const toolCalls = message.content.filter((c) =&gt; c.type === &quot;toolCall&quot;);
+
+			const toolResults: ToolResultMessage[] = [];
+			hasMoreToolCalls = false;
+			if (toolCalls.length &gt; 0) {
+				// A &quot;length&quot; stop means the output was cut off by the token limit, so
+				// every tool call in the message may carry truncated arguments. Fail
+				// them all instead of executing potentially borked calls.
+				const executedToolBatch =
+					message.stopReason === &quot;length&quot;
+						? await failToolCallsFromTruncatedMessage(toolCalls, emit)
+						: await executeToolCalls(currentContext, message, config, signal, emit);
+				toolResults.push(...executedToolBatch.messages);
+				hasMoreToolCalls = !executedToolBatch.terminate;
+
+				for (const result of toolResults) {
+					currentContext.messages.push(result);
+					newMessages.push(result);
+				}
+			}
+
+			await emit({ type: &quot;turn_end&quot;, message, toolResults });</code></pre></details></details><details class="concept-card" id="concept-c03-03"><summary>批次并行与串行约束</summary><p>默认工具批次允许并行；任何工具要求顺序时整批走串行路径。这个调度决定完成顺序与共享资源风险，和界面动画无关。
+
+并行读独立文件可能节省等待；并行写同一文件会产生业务竞争，不能仅依赖工具结果ID。串行也不自动提供事务或失败回滚。扩展工具时必须标注需求并用共享资源案例检验。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“批次并行与串行约束”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-03-0"><label for="recall-c03-03-0">同一批中一个工具必须串行，应该只串行它吗？</label><textarea id="recall-c03-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/agent/src/agent-loop.ts:464-478，对照状态、身份、异常和保存边界。</li></ul><p>此冻结实现会把整批切到串行路径；解释实际批次策略，再独立考虑工具自身的事务与幂等。</p><ul><li>明确本题契约：批次并行与串行约束</li><li>依据源码解释原因：此冻结实现会把整批切到串行路径；解释实际批次策略，再独立考虑工具自身的事务与幂等。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/agent/src/agent-loop.ts:464-478</p><p>白话翻译
+        默认可并行，但任一工具要求顺序执行时，整批改走串行路径。这类约束属于 Agent Core 的执行语义，不应由界面动画决定。</p><pre><code>async function executeToolCalls(
+	currentContext: AgentContext,
+	assistantMessage: AssistantMessage,
+	config: AgentLoopConfig,
+	signal: AbortSignal | undefined,
+	emit: AgentEventSink,
+): Promise&lt;ExecutedToolCallBatch&gt; {
+	const toolCalls = assistantMessage.content.filter((c) =&gt; c.type === &quot;toolCall&quot;);
+	const hasSequentialToolCall = toolCalls.some(
+		(tc) =&gt; currentContext.tools?.find((t) =&gt; t.name === tc.name)?.executionMode === &quot;sequential&quot;,
+	);
+	if (config.toolExecution === &quot;sequential&quot; || hasSequentialToolCall) {
+		return executeToolCallsSequential(currentContext, assistantMessage, toolCalls, config, signal, emit);
+	}
+	return executeToolCallsParallel(currentContext, assistantMessage, toolCalls, config, signal, emit);</code></pre></details></details><details class="concept-card" id="concept-c04-01"><summary>工具曝光与执行前拦截</summary><p>默认工具集合含read/bash/edit/write，调用方可替换或过滤。未曝光的能力与曝光后策略拒绝是不同阶段。
+
+过滤可以减少模型选择，但实际执行仍应确认有效注册表与宿主策略。新增工具不应让名字与实际实现错配。判断许可时不能只检查Prompt中是否写了“不要执行”。</p><p>前置概念: c03-01</p><a href="#module-04">能够解释“工具曝光与执行前拦截”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-01-0"><label for="recall-c04-01-0">工具不在模型描述里，是否已经证明不可执行？</label><textarea id="recall-c04-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/sdk.ts:256-263，对照状态、身份、异常和保存边界。</li></ul><p>只证明当前曝光集合；仍需核对实际注册、外部入口和执行策略。不要从模型看不到直接推出系统没有任何执行通道。</p><ul><li>明确本题契约：工具曝光与执行前拦截</li><li>依据源码解释原因：只证明当前曝光集合；仍需核对实际注册、外部入口和执行策略。不要从模型看不到直接推出系统没有任何执行通道。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/sdk.ts:256-263</p><p>白话翻译
+        默认负载是 read、bash、edit、write。配置可以替换默认集合，调用方也能做 allow/exclude/no-tools 过滤；“工具未展示给模型”与“工具展示后再审批”是不同设计。</p><pre><code>	const defaultActiveToolNames: ToolName[] = [&quot;read&quot;, &quot;bash&quot;, &quot;edit&quot;, &quot;write&quot;];
+	const configuredDefaultToolNames = settingsManager.getDefaultTools();
+	const allowedToolNames = options.tools ?? (options.noTools === &quot;all&quot; ? [] : undefined);
+	const excludedToolNames = options.excludeTools;
+	const excludedToolNameSet = excludedToolNames ? new Set(excludedToolNames) : undefined;
+	const initialActiveToolNames = (
+		options.tools ?? (options.noTools ? [] : (configuredDefaultToolNames ?? defaultActiveToolNames))
+	).filter((name) =&gt; !excludedToolNameSet?.has(name));</code></pre></details></details><details class="concept-card" id="concept-c04-02"><summary>项目Trust的范围</summary><p>资源加载器在未信任时排除项目本地Extension与Package，用户级与显式CLI资源另有规则。Trust主要决定哪些资源进入装配。
+
+它不等于对bash文件系统和网络访问逐项批准。读取AGENTS、加载扩展和运行工具应分开分析，否则一个项目已信任就被误当成任意系统操作授权。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“项目Trust的范围”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-02-0"><label for="recall-c04-02-0">项目已Trust，能否据此称bash被沙箱隔离？</label><textarea id="recall-c04-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/resource-loader.ts:380-400，对照状态、身份、异常和保存边界。</li></ul><p>不能。Trust是资源准入，bash执行范围由宿主与外部隔离决定；需核对具体sandbox/backend和执行策略。</p><ul><li>明确本题契约：项目Trust的范围</li><li>依据源码解释原因：不能。Trust是资源准入，bash执行范围由宿主与外部隔离决定；需核对具体sandbox/backend和执行策略。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/resource-loader.ts:380-400</p><p>白话翻译
+        未信任阶段先排除项目本地 Extension 与 Package，同时仍可加载用户级和临时 CLI 扩展。用户作出 trust 决定后，资源加载器才按该状态重载设置与资源。</p><pre><code>	async loadProjectTrustExtensions(): Promise&lt;LoadExtensionsResult&gt; {
+		// Force untrusted project settings for the bootstrap pass. This keeps project-local
+		// extensions/packages out while still loading user/global and temporary CLI extensions.
+		this.settingsManager.setProjectTrusted(false);
+		await this.settingsManager.reload();
+		return this.loadCurrentExtensionSet({ includeInlineFactories: true });
+	}
+
+	async reload(options?: ResourceLoaderReloadOptions): Promise&lt;void&gt; {
+		resetTimings(&quot;extensions&quot;);
+
+		if (this.loaded) {
+			clearExtensionCache();
+		}
+
+		let preTrustExtensions: LoadExtensionsResult | undefined;
+		if (options?.resolveProjectTrust) {
+			preTrustExtensions = await this.loadProjectTrustExtensions();
+			const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
+			this.settingsManager.setProjectTrusted(projectTrusted);
+		}</code></pre></details></details><details class="concept-card" id="concept-c04-03"><summary>本地Shell与策略接缝</summary><p>bash直接启动宿主子进程，传入cwd和环境；取消与超时限制寿命，却不建立文件、进程或网络隔离。beforeToolCall是可配置的执行前策略入口。
+
+研究权限时写出principal、资源和动作，而不是把“可取消”叫作“安全沙箱”。本课不执行宿主shell工具或读取真实凭据；教学模型只能演示状态契约，不能证明策略部署有效。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“本地Shell与策略接缝”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-03-0"><label for="recall-c04-03-0">希望禁止某类写操作，Prompt足够吗？</label><textarea id="recall-c04-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/tools/bash.ts:80-102，对照状态、身份、异常和保存边界。</li></ul><p>在工具集合和执行前策略中明确限制，必要时使用外部隔离；再验证允许/拒绝案例与旁路。自然语言建议不等于强制门禁。</p><ul><li>明确本题契约：本地Shell与策略接缝</li><li>依据源码解释原因：在工具集合和执行前策略中明确限制，必要时使用外部隔离；再验证允许/拒绝案例与旁路。自然语言建议不等于强制门禁。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/tools/bash.ts:80-102</p><p>白话翻译
+        内建 bash 工具直接启动本地 shell 子进程，并传入当前工作目录与环境。代码会处理取消、超时和输出，但这些不是资源隔离；真正可访问范围仍由宿主进程决定。</p><pre><code>/** Shared process execution used by the built-in shell tools. */
+export function createLocalShellOperations(shellName: string, resolveShellConfig: () =&gt; ShellConfig): BashOperations {
+	return {
+		exec: async (command, cwd, { onData, signal, timeout, env }) =&gt; {
+			const timeoutMs = resolveTimeoutMs(timeout);
+			if (signal?.aborted) {
+				throw new Error(&quot;aborted&quot;);
+			}
+			const shellConfig = resolveShellConfig();
+			try {
+				await fsAccess(cwd, constants.F_OK);
+			} catch {
+				throw new Error(`Working directory does not exist: ${cwd}\nCannot execute ${shellName} commands.`);
+			}
+
+			const commandFromStdin = shellConfig.commandTransport === &quot;stdin&quot;;
+			const child = spawn(shellConfig.shell, commandFromStdin ? shellConfig.args : [...shellConfig.args, command], {
+				cwd,
+				detached: process.platform !== &quot;win32&quot;,
+				env: env ?? getShellEnv(),
+				stdio: [commandFromStdin ? &quot;pipe&quot; : &quot;ignore&quot;, &quot;pipe&quot;, &quot;pipe&quot;],
+				windowsHide: true,
+			});</code></pre></details></details><details class="concept-card" id="concept-c05-01"><summary>事件桥与追加时点</summary><p>AgentSession在message_end把消息追加到SessionManager，自定义消息有自己的记录类型。因此流中的半成品与已保存完整消息有不同寿命。
+
+异常发生在消息结束前时，UI看到过文字不代表磁盘保存了完整消息。恢复问题先核对事件时点和实际文件内容，再分析模型历史。日志结构正确也不能回滚之前发生的工具写入。</p><p>前置概念: c04-01</p><a href="#module-05">能够解释“事件桥与追加时点”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-01-0"><label for="recall-c05-01-0">终端显示了文字，重新打开却没有这条，最先确认什么？</label><textarea id="recall-c05-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/agent-session.ts:688-707，对照状态、身份、异常和保存边界。</li></ul><p>确认message_end是否到达及保存是否成功，再检查当前leaf和上下文重建。可见流块不等于持久记录。</p><ul><li>明确本题契约：事件桥与追加时点</li><li>依据源码解释原因：确认message_end是否到达及保存是否成功，再检查当前leaf和上下文重建。可见流块不等于持久记录。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/agent-session.ts:688-707</p><p>白话翻译
+        AgentSession 同时是事件桥与持久化边界。自定义消息有自己的条目类型；system、user、assistant 和 toolResult 在 message_end 时追加为普通消息条目。</p><pre><code>		// Handle session persistence
+		if (event.type === &quot;message_end&quot;) {
+			// Check if this is a custom message from extensions
+			if (event.message.role === &quot;custom&quot;) {
+				// Persist as CustomMessageEntry
+				this.sessionManager.appendCustomMessageEntry(
+					event.message.customType,
+					event.message.content,
+					event.message.display,
+					event.message.details,
+				);
+			} else if (
+				event.message.role === &quot;system&quot; ||
+				event.message.role === &quot;user&quot; ||
+				event.message.role === &quot;assistant&quot; ||
+				event.message.role === &quot;toolResult&quot;
+			) {
+				// Regular LLM message - persist as SessionMessageEntry
+				this.sessionManager.appendMessage(event.message);
+			}</code></pre></details></details><details class="concept-card" id="concept-c05-02"><summary>物理追加与逻辑分支</summary><p>消息条目保存parentId，当前leaf成为下一条的父；branch只移动leaf。旧分支仍在同一JSONL，不会被移动指针删除。
+
+模型上下文应沿root到当前leaf的有效路径建立，不能读取整个物理文件当聊天顺序。教学演示会保留A/B两条分支，并用错误的全文件策略展示信息串入。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“物理追加与逻辑分支”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-02-0"><label for="recall-c05-02-0">从旧节点分支后，旧答案被删除了吗？</label><textarea id="recall-c05-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/session-manager.ts:1069-1091，对照状态、身份、异常和保存边界。</li></ul><p>没有。它仍保留在物理日志；当前leaf只选择新的活动路径。应区分保留历史与本轮模型可见投影。</p><ul><li>明确本题契约：物理追加与逻辑分支</li><li>依据源码解释原因：没有。它仍保留在物理日志；当前leaf只选择新的活动路径。应区分保留历史与本轮模型可见投影。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/session-manager.ts:1069-1091</p><p>白话翻译
+        新消息先记住当前 leaf 作为 parentId，再追加、建索引、把 leaf 移到自己并持久化。压缩摘要与分支摘要故意不是伪装成普通消息的记录。</p><pre><code>	private _appendEntry(entry: SessionEntry): void {
+		this.fileEntries.push(entry);
+		this.byId.set(entry.id, entry);
+		this.leafId = entry.id;
+		this._persist(entry);
+	}
+
+	/** Append a message as child of current leaf, then advance leaf. Returns entry id.
+	 * Does not allow writing CompactionSummaryMessage and BranchSummaryMessage directly.
+	 * Reason: we want these to be top-level entries in the session, not message session entries,
+	 * so it is easier to find them.
+	 * These need to be appended via appendCompaction() and appendBranchSummary() methods.
+	 */
+	appendMessage(message: Message | CustomMessage | BashExecutionMessage): string {
+		const entry: SessionMessageEntry = {
+			type: &quot;message&quot;,
+			id: generateId(this.byId),
+			parentId: this.leafId,
+			timestamp: new Date().toISOString(),
+			message,
+		};
+		this._appendEntry(entry);
+		return entry.id;</code></pre></details></details><details class="concept-card" id="concept-c05-03"><summary>压缩条目与有效尾部</summary><p>上下文重建先使用最新压缩条目，再接firstKeptEntryId之后的有效尾部与后续记录。旧原话仍可留在文件，却不逐条进入模型。
+
+压缩改变的是模型输入投影；摘要不能被默认为逐字保真。分支摘要与压缩摘要也是不同记录类型。对重要事实要比较原记录、摘要和实际请求，不以摘要存在推断事实保留。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“压缩条目与有效尾部”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-03-0"><label for="recall-c05-03-0">文件还保存早期值，压缩后模型应必然记住吗？</label><textarea id="recall-c05-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/session-manager.ts:452-464，对照状态、身份、异常和保存边界。</li></ul><p>不必然。只有实际投影中保留的原文或摘要明确带入才可见；还需以真实模型probe另验使用效果。</p><ul><li>明确本题契约：压缩条目与有效尾部</li><li>依据源码解释原因：不必然。只有实际投影中保留的原文或摘要明确带入才可见；还需以真实模型probe另验使用效果。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/session-manager.ts:452-464</p><p>白话翻译
+        重建上下文时，最新压缩条目先出现，然后加入从 firstKeptEntryId 开始的保留尾部，以及压缩之后的新记录。更老的原始消息仍在文件里，但不再逐条发送给模型。</p><pre><code>	const contextEntries: SessionEntry[] = [compaction];
+	let foundFirstKept = false;
+	for (let i = 0; i &lt; compactionIdx; i++) {
+		const entry = path[i];
+		if (entry.id === compaction.firstKeptEntryId) {
+			foundFirstKept = true;
+		}
+		if (foundFirstKept &amp;&amp; !(entry.type === &quot;message&quot; &amp;&amp; entry.message.role === &quot;system&quot;)) {
+			contextEntries.push(entry);
+		}
+	}
+	contextEntries.push(...path.slice(compactionIdx + 1));
+	return contextEntries;</code></pre></details></details><details class="concept-card" id="concept-c06-01"><summary>扩展接缝的选择</summary><p>输入、Turn、Message、Tool和模型选择事件提供扩展位置。需求若能在公开接缝完成，通常不必侵入核心循环。
+
+但hook顺序、阻塞行为和返回契约会影响执行，要冻结一个具体案例再改。新增观测要检验是否改变流消费或延迟；新增策略要测试拒绝结果是否被正确记录。公开接口不等于无风险任意修改。</p><p>前置概念: c05-01</p><a href="#module-06">能够解释“扩展接缝的选择”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-01-0"><label for="recall-c06-01-0">要记录工具时长，应先改核心Agent loop吗？</label><textarea id="recall-c06-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/extensions/types.ts:1296-1334，对照状态、身份、异常和保存边界。</li></ul><p>先用工具前后事件或公开扩展接口，定义关联ID、失败和取消时的记录；对比启用前后输出与时序后再决定是否改核心。</p><ul><li>明确本题契约：扩展接缝的选择</li><li>依据源码解释原因：先用工具前后事件或公开扩展接口，定义关联ID、失败和取消时的记录；对比启用前后输出与时序后再决定是否改核心。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/extensions/types.ts:1296-1334</p><p>白话翻译
+        公开 API 覆盖输入、Agent、Turn、Message、Tool 与模型选择等测试点，还允许注册新工具和斜杠命令。若需求能在这些接缝完成，通常不必改主循环。</p><pre><code>	on(
+		event: &quot;before_agent_start&quot;,
+		handler: ExtensionHandler&lt;BeforeAgentStartEvent, BeforeAgentStartEventResult&gt;,
+	): () =&gt; void;
+	on(event: &quot;agent_start&quot;, handler: ExtensionHandler&lt;AgentStartEvent&gt;): () =&gt; void;
+	on(event: &quot;agent_end&quot;, handler: ExtensionHandler&lt;AgentEndEvent&gt;): () =&gt; void;
+	on(event: &quot;agent_settled&quot;, handler: ExtensionHandler&lt;AgentSettledEvent&gt;): () =&gt; void;
+	on(event: &quot;ui_prompt_start&quot;, handler: ExtensionHandler&lt;UIPromptStartEvent&gt;): () =&gt; void;
+	on(event: &quot;ui_prompt_end&quot;, handler: ExtensionHandler&lt;UIPromptEndEvent&gt;): () =&gt; void;
+	on(event: &quot;turn_start&quot;, handler: ExtensionHandler&lt;TurnStartEvent&gt;): () =&gt; void;
+	on(event: &quot;turn_end&quot;, handler: ExtensionHandler&lt;TurnEndEvent&gt;): () =&gt; void;
+	on(event: &quot;message_start&quot;, handler: ExtensionHandler&lt;MessageStartEvent&gt;): () =&gt; void;
+	on(event: &quot;message_update&quot;, handler: ExtensionHandler&lt;MessageUpdateEvent&gt;): () =&gt; void;
+	on(event: &quot;message_end&quot;, handler: ExtensionHandler&lt;MessageEndEvent, MessageEndEventResult&gt;): () =&gt; void;
+	on(event: &quot;tool_execution_start&quot;, handler: ExtensionHandler&lt;ToolExecutionStartEvent&gt;): () =&gt; void;
+	on(event: &quot;tool_execution_update&quot;, handler: ExtensionHandler&lt;ToolExecutionUpdateEvent&gt;): () =&gt; void;
+	on(event: &quot;tool_execution_end&quot;, handler: ExtensionHandler&lt;ToolExecutionEndEvent&gt;): () =&gt; void;
+	on(event: &quot;model_select&quot;, handler: ExtensionHandler&lt;ModelSelectEvent&gt;): () =&gt; void;
+	on(event: &quot;thinking_level_select&quot;, handler: ExtensionHandler&lt;ThinkingLevelSelectEvent&gt;): () =&gt; void;
+	on(event: &quot;tool_call&quot;, handler: ExtensionHandler&lt;ToolCallEvent, ToolCallEventResult&gt;): () =&gt; void;
+	on(event: &quot;tool_result&quot;, handler: ExtensionHandler&lt;ToolResultEvent, ToolResultEventResult&gt;): () =&gt; void;
+	on(event: &quot;user_bash&quot;, handler: ExtensionHandler&lt;UserBashEvent, UserBashEventResult&gt;): () =&gt; void;
+	on(event: &quot;input&quot;, handler: ExtensionHandler&lt;InputEvent, InputEventResult&gt;): () =&gt; void;
+
+	// =========================================================================
+	// Tool Registration
+	// =========================================================================
+
+	/** Register a tool that the LLM can call. */
+	registerTool&lt;TParams extends TSchema = TSchema, TDetails = unknown, TState = any&gt;(
+		tool: ToolDefinition&lt;TParams, TDetails, TState&gt;,
+	): void;
+
+	// =========================================================================
+	// Command, Shortcut, Flag Registration
+	// =========================================================================
+
+	/** Register a custom command. */
+	registerCommand(name: string, options: Omit&lt;RegisteredCommand, &quot;name&quot; | &quot;sourceInfo&quot;&gt;): void;</code></pre></details></details><details class="concept-card" id="concept-c06-02"><summary>截断工具调用的fail-closed</summary><p>输出长度截断时即使残缺JSON仍可解析，循环也不执行这批调用，而为每项生成错误结果要求完整参数。语法可解析与生成已完成不同。
+
+这是协议完成门槛，不是对所有参数的安全证明。若修改Provider stop reason映射，必须回归截断与正常两类输出，防止把不完整请求送到有副作用的工具。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“截断工具调用的fail-closed”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-02-0"><label for="recall-c06-02-0">截断输出里的参数碰巧是合法JSON，能否执行？</label><textarea id="recall-c06-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/agent/src/agent-loop.ts:428-458，对照状态、身份、异常和保存边界。</li></ul><p>此实现仍拒绝整批并生成错误ToolResult。必须同时满足完整输出与合法调用契约，不能仅看JSON可解析。</p><ul><li>明确本题契约：截断工具调用的fail-closed</li><li>依据源码解释原因：此实现仍拒绝整批并生成错误ToolResult。必须同时满足完整输出与合法调用契约，不能仅看JSON可解析。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/agent/src/agent-loop.ts:428-458</p><p>白话翻译
+        输出长度截断时，即便残缺 JSON 恰好还能解析，Pi 也不执行任何工具调用；它为每个调用生成错误 Tool Result，让模型用完整参数重试。这是具体的 fail-closed 设计。</p><pre><code> * Fail all tool calls from an assistant message that was truncated by the
+ * output token limit. Streamed tool-call arguments are finalized with a
+ * best-effort JSON salvage parser, so a truncated message can yield tool calls
+ * whose arguments parse and validate but are silently incomplete. None of them
+ * are safe to execute; report each as an error so the model can re-issue them.
+ */
+async function failToolCallsFromTruncatedMessage(
+	toolCalls: AgentToolCall[],
+	emit: AgentEventSink,
+): Promise&lt;ExecutedToolCallBatch&gt; {
+	const messages: ToolResultMessage[] = [];
+	for (const toolCall of toolCalls) {
+		await emit({
+			type: &quot;tool_execution_start&quot;,
+			toolCallId: toolCall.id,
+			toolName: toolCall.name,
+			args: toolCall.arguments,
+		});
+		const finalized: FinalizedToolCallOutcome = {
+			toolCall,
+			result: createErrorToolResult(
+				`Tool call &quot;${toolCall.name}&quot; was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments.`,
+			),
+			isError: true,
+		};
+		await emitToolExecutionEnd(finalized, emit);
+		const toolResultMessage = createToolResultMessage(finalized);
+		await emitToolResultMessage(toolResultMessage, emit);
+		messages.push(toolResultMessage);
+	}
+	return { messages, terminate: false };</code></pre></details></details><details class="concept-card" id="concept-c06-03"><summary>用失败层次教回主线</summary><p>无模型或无有效认证在进入循环前终止；OAuth错误还有专门反馈。这与模型能力、工具返回错误和会话重建失败属于不同层。
+
+迁移到新的宿主时先冻结输入变换、循环事件、工具策略、日志树和上下文投影。把静态源码、独立教学模型与真实Provider结果分别记录。当前教材没有发真实模型请求，也没有验OS隔离。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“用失败层次教回主线”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-03-0"><label for="recall-c06-03-0">迁移为研究助手，最先应冻结哪几个契约？</label><textarea id="recall-c06-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 packages/coding-agent/src/core/agent-session.ts:1313-1330，对照状态、身份、异常和保存边界。</li></ul><p>冻结输入/模型配置、工具权限与结果配对、终止条件、会话树与压缩投影；再分别验证正常、截断、拒绝和恢复，不拿CLI最终文字代替证据。</p><ul><li>明确本题契约：用失败层次教回主线</li><li>依据源码解释原因：冻结输入/模型配置、工具权限与结果配对、终止条件、会话树与压缩投影；再分别验证正常、截断、拒绝和恢复，不拿CLI最终文字代替证据。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">packages/coding-agent/src/core/agent-session.ts:1313-1330</p><p>白话翻译
+        没有模型或没有有效认证时，请求在 Agent Loop 之前终止。OAuth 错误还会给出重新登录的具体动作；这类故障不应通过重写 Prompt 修复。</p><pre><code>			// Validate model
+			if (!this.model) {
+				throw new Error(formatNoModelSelectedMessage());
+			}
+
+			const hasConfiguredAuth =
+				this._modelRuntime.hasConfiguredAuth(this.model.provider) ||
+				(await this._modelRuntime.checkAuth(this.model.provider)) !== undefined;
+			if (!hasConfiguredAuth) {
+				const isOAuth = this._modelRuntime.isUsingOAuth(this.model.provider);
+				if (isOAuth) {
+					throw new Error(
+						`Authentication failed for &quot;${this.model.provider}&quot;. ` +
+							`Credentials may have expired or network is unavailable. ` +
+							`Run &#x27;/login ${this.model.provider}&#x27; to re-authenticate.`,
+					);
+				}
+				throw new Error(formatNoApiKeyFoundMessage(this.model.provider));</code></pre></details></details><button type="button" class="export-learning-notes">导出回忆记录</button><p class="notes-feedback" aria-live="polite"></p><details class="export-preview" hidden><summary>可复制的导出记录</summary><label for="export-data">尚未评价的回忆记录（JSON）</label><textarea id="export-data" readonly rows="6"></textarea><a class="export-download" download="code-learning-recall.json">下载 JSON</a></details></section>
+  <main id="course"><section class="course-module" id="module-01" data-title="按下 Enter 之后">
+  <div class="screen hero-screen" data-number="01">
+    <p class="eyebrow">Module 1 · Input path</p>
+    <h2>按下 Enter，只是敲响前台铃</h2>
+    <p class="lede">学完这一节，你能从终端输入一路找到真正启动 Agent 的位置；当“按了 Enter 没反应”时，会先检查输入、预处理、模型与认证，而不是直接怀疑模型能力。</p>
+    <div class="callout">
+      <strong>本课追踪对象：</strong>用户输入“读取配置并解释失败原因”，Pi 可能读取文件、执行命令，再给出结论。
+    </div>
+    <p><dfn data-definition="TUI 是运行在终端里的图形化文字界面，负责编辑、消息展示、快捷键与状态反馈。">TUI</dfn> 是你看见的界面，不是执行推理的 Agent 本身。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The reception desk</p>
+    <h3>界面一次只把一个普通输入交给会话</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/modes/interactive/interactive-mode.ts" data-lines="1136-1145">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>		// Main interactive loop
+		while (true) {
+			const userInput = await this.getUserInput();
+			try {
+				await this.session.prompt(userInput);
+			} catch (error: unknown) {
+				const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+				this.showError(errorMessage);
+			}
+		}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>交互模式持续等待输入。每次拿到一条普通消息，就等待 <span class="path-chip">session.prompt()</span> 完成；若前置检查或运行失败，错误回到界面显示。</p>
+      </figcaption>
+    </figure>
+    <p>这里的 <code>await</code> 像前台一次处理一位来访者。Agent 正在工作时的新输入不会偷偷启动第二个并发会话，而会走 steer 或 follow-up 队列。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Preprocessing order</p>
+    <h3>原始文字先经过一条有顺序的分诊线</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/agent-session.ts" data-lines="1255-1291">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>		try {
+			// Handle extension commands first (execute immediately, even during streaming)
+			// Extension commands manage their own LLM interaction via pi.sendMessage()
+			if (expandPromptTemplates &amp;&amp; text.startsWith("/")) {
+				const handled = await this._tryExecuteExtensionCommand(text);
+				if (handled) {
+					// Extension command executed, no prompt to send
+					preflightResult?.(true);
+					return;
+				}
+			}
+
+			if (this._compactionAbortController !== undefined) {
+				throw new Error(
+					"Cannot submit a prompt while compaction is in progress. Wait for compaction to finish and retry.",
+				);
+			}
+
+			// Emit input event for extension interception (before skill/template expansion)
+			const processedInput = await this._runInputHandlers(
+				text,
+				options?.images,
+				options?.source ?? "interactive",
+				this.isStreaming ? options?.streamingBehavior : undefined,
+			);
+			if (!processedInput) {
+				preflightResult?.(true);
+				return;
+			}
+			const { text: currentText, images: currentImages } = processedInput;
+
+			// Expand skill commands (/skill:name args) and prompt templates (/template args)
+			let expandedText = currentText;
+			if (expandPromptTemplates) {
+				expandedText = this._expandSkillCommand(expandedText);
+				expandedText = expandPromptTemplate(expandedText, [...this.promptTemplates]);
+			}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>斜杠命令先尝试由 Extension 接管；压缩进行中会拒绝新主请求；输入钩子可以处理或改写内容；最后才展开 Skill 与 Prompt Template。顺序变化会改变可见行为。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="一次普通输入进入 Agent 的步骤">
+      <button type="button" class="flow-step is-active" data-detail="Editor 收集文字，Enter 把它交给 InteractiveMode。">1. Editor</button>
+      <button type="button" class="flow-step" data-detail="InteractiveMode 从输入队列取出一条消息。">2. Input queue</button>
+      <button type="button" class="flow-step" data-detail="AgentSession 依次处理命令、钩子、Skill、模板和流式队列。">3. Session preflight</button>
+      <button type="button" class="flow-step" data-detail="会话检查模型与认证，并组装用户消息、系统上下文和工具清单。">4. Request assembly</button>
+      <button type="button" class="flow-step" data-detail="Agent Core 启动循环；模型回答或请求工具。">5. Agent loop</button>
+      <button type="button" class="flow-step" data-detail="事件同时驱动 TUI 更新和会话持久化。">6. Events</button>
+      <p class="flow-detail" aria-live="polite">Editor 收集文字，Enter 把它交给 InteractiveMode。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied diagnosis</p>
+    <h3>“没回答”至少有四种不同停点</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>输入没离开编辑器</h4><p>查提交回调、启动状态与输入队列。</p></article>
+      <article class="actor-card"><h4>分诊提前返回</h4><p>斜杠命令或 input handler 可能已处理消息。</p></article>
+      <article class="actor-card"><h4>前置检查拒绝</h4><p>压缩、无模型或认证失败会在调用 Provider 前报错。</p></article>
+      <article class="actor-card"><h4>运行阶段失败</h4><p>此时才进入模型流、工具与会话事件的排查。</p></article>
+    </div>
+    <p><dfn data-definition="Preflight 是正式启动高成本或有副作用操作前的一组检查与改写步骤。">Preflight</dfn> 能让许多错误在模型请求或工具执行前暴露。</p>
+    <div class="quiz" data-explanation="AgentSession 在调用模型前就会处理扩展、压缩状态、Skill/模板、模型与认证；这些都比 Provider 更靠前。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>输入 `/review` 后没有出现模型流，但自定义面板正常打开，最可能发生了什么？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">Extension command 已处理输入并提前返回</button>
+        <button type="button">模型一定生成了空字符串</button>
+        <button type="button">JSONL 会话树一定损坏了</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout warning">
+      <strong>证据边界：</strong>本课锁定提交 <span class="path-chip">36b60d2e8985</span> 做静态调用链追踪；尚未启动 Pi 或连接真实 Provider。
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-02" data-title="五个角色，谁负责什么">
+  <div class="screen hero-screen" data-number="02">
+    <p class="eyebrow">Module 2 · Cast of components</p>
+    <h2>别把整部电影都叫“模型”</h2>
+    <p class="lede">这一节把一次 Pi 请求拆成界面、产品会话、Agent 循环、Provider 适配和本地执行/保存五个角色。你会知道一个改动应该交给谁。</p>
+    <div class="callout">
+      <strong>片场比喻：</strong>TUI 是银幕，Coding Agent 是导演组，Agent Core 是现场调度，Pi AI 是翻译与发行接口，工具和 Session 是道具间与场记。
+    </div>
+    <p><dfn data-definition="Agent harness 是把模型、工具、状态、事件和产品界面组织成可运行系统的外壳。">Harness</dfn> 的价值就在“组织”，不是替代模型。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Repository map</p>
+    <h3>上游自己把产品、运行时与模型接口分开</h3>
+    <figure class="code-translation" data-source="README.md" data-lines="13-19">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code># Pi Agent Harness
+
+This is the home of the Pi agent harness project including our self extensible coding agent.
+
+* **[@earendil-works/pi-coding-agent](packages/coding-agent)**: Interactive coding agent CLI
+* **[@earendil-works/pi-agent-core](packages/agent)**: Agent runtime with tool calling and state management
+* **[@earendil-works/pi-ai](packages/ai)**: Unified multi-provider LLM API (OpenAI, Anthropic, Google, …)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">coding-agent</span> 是可直接使用的产品层；<span class="path-chip">agent</span> 提供可复用循环；<span class="path-chip">ai</span> 把不同 Provider 统一到共同消息与流接口。改 UI 不应落到 Provider，改工具循环也不该塞进 TUI。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Pi TUI</h4><p>绘制编辑器、消息、工具进度、选择器和状态栏。</p></article>
+      <article class="actor-card"><h4>Coding Agent</h4><p>处理配置、资源、认证、会话、扩展与产品模式。</p></article>
+      <article class="actor-card"><h4>Agent Core</h4><p>维护运行状态，发出事件，循环调用模型和工具。</p></article>
+      <article class="actor-card"><h4>Pi AI</h4><p>把统一上下文转换为不同 Provider 的请求与流。</p></article>
+      <article class="actor-card"><h4>Tool + Session</h4><p>触碰本地世界，并留下可恢复、可分支的记录。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Runtime assembly</p>
+    <h3>主入口先选“门”，再把同一个 runtime 交进去</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/main.ts" data-lines="929-944">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	if (appMode === "rpc") {
+		printTimings();
+		await runRpcMode(runtime);
+	} else if (appMode === "interactive") {
+		const interactiveMode = new InteractiveMode(runtime, {
+			migratedProviders,
+			startupDiagnostics,
+			modelFallbackMessage,
+			autoTrustOnReloadCwd,
+			initialMessage,
+			initialImages,
+			initialMessages: parsed.messages,
+			verbose: parsed.verbose,
+			tuiMode: parsed.tuiMode,
+			initialThemeSetting: parsed.useTheme,
+		});</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>命令行模式不是不同的 Agent 大脑，而是同一运行时的不同入口。默认交互模式创建 <span class="path-chip">InteractiveMode</span>，并带上诊断、初始消息和界面设置。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/sdk.ts" data-lines="306-325">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	agent = new Agent({
+		initialState: {
+			systemPrompt: "",
+			model,
+			thinkingLevel,
+			tools: [],
+		},
+		convertToLlm: convertToLlmWithBlockImages,
+		streamFn: async (model, context, options) =&gt; {
+			const providerRetrySettings = settingsManager.getProviderRetrySettings();
+			const httpIdleTimeoutMs = settingsManager.getHttpIdleTimeoutMs();
+			// SDKs treat timeout=0 as 0ms (immediate timeout), not "no timeout".
+			// Use max int32 to effectively disable the timeout.
+			const effectiveTimeoutMs = httpIdleTimeoutMs === 0 ? 2147483647 : httpIdleTimeoutMs;
+			const timeoutMs = options?.timeoutMs ?? providerRetrySettings.timeoutMs ?? effectiveTimeoutMs;
+			const websocketConnectTimeoutMs =
+				options?.websocketConnectTimeoutMs ?? settingsManager.getWebSocketConnectTimeoutMs();
+			const headerRunner = extensionRunnerRef.current;
+			return modelRuntime.streamSimple(model, context, {
+				...options,</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Coding Agent 把选中的模型、思考级别、消息转换和 Provider 流函数注入通用 Agent。Agent Core 不硬编码某一家模型；真正的网络调用由 <span class="path-chip">modelRuntime.streamSimple</span> 承接。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Component handoff</p>
+    <h3>一次请求像五位同事交接同一张工单</h3>
+    <div class="component-chat" aria-label="Pi 组件之间的一次请求交接">
+      <div class="chat-message" data-speaker="TUI">我收到了用户输入，并会把事件实时画出来。</div>
+      <div class="chat-message" data-speaker="AgentSession">我先加载规则、Skill、扩展、模型、认证和可用工具。</div>
+      <div class="chat-message" data-speaker="Agent Core">我维护回合，决定何时请求模型、何时执行工具、何时停止。</div>
+      <div class="chat-message" data-speaker="Pi AI">我把统一上下文翻译成当前 Provider 的协议，并把流式事件送回。</div>
+      <div class="chat-message" data-speaker="Tool / Session">我执行本地动作，并把完成消息追加到会话树。</div>
+      <button type="button" class="replay-chat">重放交接</button>
+    </div>
+    <div class="quiz" data-explanation="新增 Provider 属于统一模型接口与 Provider 适配；TUI 只负责呈现，Agent Core 只依赖注入的 stream function。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>要接入一种新的模型协议，主要应先检查哪一层？</h3>
+      <div class="quiz-options">
+        <button type="button">Pi TUI 的消息颜色</button>
+        <button type="button" data-correct="true">`packages/ai` 的 Provider 与流式适配</button>
+        <button type="button">SessionManager 的 parentId</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout">
+      <strong>指挥 Agent 的实用句式：</strong>“只改责任层 X，通过边界 Y 与现有组件交接，并用事件/测试 Z 证明没有破坏其他模式。”
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-03" data-title="Agent 循环：回答、工具、再回答">
+  <div class="screen hero-screen" data-number="03">
+    <p class="eyebrow">Module 3 · Agent loop</p>
+    <h2>一次回答，可能打很多个来回</h2>
+    <p class="lede">这一节解释 Pi 为什么能先读文件、再跑命令、最后回答：模型与本地工具像打乒乓球，Tool Result 会被回灌给模型，直到没有后续工具或排队消息。</p>
+    <div class="callout">
+      <strong>乒乓球比喻：</strong>用户发球；模型可以直接得分，也可以把“请执行工具”打到本地；工具把结果回球，模型再决定下一拍。
+    </div>
+    <p><dfn data-definition="Turn 是一次模型调用及紧随其后的工具执行；一个用户请求可以包含多个 Turn。">Turn</dfn> 不等于完整用户任务。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Run lifecycle</p>
+    <h3>Agent 先阻止重叠运行，再建立状态快照</h3>
+    <figure class="code-translation" data-source="packages/agent/src/agent.ts" data-lines="363-374">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	/** Start a new prompt from text, a single message, or a batch of messages. */
+	async prompt(message: AgentMessage | AgentMessage[]): Promise&lt;void&gt;;
+	async prompt(input: string, images?: ImageContent[]): Promise&lt;void&gt;;
+	async prompt(input: string | AgentMessage | AgentMessage[], images?: ImageContent[]): Promise&lt;void&gt; {
+		if (this.activeRun) {
+			throw new Error(
+				"Agent is already processing a prompt. Use steer() or followUp() to queue messages, or wait for completion.",
+			);
+		}
+		const messages = this.normalizePromptInput(input, images);
+		await this.runPromptMessages(messages);
+	}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>同一个 Agent 不允许两个主运行同时改状态。新输入要么等待，要么明确进入 steer/follow-up 队列；普通文本先规范化成消息，再进入统一运行路径。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="packages/agent/src/agent.ts" data-lines="425-438">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	private async runPromptMessages(
+		messages: AgentMessage[],
+		options: { skipInitialSteeringPoll?: boolean } = {},
+	): Promise&lt;void&gt; {
+		await this.runWithLifecycle(async (signal) =&gt; {
+			await runAgentLoop(
+				messages,
+				this.createContextSnapshot(),
+				this.createLoopConfig(options),
+				(event) =&gt; this.processEvents(event),
+				signal,
+				this.streamFunction,
+			);
+		});</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>核心循环拿到六样东西：新消息、上下文快照、运行配置、事件处理器、取消信号和模型流函数。它不需要知道终端怎样画，也不需要直接读配置文件。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Provider boundary</p>
+    <h3>只有到模型边界，内部消息才被翻译</h3>
+    <figure class="code-translation" data-source="packages/agent/src/agent-loop.ts" data-lines="348-376">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	if (config.transformContext) {
+		messages = await config.transformContext(messages, signal);
+	}
+
+	// Convert to LLM-compatible messages (AgentMessage[] → Message[])
+	const llmMessages = await config.convertToLlm(messages);
+
+	const llmContext = normalizeContext({ messages: llmMessages });
+
+	// Resolve API key (important for expiring tokens)
+	const resolvedApiKey =
+		(config.getApiKey ? await config.getApiKey(config.model.provider) : undefined) || config.apiKey;
+
+	const response = await streamFunction(config.model, llmContext, {
+		...config,
+		apiKey: resolvedApiKey,
+		signal,
+	});
+
+	let partialMessage: AssistantMessage | null = null;
+	let addedPartial = false;
+
+	for await (const event of response) {
+		switch (event.type) {
+			case "start":
+				partialMessage = event.partial;
+				context.messages.push(partialMessage);
+				addedPartial = true;
+				await emit({ type: "message_start", message: { ...partialMessage } });</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>扩展先有机会变换上下文，然后自定义消息才被过滤或转换成 LLM 能理解的格式。凭据在请求前动态解析，Provider 返回的流则被转成统一事件。</p>
+      </figcaption>
+    </figure>
+    <p><dfn data-definition="Stream 是结果尚未全部完成时持续到达的一系列事件，例如文本增量、思考增量或工具调用参数。">流式响应</dfn> 让 TUI 能边收到边显示；它不代表这条 Assistant Message 已经完成或持久化。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Tool round-trip</p>
+    <h3>工具结果被放回上下文，模型才知道发生了什么</h3>
+    <figure class="code-translation" data-source="packages/agent/src/agent-loop.ts" data-lines="217-249">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>			// Stream assistant response
+			const message = await streamAssistantResponse(currentContext, config, signal, emit, streamFunction);
+			newMessages.push(message);
+
+			if (message.stopReason === "error" || message.stopReason === "aborted") {
+				await emit({ type: "turn_end", message, toolResults: [] });
+				await emit({ type: "agent_end", messages: newMessages });
+				return;
+			}
+
+			// Check for tool calls
+			const toolCalls = message.content.filter((c) =&gt; c.type === "toolCall");
+
+			const toolResults: ToolResultMessage[] = [];
+			hasMoreToolCalls = false;
+			if (toolCalls.length &gt; 0) {
+				// A "length" stop means the output was cut off by the token limit, so
+				// every tool call in the message may carry truncated arguments. Fail
+				// them all instead of executing potentially borked calls.
+				const executedToolBatch =
+					message.stopReason === "length"
+						? await failToolCallsFromTruncatedMessage(toolCalls, emit)
+						: await executeToolCalls(currentContext, message, config, signal, emit);
+				toolResults.push(...executedToolBatch.messages);
+				hasMoreToolCalls = !executedToolBatch.terminate;
+
+				for (const result of toolResults) {
+					currentContext.messages.push(result);
+					newMessages.push(result);
+				}
+			}
+
+			await emit({ type: "turn_end", message, toolResults });</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>模型先产出 Assistant Message。若其中含 Tool Call，Pi 执行后把 Tool Result 同时加入当前上下文和本次新增消息。下一轮模型因此能基于真实输出继续，而不是假装命令已经成功。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="Agent 循环中的一轮工具往返">
+      <button type="button" class="flow-step is-active" data-detail="上下文被转换为当前 Provider 能接受的消息。">1. Context</button>
+      <button type="button" class="flow-step" data-detail="Provider 流式返回文字、思考或工具调用。">2. Model stream</button>
+      <button type="button" class="flow-step" data-detail="Pi 找到工具并校验参数，必要时被策略拦截。">3. Tool preflight</button>
+      <button type="button" class="flow-step" data-detail="工具在本地或替换后的后端执行，并持续报告进度。">4. Execute</button>
+      <button type="button" class="flow-step" data-detail="Tool Result 进入上下文；只要还有工具或排队消息，循环继续。">5. Feed back</button>
+      <p class="flow-detail" aria-live="polite">上下文被转换为当前 Provider 能接受的消息。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Control and diagnosis</p>
+    <h3>显示顺序、执行顺序与会话顺序不是一回事</h3>
+    <figure class="code-translation" data-source="packages/agent/src/agent-loop.ts" data-lines="464-478">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>async function executeToolCalls(
+	currentContext: AgentContext,
+	assistantMessage: AssistantMessage,
+	config: AgentLoopConfig,
+	signal: AbortSignal | undefined,
+	emit: AgentEventSink,
+): Promise&lt;ExecutedToolCallBatch&gt; {
+	const toolCalls = assistantMessage.content.filter((c) =&gt; c.type === "toolCall");
+	const hasSequentialToolCall = toolCalls.some(
+		(tc) =&gt; currentContext.tools?.find((t) =&gt; t.name === tc.name)?.executionMode === "sequential",
+	);
+	if (config.toolExecution === "sequential" || hasSequentialToolCall) {
+		return executeToolCallsSequential(currentContext, assistantMessage, toolCalls, config, signal, emit);
+	}
+	return executeToolCallsParallel(currentContext, assistantMessage, toolCalls, config, signal, emit);</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>默认可并行，但任一工具要求顺序执行时，整批改走串行路径。这类约束属于 Agent Core 的执行语义，不应由界面动画决定。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="模型只能看到被追加回上下文的 Tool Result；它据此决定继续调用工具还是给最终答案。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>为什么命令执行后通常还会再请求一次模型？</h3>
+      <div class="quiz-options">
+        <button type="button">因为 TUI 必须重新启动</button>
+        <button type="button" data-correct="true">模型需要读取 Tool Result，才能继续推理或形成最终回答</button>
+        <button type="button">因为 JSONL 每行只能存一个字符</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-04" data-title="能力不等于许可：工具与信任边界">
+  <div class="screen hero-screen" data-number="04">
+    <p class="eyebrow">Module 4 · Trust boundaries</p>
+    <h2>拿到工具箱，不等于装上门禁</h2>
+    <p class="lede">这一节区分四件常被混为一谈的事：模型看见哪些工具、项目资源是否加载、工具调用能否被策略拦截，以及进程最终拥有的操作系统权限。</p>
+    <div class="callout">
+      <strong>工具箱与门禁比喻：</strong>工具清单像“工人会用什么设备”；Project Trust 像“是否让本项目带来的插件进场”；沙箱才像“围墙和门禁”。
+    </div>
+    <p><dfn data-definition="Capability 是系统提供给模型或扩展的可调用能力；它描述能做什么，不自动描述谁获准在什么范围内做。">Capability</dfn> 与许可策略必须分开审查。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Default loadout</p>
+    <h3>默认 Agent 一开始就有四种高影响能力</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/sdk.ts" data-lines="256-263">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	const defaultActiveToolNames: ToolName[] = ["read", "bash", "edit", "write"];
+	const configuredDefaultToolNames = settingsManager.getDefaultTools();
+	const allowedToolNames = options.tools ?? (options.noTools === "all" ? [] : undefined);
+	const excludedToolNames = options.excludeTools;
+	const excludedToolNameSet = excludedToolNames ? new Set(excludedToolNames) : undefined;
+	const initialActiveToolNames = (
+		options.tools ?? (options.noTools ? [] : (configuredDefaultToolNames ?? defaultActiveToolNames))
+	).filter((name) =&gt; !excludedToolNameSet?.has(name));</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>默认负载是 read、bash、edit、write。配置可以替换默认集合，调用方也能做 allow/exclude/no-tools 过滤；“工具未展示给模型”与“工具展示后再审批”是不同设计。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>read</h4><p>读取文件内容，可能接触敏感本地信息。</p></article>
+      <article class="actor-card"><h4>bash</h4><p>启动 shell 命令，影响范围由进程与操作系统决定。</p></article>
+      <article class="actor-card"><h4>edit</h4><p>对已有文件做精确修改。</p></article>
+      <article class="actor-card"><h4>write</h4><p>创建或覆盖文件内容。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Project trust</p>
+    <h3>Trust 控制项目带来的代码和设置是否被加载</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/resource-loader.ts" data-lines="380-400">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	async loadProjectTrustExtensions(): Promise&lt;LoadExtensionsResult&gt; {
+		// Force untrusted project settings for the bootstrap pass. This keeps project-local
+		// extensions/packages out while still loading user/global and temporary CLI extensions.
+		this.settingsManager.setProjectTrusted(false);
+		await this.settingsManager.reload();
+		return this.loadCurrentExtensionSet({ includeInlineFactories: true });
+	}
+
+	async reload(options?: ResourceLoaderReloadOptions): Promise&lt;void&gt; {
+		resetTimings("extensions");
+
+		if (this.loaded) {
+			clearExtensionCache();
+		}
+
+		let preTrustExtensions: LoadExtensionsResult | undefined;
+		if (options?.resolveProjectTrust) {
+			preTrustExtensions = await this.loadProjectTrustExtensions();
+			const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
+			this.settingsManager.setProjectTrusted(projectTrusted);
+		}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>未信任阶段先排除项目本地 Extension 与 Package，同时仍可加载用户级和临时 CLI 扩展。用户作出 trust 决定后，资源加载器才按该状态重载设置与资源。</p>
+      </figcaption>
+    </figure>
+    <p><dfn data-definition="Project Trust 是对项目本地设置、包和可执行扩展的加载决定；它不是每次文件或命令操作的审批。">Project Trust</dfn> 解决“是否执行项目带来的代码”，不是“bash 能否访问某个目录”。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Operating-system boundary</p>
+    <h3>上游明确写着：Pi 默认继承启动它的进程权限</h3>
+    <figure class="code-translation" data-source="README.md" data-lines="40-48">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>## Permissions &amp; Containerization
+
+Pi does not include a built-in permission system for restricting filesystem, process, network, or credential access. By default, it runs with the permissions of the user and process that launched it.
+
+If you need stronger boundaries, containerize or sandbox Pi. See [packages/coding-agent/docs/containerization.md](packages/coding-agent/docs/containerization.md) for three patterns:
+
+- **Gondolin extension**: keep `pi` and provider auth on the host while routing built-in tools and `!` commands into a local Linux micro-VM.
+- **Plain Docker**: run the whole `pi` process in a local container for simple isolation.
+- **OpenShell**: run the whole `pi` process in a policy-controlled sandbox.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Pi 自身没有覆盖文件系统、进程、网络和凭据的通用内建许可系统。需要强边界时，上游建议把执行放进 micro-VM、Docker 或策略沙箱。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/tools/bash.ts" data-lines="80-102">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>/** Shared process execution used by the built-in shell tools. */
+export function createLocalShellOperations(shellName: string, resolveShellConfig: () =&gt; ShellConfig): BashOperations {
+	return {
+		exec: async (command, cwd, { onData, signal, timeout, env }) =&gt; {
+			const timeoutMs = resolveTimeoutMs(timeout);
+			if (signal?.aborted) {
+				throw new Error("aborted");
+			}
+			const shellConfig = resolveShellConfig();
+			try {
+				await fsAccess(cwd, constants.F_OK);
+			} catch {
+				throw new Error(`Working directory does not exist: ${cwd}\nCannot execute ${shellName} commands.`);
+			}
+
+			const commandFromStdin = shellConfig.commandTransport === "stdin";
+			const child = spawn(shellConfig.shell, commandFromStdin ? shellConfig.args : [...shellConfig.args, command], {
+				cwd,
+				detached: process.platform !== "win32",
+				env: env ?? getShellEnv(),
+				stdio: [commandFromStdin ? "pipe" : "ignore", "pipe", "pipe"],
+				windowsHide: true,
+			});</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>内建 bash 工具直接启动本地 shell 子进程，并传入当前工作目录与环境。代码会处理取消、超时和输出，但这些不是资源隔离；真正可访问范围仍由宿主进程决定。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Optional policy seam</p>
+    <h3>可插入拦截策略，但“可插入”不等于“默认已审批”</h3>
+    <figure class="code-translation" data-source="packages/agent/src/agent-loop.ts" data-lines="669-708">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	const tool = currentContext.tools?.find((t) =&gt; t.name === toolCall.name);
+	if (!tool) {
+		return {
+			kind: "immediate",
+			result: createErrorToolResult(`Tool ${toolCall.name} not found`),
+			isError: true,
+		};
+	}
+
+	try {
+		const preparedToolCall = prepareToolCallArguments(tool, toolCall);
+		const validatedArgs = validateToolArguments(tool, preparedToolCall);
+		if (config.beforeToolCall) {
+			const beforeResult = await config.beforeToolCall(
+				{
+					assistantMessage,
+					toolCall,
+					args: validatedArgs,
+					context: currentContext,
+				},
+				signal,
+			);
+			if (signal?.aborted) {
+				return {
+					kind: "immediate",
+					result: createErrorToolResult("Operation aborted"),
+					isError: true,
+				};
+			}
+			if (beforeResult?.block) {
+				const result = createErrorToolResult(beforeResult.reason || "Tool execution was blocked");
+				if (beforeResult.terminate === true) {
+					result.terminate = true;
+				}
+				return {
+					kind: "immediate",
+					result,
+					isError: true,
+				};
+			}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Agent Core 会先找工具并校验参数；宿主若提供 <span class="path-chip">beforeToolCall</span>，可以拒绝执行并给模型错误结果。这是策略接缝，不改变上游对“Pi 无通用内建权限系统”的明确说明。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="Project Trust 只决定项目设置、包和扩展是否加载；要限制文件、进程、网络或凭据，需使用工具策略与操作系统级沙箱/容器边界。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>你把项目标记为“不信任”，是否因此能保证 bash 无法访问工作目录外的文件？</h3>
+      <div class="quiz-options">
+        <button type="button">可以，Project Trust 就是文件系统沙箱</button>
+        <button type="button" data-correct="true">不可以；它阻止项目资源加载，不替代 OS 沙箱或工具策略</button>
+        <button type="button">可以，只要模型的思考级别设为 off</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout warning"><strong>安全指挥原则：</strong>先写允许访问的路径、进程、网络与凭据边界，再选择 sandbox/container；不要只写“开启 trust”。</div>
+  </div>
+</section>
+
+<section class="course-module" id="module-05" data-title="会话树：保存、分支与压缩">
+  <div class="screen hero-screen" data-number="05">
+    <p class="eyebrow">Module 5 · Session state</p>
+    <h2>会话是账本，不是一块会被擦掉的白板</h2>
+    <p class="lede">这一节说明消息何时落盘、为什么每条记录都有父节点、`/tree` 如何保留旧分支，以及压缩为什么只改变“模型下一次看什么”，不等于删除完整历史。</p>
+    <div class="callout">
+      <strong>账本与书签比喻：</strong>JSONL 是只往后写的账本；parentId 是页间引用；leaf 是当前书签；分支只是移动书签后继续写新页。
+    </div>
+    <p><dfn data-definition="JSONL 是一行一个 JSON 对象的文本格式，适合追加写入和逐行恢复。">JSONL</dfn> 让一段会话可以作为可检查的事件序列保存。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Persistence trigger</p>
+    <h3>只有完成的消息事件才进入常规消息账本</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/agent-session.ts" data-lines="688-707">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>		// Handle session persistence
+		if (event.type === "message_end") {
+			// Check if this is a custom message from extensions
+			if (event.message.role === "custom") {
+				// Persist as CustomMessageEntry
+				this.sessionManager.appendCustomMessageEntry(
+					event.message.customType,
+					event.message.content,
+					event.message.display,
+					event.message.details,
+				);
+			} else if (
+				event.message.role === "system" ||
+				event.message.role === "user" ||
+				event.message.role === "assistant" ||
+				event.message.role === "toolResult"
+			) {
+				// Regular LLM message - persist as SessionMessageEntry
+				this.sessionManager.appendMessage(event.message);
+			}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>AgentSession 同时是事件桥与持久化边界。自定义消息有自己的条目类型；system、user、assistant 和 toolResult 在 <span class="path-chip">message_end</span> 时追加为普通消息条目。</p>
+      </figcaption>
+    </figure>
+    <p>流式的 <code>message_update</code> 用来刷新界面，但这里没有逐 token 写成一堆永久消息；最终完成事件才形成常规会话记录。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Append-only tree</p>
+    <h3>每一条新记录都成为当前 leaf 的孩子</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/session-manager.ts" data-lines="857-866">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code> * Manages conversation sessions as append-only trees stored in JSONL files.
+ *
+ * Each session entry has an id and parentId forming a tree structure. The "leaf"
+ * pointer tracks the current position. Appending creates a child of the current leaf.
+ * Branching moves the leaf to an earlier entry, allowing new branches without
+ * modifying history.
+ *
+ * Use buildSessionContext() to get the resolved message list for the LLM, which
+ * handles compaction summaries and follows the path from root to current leaf.
+ */</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>源码注释直接定义了数据模型：物理文件是追加式，逻辑结构是树。模型看到的不是整份文件，而是从 root 走到当前 leaf 的有效路径，并应用压缩规则。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/session-manager.ts" data-lines="1069-1091">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	private _appendEntry(entry: SessionEntry): void {
+		this.fileEntries.push(entry);
+		this.byId.set(entry.id, entry);
+		this.leafId = entry.id;
+		this._persist(entry);
+	}
+
+	/** Append a message as child of current leaf, then advance leaf. Returns entry id.
+	 * Does not allow writing CompactionSummaryMessage and BranchSummaryMessage directly.
+	 * Reason: we want these to be top-level entries in the session, not message session entries,
+	 * so it is easier to find them.
+	 * These need to be appended via appendCompaction() and appendBranchSummary() methods.
+	 */
+	appendMessage(message: Message | CustomMessage | BashExecutionMessage): string {
+		const entry: SessionMessageEntry = {
+			type: "message",
+			id: generateId(this.byId),
+			parentId: this.leafId,
+			timestamp: new Date().toISOString(),
+			message,
+		};
+		this._appendEntry(entry);
+		return entry.id;</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>新消息先记住当前 leaf 作为 parentId，再追加、建索引、把 leaf 移到自己并持久化。压缩摘要与分支摘要故意不是伪装成普通消息的记录。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Branching</p>
+    <h3>回到旧节点不会覆写后来发生的事</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/session-manager.ts" data-lines="1382-1393">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	/**
+	 * Start a new branch from an earlier entry.
+	 * Moves the leaf pointer to the specified entry. The next appendXXX() call
+	 * will create a child of that entry, forming a new branch. Existing entries
+	 * are not modified or deleted.
+	 */
+	branch(branchFromId: string): void {
+		if (!this.byId.has(branchFromId)) {
+			throw new Error(`Entry ${branchFromId} not found`);
+		}
+		this.leafId = branchFromId;
+	}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>分支动作只验证目标并移动 leaf。下一次追加会从旧节点长出一个兄弟分支；原路径仍留在同一个 JSONL 文件里。</p>
+      </figcaption>
+    </figure>
+    <div class="callout">
+      <pre><code>root ─ user A ─ assistant A
+                   ├─ user B ─ assistant B   ← 原路径仍在
+                   └─ user C ─ assistant C   ← 当前 leaf</code></pre>
+    </div>
+    <p><dfn data-definition="Leaf 是当前活动路径最末端的条目；新记录会接在它后面。">leaf</dfn> 是模型上下文路径的书签，不是“文件最后一行”的同义词。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Compaction</p>
+    <h3>压缩替换模型视野，不抹掉账本</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/session-manager.ts" data-lines="452-464">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	const contextEntries: SessionEntry[] = [compaction];
+	let foundFirstKept = false;
+	for (let i = 0; i &lt; compactionIdx; i++) {
+		const entry = path[i];
+		if (entry.id === compaction.firstKeptEntryId) {
+			foundFirstKept = true;
+		}
+		if (foundFirstKept &amp;&amp; !(entry.type === "message" &amp;&amp; entry.message.role === "system")) {
+			contextEntries.push(entry);
+		}
+	}
+	contextEntries.push(...path.slice(compactionIdx + 1));
+	return contextEntries;</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>重建上下文时，最新压缩条目先出现，然后加入从 <span class="path-chip">firstKeptEntryId</span> 开始的保留尾部，以及压缩之后的新记录。更老的原始消息仍在文件里，但不再逐条发送给模型。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="分支移动 leaf 而不删旧条目；压缩改变当前上下文投影，并保留完整 JSONL 历史供 `/tree` 回看。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>自动压缩后，哪句话最准确？</h3>
+      <div class="quiz-options">
+        <button type="button">旧消息已从磁盘永久删除</button>
+        <button type="button" data-correct="true">模型改看摘要与保留尾部，完整历史仍在 JSONL</button>
+        <button type="button">所有旧消息仍逐字进入每次 Provider 请求</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout warning"><strong>不可过度承诺：</strong>上游文档明确把 compaction 称为有损；源码证明保留机制，不能证明摘要语义零损失。</div>
+  </div>
+</section>
+
+<section class="course-module" id="module-06" data-title="扩展 Pi 与排查失败">
+  <div class="screen hero-screen" data-number="06">
+    <p class="eyebrow">Module 6 · Safe change map</p>
+    <h2>先选插座，再追熔断点</h2>
+    <p class="lede">最后一节把前五节变成行动地图：何时用 Prompt、Skill 或 Extension，何时才改核心；发生故障时，如何按 preflight、Provider、tool、session 四段收集证据。</p>
+    <div class="callout">
+      <strong>配电盘比喻：</strong>Extension API 是预留插座；事件是电路测试点；错误与 stop reason 是熔断器标签。先接对插座，故障才不会蔓延到整台机器。
+    </div>
+    <p><dfn data-definition="Extension 是在不修改 Pi 核心源码的前提下，注册事件处理器、工具、命令、快捷键或界面的可执行扩展。">Extension</dfn> 比复制一份核心代码更容易升级与隔离责任。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Public seams</p>
+    <h3>扩展可以观察生命周期，也能新增工具和命令</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/extensions/types.ts" data-lines="1296-1334">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	on(
+		event: "before_agent_start",
+		handler: ExtensionHandler&lt;BeforeAgentStartEvent, BeforeAgentStartEventResult&gt;,
+	): () =&gt; void;
+	on(event: "agent_start", handler: ExtensionHandler&lt;AgentStartEvent&gt;): () =&gt; void;
+	on(event: "agent_end", handler: ExtensionHandler&lt;AgentEndEvent&gt;): () =&gt; void;
+	on(event: "agent_settled", handler: ExtensionHandler&lt;AgentSettledEvent&gt;): () =&gt; void;
+	on(event: "ui_prompt_start", handler: ExtensionHandler&lt;UIPromptStartEvent&gt;): () =&gt; void;
+	on(event: "ui_prompt_end", handler: ExtensionHandler&lt;UIPromptEndEvent&gt;): () =&gt; void;
+	on(event: "turn_start", handler: ExtensionHandler&lt;TurnStartEvent&gt;): () =&gt; void;
+	on(event: "turn_end", handler: ExtensionHandler&lt;TurnEndEvent&gt;): () =&gt; void;
+	on(event: "message_start", handler: ExtensionHandler&lt;MessageStartEvent&gt;): () =&gt; void;
+	on(event: "message_update", handler: ExtensionHandler&lt;MessageUpdateEvent&gt;): () =&gt; void;
+	on(event: "message_end", handler: ExtensionHandler&lt;MessageEndEvent, MessageEndEventResult&gt;): () =&gt; void;
+	on(event: "tool_execution_start", handler: ExtensionHandler&lt;ToolExecutionStartEvent&gt;): () =&gt; void;
+	on(event: "tool_execution_update", handler: ExtensionHandler&lt;ToolExecutionUpdateEvent&gt;): () =&gt; void;
+	on(event: "tool_execution_end", handler: ExtensionHandler&lt;ToolExecutionEndEvent&gt;): () =&gt; void;
+	on(event: "model_select", handler: ExtensionHandler&lt;ModelSelectEvent&gt;): () =&gt; void;
+	on(event: "thinking_level_select", handler: ExtensionHandler&lt;ThinkingLevelSelectEvent&gt;): () =&gt; void;
+	on(event: "tool_call", handler: ExtensionHandler&lt;ToolCallEvent, ToolCallEventResult&gt;): () =&gt; void;
+	on(event: "tool_result", handler: ExtensionHandler&lt;ToolResultEvent, ToolResultEventResult&gt;): () =&gt; void;
+	on(event: "user_bash", handler: ExtensionHandler&lt;UserBashEvent, UserBashEventResult&gt;): () =&gt; void;
+	on(event: "input", handler: ExtensionHandler&lt;InputEvent, InputEventResult&gt;): () =&gt; void;
+
+	// =========================================================================
+	// Tool Registration
+	// =========================================================================
+
+	/** Register a tool that the LLM can call. */
+	registerTool&lt;TParams extends TSchema = TSchema, TDetails = unknown, TState = any&gt;(
+		tool: ToolDefinition&lt;TParams, TDetails, TState&gt;,
+	): void;
+
+	// =========================================================================
+	// Command, Shortcut, Flag Registration
+	// =========================================================================
+
+	/** Register a custom command. */
+	registerCommand(name: string, options: Omit&lt;RegisteredCommand, "name" | "sourceInfo"&gt;): void;</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>公开 API 覆盖输入、Agent、Turn、Message、Tool 与模型选择等测试点，还允许注册新工具和斜杠命令。若需求能在这些接缝完成，通常不必改主循环。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/extensions/types.ts" data-lines="1125-1134">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>export interface ToolCallEventResult {
+	/** Block tool execution. To modify arguments, mutate `event.input` in place instead. */
+	block?: boolean;
+	reason?: string;
+	/**
+	 * Hint that the agent should stop after the current tool batch when this call is blocked.
+	 * Early termination only happens when every finalized tool result in the batch sets this to true.
+	 */
+	terminate?: boolean;
+}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Extension 的 tool-call handler 可以明确阻止调用、解释原因，并提示是否结束该批工具。这样组织级策略可以成为可测试扩展，而不是一句依赖模型自觉的 Prompt。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Choose the smallest seam</p>
+    <h3>Prompt、Skill、Extension 与核心改动解决不同问题</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/system-prompt.ts" data-lines="142-170">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>	const promptSections: Record&lt;string, string&gt; = {};
+	if (customPrompt) {
+		promptSections.preamble = customPrompt;
+	} else {
+		promptSections.preamble =
+			"You are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files.";
+		const visibleTools = selectedTools.filter((name) =&gt; !!toolSnippets[name]);
+		const tools =
+			visibleTools.length &gt; 0 ? visibleTools.map((name) =&gt; `- ${name}: ${toolSnippets[name]}`).join("\n") : "(none)";
+		promptSections.tools = `${tools}\n\nIn addition to the tools above, you may have access to other custom tools depending on the project.`;
+		promptSections.rules = buildRules(selectedTools, toolGuidelines, promptGuidelines);
+		promptSections.docs = `Pi documentation (read only when the user asks about pi itself, its SDK, extensions, themes, skills, or TUI):
+- Main documentation: ${getReadmePath()}
+- Additional docs: ${getDocsPath()}
+- Examples: ${getExamplesPath()} (extensions, custom tools, SDK)
+- When reading pi docs or examples, resolve docs/... under Additional docs and examples/... under Examples, not the current working directory
+- When asked about: extensions (docs/extensions.md, examples/extensions/), themes (docs/themes.md), skills (docs/skills.md), prompt templates (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings (docs/keybindings.md), SDK integrations (docs/sdk.md), custom providers (docs/custom-provider.md), adding models (docs/models.md), pi packages (docs/packages.md), environment variables (docs/environment-variables.md)
+- When working on pi topics, read the docs and examples, and follow .md cross-references before implementing
+- Always read pi .md files completely and follow links to related docs (e.g., tui.md for TUI API details)`;
+	}
+
+	if (appendSystemPrompt) promptSections.addendum = appendSystemPrompt;
+	if (contextFiles.length &gt; 0) promptSections.project_context = renderProjectContext(contextFiles);
+	const skillFileReadTool = (["read", "bash"] as const).find((tool) =&gt; selectedTools.includes(tool));
+	if (skillFileReadTool &amp;&amp; skills.length &gt; 0) {
+		const skillsPrompt = formatSkillsForPrompt(skills, skillFileReadTool).trim();
+		if (skillsPrompt) promptSections.skills = skillsPrompt;
+	}
+	promptSections.cwd = cwd.replace(/\\/g, "/");</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>系统 Prompt 不是一整段神秘字符串，而是由 preamble、工具、规则、文档、附加说明、项目上下文、Skill 与 cwd 等命名区块组装。改行为前先找对区块，避免把安全机制错写成文字建议。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Prompt Template</h4><p>复用一段用户请求格式；不新增执行能力。</p></article>
+      <article class="actor-card"><h4>Skill</h4><p>按需给模型一套工作方法与资源说明；仍由现有工具执行。</p></article>
+      <article class="actor-card"><h4>Extension</h4><p>新增可执行工具、事件策略、命令或界面。</p></article>
+      <article class="actor-card"><h4>Core change</h4><p>只有公共生命周期或不变量本身要变时才触碰。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Failure ladder</p>
+    <h3>先找停止阶段，再讨论根因</h3>
+    <figure class="code-translation" data-source="packages/coding-agent/src/core/agent-session.ts" data-lines="1313-1330">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>			// Validate model
+			if (!this.model) {
+				throw new Error(formatNoModelSelectedMessage());
+			}
+
+			const hasConfiguredAuth =
+				this._modelRuntime.hasConfiguredAuth(this.model.provider) ||
+				(await this._modelRuntime.checkAuth(this.model.provider)) !== undefined;
+			if (!hasConfiguredAuth) {
+				const isOAuth = this._modelRuntime.isUsingOAuth(this.model.provider);
+				if (isOAuth) {
+					throw new Error(
+						`Authentication failed for "${this.model.provider}". ` +
+							`Credentials may have expired or network is unavailable. ` +
+							`Run '/login ${this.model.provider}' to re-authenticate.`,
+					);
+				}
+				throw new Error(formatNoApiKeyFoundMessage(this.model.provider));</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>没有模型或没有有效认证时，请求在 Agent Loop 之前终止。OAuth 错误还会给出重新登录的具体动作；这类故障不应通过重写 Prompt 修复。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="packages/agent/src/agent-loop.ts" data-lines="428-458">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code> * Fail all tool calls from an assistant message that was truncated by the
+ * output token limit. Streamed tool-call arguments are finalized with a
+ * best-effort JSON salvage parser, so a truncated message can yield tool calls
+ * whose arguments parse and validate but are silently incomplete. None of them
+ * are safe to execute; report each as an error so the model can re-issue them.
+ */
+async function failToolCallsFromTruncatedMessage(
+	toolCalls: AgentToolCall[],
+	emit: AgentEventSink,
+): Promise&lt;ExecutedToolCallBatch&gt; {
+	const messages: ToolResultMessage[] = [];
+	for (const toolCall of toolCalls) {
+		await emit({
+			type: "tool_execution_start",
+			toolCallId: toolCall.id,
+			toolName: toolCall.name,
+			args: toolCall.arguments,
+		});
+		const finalized: FinalizedToolCallOutcome = {
+			toolCall,
+			result: createErrorToolResult(
+				`Tool call "${toolCall.name}" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments.`,
+			),
+			isError: true,
+		};
+		await emitToolExecutionEnd(finalized, emit);
+		const toolResultMessage = createToolResultMessage(finalized);
+		await emitToolResultMessage(toolResultMessage, emit);
+		messages.push(toolResultMessage);
+	}
+	return { messages, terminate: false };</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>输出长度截断时，即便残缺 JSON 恰好还能解析，Pi 也不执行任何工具调用；它为每个调用生成错误 Tool Result，让模型用完整参数重试。这是具体的 fail-closed 设计。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Steer and verify</p>
+    <h3>把需求写成“责任层 + 不变量 + 证据”</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>表象</h4><p>用户看到什么？是无响应、报错、工具失败、历史丢失还是权限越界？</p></article>
+      <article class="actor-card"><h4>责任层</h4><p>TUI、AgentSession、Agent Core、Provider、Tool 或 Session，哪个最先违背预期？</p></article>
+      <article class="actor-card"><h4>不变量</h4><p>例如“截断参数绝不执行”“旧分支不被修改”“未 trust 不加载项目扩展”。</p></article>
+      <article class="actor-card"><h4>证据</h4><p>指定事件序列、测试、JSONL 条目、错误消息或沙箱边界，而不是“看起来能用”。</p></article>
+    </div>
+    <div class="quiz" data-explanation="Prompt 只能劝模型；对每次 bash 做强制审批需要可执行的 Extension 策略/UI，并且高风险环境仍应由沙箱限制最终权限。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>需求是“所有 bash 调用必须先经人工确认”，最可靠的起点是什么？</h3>
+      <div class="quiz-options">
+        <button type="button">只在 Prompt 中写“请谨慎”</button>
+        <button type="button" data-correct="true">用 Extension 的 tool_call/UI 接缝实现可测试审批，并保留沙箱边界</button>
+        <button type="button">修改 SessionManager 的 parentId</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout">
+      <strong>课程总结：</strong>从 Enter 到最终回答，Pi 依次经过输入分诊、运行装配、Agent 循环、Provider 流、工具往返和会话树；安全边界与扩展点横跨这些层，但各自职责可被源码和事件独立核验。
+    </div>
+  </div>
+</section></main>
+
+  <footer class="course-footer">
+    <p>源码摘录授权见 <a href="source-license.txt">上游许可</a>；课程工具许可见 <a href="tooling-license.txt">MIT</a>。</p>
+    <p>基于已检查的源码。摘录保留原文件与连续行号，学习结论可回到证据。</p>
+    <a href="#course-start">返回顶部 ↑</a>
+  </footer>
+  <script>(() => {
+  const modules = [...document.querySelectorAll('.course-module')];
+  const dots = [...document.querySelectorAll('.nav-dot')];
+  const progress = document.querySelector('#progress-bar');
+  const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let userReducedMotion = false;
+  try { userReducedMotion = localStorage.getItem('code-learning:reduce-motion') === 'true'; } catch (_) {}
+  let reduceMotion = systemReducedMotion || userReducedMotion;
+  const motionToggle = document.querySelector('#motion-toggle');
+  const applyMotion = () => {
+    reduceMotion = systemReducedMotion || userReducedMotion;
+    document.documentElement.dataset.reducedMotion = String(reduceMotion);
+    if (motionToggle) {
+      motionToggle.setAttribute('aria-pressed', String(reduceMotion));
+      motionToggle.disabled = systemReducedMotion;
+    }
+  };
+  applyMotion();
+  motionToggle?.addEventListener('click', () => {
+    userReducedMotion = !userReducedMotion;
+    try { localStorage.setItem('code-learning:reduce-motion', String(userReducedMotion)); } catch (_) {}
+    applyMotion();
+  });
+
+  let activeModuleId;
+  const setActiveModule = (id) => {
+    if (activeModuleId === id) return;
+    activeModuleId = id;
+    dots.forEach((dot) => {
+      const active = dot.dataset.target === id;
+      dot.classList.toggle('is-active', active);
+      if (active) dot.setAttribute('aria-current', 'step');
+      else dot.removeAttribute('aria-current');
+      const nav = dot.parentElement;
+      if (active && nav.scrollWidth > nav.clientWidth) {
+        nav.scrollTo({ left: dot.offsetLeft - nav.offsetLeft - (nav.clientWidth - dot.offsetWidth) / 2,
+          behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    });
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      document.getElementById(dot.dataset.target)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  });
+
+  const updateProgress = () => {
+    const available = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = available > 0 ? Math.min(1, Math.max(0, window.scrollY / available)) : 0;
+    if (progress) progress.style.width = `${ratio * 100}%`;
+    const current = currentModuleIndex();
+    if (modules.length) setActiveModule(current >= 0 ? modules[current].id : null);
+  };
+  document.addEventListener('scroll', updateProgress, { passive: true });
+
+  const currentModuleIndex = () => {
+    const center = window.scrollY + window.innerHeight * 0.45;
+    let best = -1;
+    modules.forEach((module, index) => {
+      if (module.offsetTop <= center) best = index;
+    });
+    return best;
+  };
+  updateProgress();
+
+  document.addEventListener('keydown', (event) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) return;
+    if (document.activeElement?.closest('[data-code-scroll], .table-scroll')) return;
+    const forward = event.key === 'j' || event.key === 'J' || event.key === 'ArrowDown';
+    const backward = event.key === 'k' || event.key === 'K' || event.key === 'ArrowUp';
+    if (!forward && !backward) return;
+    const offset = forward ? 1 : -1;
+    const target = modules[Math.min(modules.length - 1, Math.max(0, currentModuleIndex() + offset))];
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+  });
+
+  document.querySelectorAll('dfn[data-definition]').forEach((term) => {
+    term.tabIndex = 0;
+    term.setAttribute('aria-label', `${term.textContent}: ${term.dataset.definition}`);
+  });
+
+  document.querySelectorAll('.code-translation').forEach((translation) => {
+    const label = translation.querySelector('.source-label');
+    if (label) {
+      const range = (translation.dataset.lines || '').replace('-', '–');
+      label.textContent = `源码 · ${translation.dataset.source || 'unknown source'}:${range}`;
+    }
+    const code = translation.querySelector('pre');
+    if (code) {
+      code.tabIndex = 0;
+      code.setAttribute('data-code-scroll', '');
+      code.setAttribute('aria-label', '源码摘录，可用方向键滚动');
+    }
+  });
+
+  document.querySelectorAll('.table-scroll').forEach((table) => {
+    table.tabIndex = 0;
+    table.setAttribute('aria-label', '对照表，可用方向键横向滚动');
+  });
+
+  document.querySelectorAll('.quiz').forEach((quiz) => {
+    const choices = [...quiz.querySelectorAll('.quiz-options button')];
+    const feedback = quiz.querySelector('.quiz-feedback');
+    choices.forEach((choice) => {
+      choice.addEventListener('click', () => {
+        choices.forEach((item) => item.classList.remove('is-correct', 'is-wrong'));
+        const correct = choice.dataset.correct === 'true';
+        choice.classList.add(correct ? 'is-correct' : 'is-wrong');
+        feedback.textContent = `${correct ? '正确。' : '再想一想。'}${quiz.dataset.explanation || ''}`;
+      });
+    });
+  });
+
+  const playChat = (chat) => {
+    const messages = [...chat.querySelectorAll('.chat-message')];
+    messages.forEach((message) => message.classList.remove('is-visible'));
+    messages.forEach((message, index) => {
+      if (reduceMotion) message.classList.add('is-visible');
+      else window.setTimeout(() => message.classList.add('is-visible'), 180 + index * 520);
+    });
+  };
+
+  document.querySelectorAll('.component-chat').forEach((chat) => {
+    playChat(chat);
+    chat.querySelector('.replay-chat')?.addEventListener('click', () => playChat(chat));
+  });
+
+  document.querySelectorAll('.data-flow').forEach((flow) => {
+    const steps = [...flow.querySelectorAll('.flow-step')];
+    const detail = flow.querySelector('.flow-detail');
+    steps.forEach((step) => {
+      step.addEventListener('click', () => {
+        steps.forEach((item) => item.classList.remove('is-active'));
+        step.classList.add('is-active');
+        if (detail) detail.textContent = step.dataset.detail || '';
+      });
+    });
+  });
+
+  const panel = document.querySelector('.learning-panel');
+  if (panel) {
+    const conceptCards = [...panel.querySelectorAll('.concept-card')];
+    const conceptNames = new Map(conceptCards.map(card => [card.id.replace('concept-', ''), card.querySelector('summary')?.textContent]));
+    conceptCards.forEach(card => {
+      const prerequisites = [...card.children].find(el => el.tagName === 'P' && el.textContent.startsWith('前置概念:'));
+      if (!prerequisites) return;
+      const ids = prerequisites.textContent.replace('前置概念:', '').trim().split(',').map(id => id.trim());
+      if (!ids.every(id => conceptNames.has(id))) return;
+      prerequisites.replaceChildren(document.createTextNode('前置概念：'));
+      ids.forEach((id, index) => {
+        if (index) prerequisites.append(document.createTextNode('、'));
+        const link = document.createElement('a');
+        link.href = `#concept-${id}`;
+        link.textContent = conceptNames.get(id);
+        link.className = 'concept-prerequisite';
+        link.addEventListener('click', () => { document.getElementById(`concept-${id}`).open = true; });
+        prerequisites.append(link);
+      });
+    });
+    const storageKey = `code-learning:${panel.dataset.kitId}`;
+    const sourceRevision = document.querySelectorAll('.course-meta dd')[1]?.textContent || 'unknown';
+    const feedback = panel.querySelector('.notes-feedback');
+    const zh = document.documentElement.lang.startsWith('zh');
+    let notes = {};
+    try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) { notes = {}; }
+    if (!notes || typeof notes !== 'object' || Array.isArray(notes)) notes = {};
+    panel.querySelectorAll('.recall').forEach((recall) => {
+      const field = recall.querySelector('textarea');
+      const key = recall.dataset.recallId;
+      field.value = typeof notes[key]?.response === 'string' ? notes[key].response : '';
+      field.addEventListener('input', () => {
+        notes[key] = { response: field.value, sourceRevision, recordedAt: new Date().toISOString(), kind: 'provisional-recall' };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(notes));
+          if (feedback) feedback.textContent = zh ? '回忆已保存到本机浏览器；尚未评价掌握程度。' : 'Recall saved in this browser; mastery has not been assessed.';
+        } catch (_) {
+          if (feedback) feedback.textContent = zh ? '浏览器未允许保存；可导出本次记录。' : 'Browser storage is unavailable; export this session to keep it.';
+        }
+      });
+    });
+    let exportURL;
+    panel.querySelector('.export-learning-notes')?.addEventListener('click', () => {
+      const content = { kitId: panel.dataset.kitId, sourceRevision, assessment: 'unassessed', notes };
+      const text = JSON.stringify(content, null, 2);
+      const preview = panel.querySelector('.export-preview');
+      if (preview) {
+        preview.hidden = false;
+        preview.open = true;
+        preview.querySelector('textarea').value = text;
+        if (exportURL) URL.revokeObjectURL(exportURL);
+        exportURL = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+        preview.querySelector('.export-download').href = exportURL;
+        if (feedback) feedback.textContent = zh ? '记录已准备好：可以下载 JSON，或从下方文本框复制。' : 'Records are ready: download JSON or copy the text below.';
+      }
+    });
+    window.addEventListener('pagehide', () => { if (exportURL) URL.revokeObjectURL(exportURL); });
+  }
+})();
+</script>
+</body>
+</html>
+

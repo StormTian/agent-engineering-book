@@ -1,0 +1,2634 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="generator" content="codebase-to-mastery">
+  <title>读懂 OpenHands Agent SDK：一条消息如何变成代码行动与可恢复事件</title>
+  <style>:root {
+  --paper: #eef3f6; --paper-deep: #e3ecef; --ink: #172d3a; --muted: #536b79;
+  --line: #d4e0e6; --card: #fff; --code: #112630; --code-ink: #e6f4f7;
+  --accent: #147d92; --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
+  --good: #16745a; --bad: #ae394b; --shadow: 0 6px 22px rgba(23,45,58,.04);
+  --radius: 12px; --measure: 72rem; --rail-width: 228px;
+  --rail: #122936; --rail-ink: #edf7f8; --lime: #b8e3a4;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scroll-behavior: smooth; }
+html, body { overflow-x: clip; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: .2em; }
+button, textarea { font: inherit; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -.025em; }
+h1 { margin: 0; max-width: 22ch; font-size: clamp(2.4rem,5vw,4.6rem); font-weight: 750; }
+h2 { margin: 0; font-size: clamp(2rem,3.6vw,3.3rem); }
+h3 { margin: 0 0 1rem; font-size: clamp(1.35rem,2.5vw,2rem); }
+p { overflow-wrap: anywhere; }
+.progress { position: fixed; inset: 0 0 auto var(--rail-width); height: 3px; z-index: 50; background: var(--paper-deep); }
+.progress span { display: block; width: 0; height: 100%; background: var(--accent); transition: width 120ms linear; }
+.course-rail { position: fixed; inset: 0 auto 0 0; z-index: 30; width: var(--rail-width); display: flex; flex-direction: column; padding: 32px 18px 22px; color: var(--rail-ink); background: var(--rail); overflow-y: auto; }
+.course-mark { display: flex; align-items: center; gap: 12px; padding: 0 8px 26px; text-decoration: none; flex-shrink: 0; }
+.brand-emblem { display: flex; align-items: flex-end; gap: 3px; width: 34px; height: 34px; padding: 8px 6px; border-radius: 9px; background: var(--lime); }
+.brand-emblem i { display: block; width: 5px; background: var(--rail); border-radius: 1px; }
+.brand-emblem i:nth-child(1) { height: 7px; }
+.brand-emblem i:nth-child(2) { height: 12px; }
+.brand-emblem i:nth-child(3) { height: 18px; }
+.brand-name { font-size: 15px; font-weight: 700; line-height: 1.35; letter-spacing: -.01em; }
+.brand-name > span { display: block; color: var(--lime); }
+.overview-link { display: flex; justify-content: space-between; align-items: center; padding: 12px; font-size: 13px; text-decoration: none; border: 1px solid #35505e; border-radius: 8px; }
+.overview-link:hover { background: #203c4b; }
+.nav-label { margin: 28px 12px 10px; color: #a5bdc9; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.module-nav { display: grid; gap: 6px; }
+.nav-dot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #c7d9e1; text-align: left; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.nav-title { min-width: 0; overflow-wrap: anywhere; }
+.nav-arrow { opacity: 0; color: var(--lime); }
+.nav-dot:hover { background: #203c4b; color: white; }
+.nav-dot.is-active { color: white; background: #244b5b; border-color: #416a7a; }
+.nav-dot.is-active .nav-arrow { opacity: 1; }
+.rail-source { display: grid; gap: 5px; margin: auto 8px 0; padding-top: 36px; font-size: 12px; overflow-wrap: anywhere; }
+.rail-source-label { color: #a5bdc9; font-size: 10px; letter-spacing: .08em; }
+.rail-source strong { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-weight: 500; }
+.key-hint { display: flex; align-items: center; gap: 5px; margin: 18px 8px 0; color: #a5bdc9; font-size: 10px; }
+.key-hint > span { margin-left: 5px; }
+kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px solid #4c6977; border-radius: 4px; text-align: center; font: 10px/1.5 ui-monospace,monospace; }
+.course-cover, .learning-panel, .course-module, .course-footer { margin-left: var(--rail-width); min-width: 0; }
+.course-cover { position: relative; display: grid; align-content: center; padding: 64px clamp(28px,4vw,64px) 46px; min-height: 520px; border-bottom: 1px solid var(--line); background: var(--card); }
+.cover-topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 32px; }
+.cover-kicker, .eyebrow, .pane-label, .quiz-kicker { margin: 0 0 10px; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.cover-topline .cover-kicker { margin: 0; }
+.format-tag, .stage-count { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.cover-subtitle, .lede { max-width: 48rem; margin: 20px 0; color: var(--muted); font-size: clamp(1rem,1.6vw,1.2rem); }
+.course-meta { display: flex; flex-wrap: wrap; gap: 16px 32px; margin: 16px 0 28px; }
+.course-meta div { min-width: 70px; }
+.course-meta dt { color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+.course-meta dd { margin: 5px 0 0; font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.cover-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.start-link { display: inline-flex; align-items: center; gap: 30px; width: fit-content; padding: 11px 16px; border-radius: 8px; background: var(--accent); color: white; text-decoration: none; font-size: 13px; font-weight: 700; }
+.motion-toggle { padding: 9px 13px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.motion-toggle[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.cover-route { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 38px; padding-top: 22px; border-top: 1px solid var(--line); font: 10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing: .12em; color: var(--muted); }
+.cover-route b { font-weight: 400; color: var(--accent); }
+.learning-panel { padding: 28px clamp(28px,4vw,64px) 56px; border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.panel-heading .eyebrow { margin: 0; }
+.learning-panel h2 { max-width: none; font-size: clamp(1.65rem,3vw,2.3rem); }
+.panel-scope { margin: 10px 0 18px; max-width: 66rem; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.learning-stages { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }
+.learning-stage { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.stage-topline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.stage-number { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; color: var(--accent); background: var(--accent-soft); font: 700 12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+.stage-kind { color: var(--muted); font: 9px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform: uppercase; letter-spacing: .08em; }
+.learning-stage h3 { margin: 0; font-size: 17px; line-height: 1.4; letter-spacing: -.02em; }
+.stage-outcome { margin: 8px 0 10px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.gate { margin: auto 0 0; padding: 8px 0 10px; border-top: 1px solid var(--line); }
+.gate > span { color: var(--accent); font-size: 10px; font-weight: 700; }
+.gate p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.stage-links { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 650; }
+.stage-links a { overflow-wrap: anywhere; text-decoration: none; }
+.stage-links a:hover { text-decoration: underline; }
+.scope-note { margin: 18px 0 0; padding: 12px 16px; box-shadow: none; font-size: 12px; }
+.scope-note p { margin-bottom: 0; color: var(--muted); }
+.recall-heading { margin: 46px 0 24px; }
+.recall-heading h3 { font-size: 24px; margin-bottom: 8px; }
+.recall-heading > p:last-child { margin: 0; color: var(--muted); font-size: 12px; }
+.concept-card { padding: 18px; margin: 10px 0; min-width: 0; box-shadow: none; }
+.concept-card > summary { font-size: 14px; }
+.concept-card > p { color: var(--muted); font-size: 13px; }
+.concept-card details { min-width: 0; }
+.recall { margin: 22px 0; }
+.recall label { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 650; }
+.recall textarea { display: block; width: 100%; resize: vertical; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); font-size: 13px; }
+.recall-answer { margin: 12px 0; padding: 14px; background: var(--accent-soft); border: 0; box-shadow: none; font-size: 13px; }
+.export-learning-notes { margin-top: 16px; padding: 11px 16px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 12px; cursor: pointer; }
+.notes-feedback { font-size: 12px; color: var(--muted); }
+.export-preview { margin: 16px 0; padding: 16px; }
+.export-preview label { display: block; margin: 12px 0; font-size: 12px; }
+.export-preview textarea { width: 100%; color: var(--ink); background: #f7fafb; font: 12px/1.6 ui-monospace,monospace; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.course-module { border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.course-module:nth-child(odd) { background: #f8fafb; }
+.screen { display: grid; grid-template-columns: minmax(0,1fr); align-content: center; min-height: 550px; max-width: var(--measure); margin: 0 auto; padding: 64px clamp(28px,4vw,64px); }
+.hero-screen { position: relative; }
+.hero-screen > p:not(.eyebrow):not(.lede) { max-width: 58rem; font-size: 15px; color: var(--muted); }
+.actor-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(14rem,100%),1fr)); gap: 14px; }
+.actor-card, .callout, .quiz, .data-flow, .component-chat, details { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.actor-card, .callout, details { padding: 20px; }
+.actor-card h4 { margin: 0 0 8px; font-size: 16px; }
+.actor-card p { margin: 0; color: var(--muted); font-size: 14px; }
+.callout { border-left: 3px solid var(--accent); font-size: 14px; }
+.callout.warning { border-left-color: var(--bad); }
+.path-chip { display: inline-flex; max-width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--accent); font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.code-translation { min-width: 0; contain: inline-size; display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); margin: 24px 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.code-pane { min-width: 0; padding: 22px; color: var(--code-ink); background: var(--code); }
+.code-pane .pane-label { color: #8cd4d9; font-family: ui-monospace,monospace; text-transform: none; letter-spacing: 0; }
+pre { margin: 0; max-width: 100%; overflow: auto; tab-size: 2; }
+pre > code { display: block; min-width: 100%; }
+code { font: 12px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.code-translation figcaption { min-width: 0; padding: 22px; background: white; font-size: 14px; }
+.quiz, .data-flow, .component-chat { padding: 24px; }
+.quiz h3 { font-size: 24px; line-height: 1.45; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-options button, .flow-step, .replay-chat { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); text-align: left; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+.quiz-options button:hover, .quiz-options button:focus-visible, .flow-step:hover, .flow-step:focus-visible { border-color: var(--accent); }
+.quiz-options button.is-correct { border-color: var(--good); background: color-mix(in srgb,var(--good) 8%,white); }
+.quiz-options button.is-wrong { border-color: var(--bad); background: color-mix(in srgb,var(--bad) 7%,white); }
+.quiz-feedback { min-height: 1.6em; margin-bottom: 0; font-size: 13px; font-weight: 600; }
+.component-chat { display: grid; gap: 12px; }
+.chat-message { width: min(34rem,85%); padding: 14px; border-radius: 10px 10px 10px 2px; background: var(--paper); font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 260ms ease, transform 260ms ease; }
+.chat-message::before { content: attr(data-speaker); display: block; margin-bottom: 4px; color: var(--muted); font: 700 10px ui-monospace,monospace; text-transform: uppercase; }
+.chat-message:nth-child(even) { justify-self: end; border-radius: 10px 10px 2px 10px; background: var(--accent-soft); }
+.chat-message.is-visible { opacity: 1; transform: none; }
+.replay-chat { width: fit-content; justify-self: center; margin-top: 6px; }
+.data-flow { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(10rem,100%),1fr)); gap: 10px; }
+.flow-step { text-align: center; }
+.flow-step.is-active { background: var(--accent); border-color: var(--accent); color: white; }
+.flow-detail { grid-column: 1 / -1; margin: 6px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+dfn { position: relative; border-bottom: 2px dotted var(--accent); font-style: normal; cursor: help; }
+dfn::after { content: attr(data-definition); position: absolute; left: 0; bottom: calc(100% + 10px); z-index: 40; width: min(18rem,70vw); padding: 12px; border-radius: 8px; color: white; background: var(--rail); box-shadow: var(--shadow); font-size: 12px; font-weight: 400; opacity: 0; pointer-events: none; transform: translateY(5px); transition: opacity 140ms ease, transform 140ms ease; }
+dfn:hover::after, dfn:focus::after { opacity: 1; transform: none; }
+details { margin-top: 16px; }
+summary { cursor: pointer; font-weight: 650; }
+.course-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 28px clamp(28px,4vw,64px); color: var(--muted); background: white; font-size: 12px; }
+.course-footer p { max-width: 40rem; margin: 0; }
+.course-footer a { color: var(--accent); }
+:focus-visible { outline: 3px solid #57b6c5; outline-offset: 4px; }
+html[data-reduced-motion="true"] *, html[data-reduced-motion="true"] *::before, html[data-reduced-motion="true"] *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+html[data-reduced-motion="true"] { scroll-behavior: auto !important; }
+html[data-reduced-motion="true"] .chat-message { opacity: 1; transform: none; }
+@media (max-width:1050px) {
+  :root { --rail-width: 204px; }
+  .learning-stages { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  :root { --rail-width: 0px; }
+  .progress { inset: 0 0 auto; }
+  .course-rail { inset: 0 0 auto; width: auto; height: 116px; padding: 12px 16px 10px; overflow: hidden; }
+  .course-mark { padding: 0; gap: 8px; width: fit-content; }
+  .brand-emblem { width: 28px; height: 28px; padding: 5px 3px; }
+  .brand-name { display: flex; gap: 4px; font-size: 13px; }
+  .brand-name > span { display: inline; }
+  .overview-link { position: absolute; right: 16px; top: 12px; padding: 5px 8px; gap: 10px; font-size: 10px; }
+  .nav-label, .key-hint, .rail-source { display: none; }
+  .module-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 13px; padding: 3px; }
+  .nav-dot { flex: 0 0 auto; width: auto; max-width: 220px; min-height: 35px; padding: 7px 10px; font-size: 11px; white-space: nowrap; border-color: #35505e; }
+  .nav-arrow { display: none; }
+  .course-cover { margin-top: 116px; min-height: auto; padding: 30px 20px; scroll-margin-top: 116px; }
+  .cover-topline { margin-bottom: 24px; }
+  .cover-kicker { font-size: 10px; }
+  .format-tag { font-size: 10px; padding: 4px 7px; }
+  h1 { font-size: 36px; }
+  h2 { font-size: 32px; }
+  .cover-subtitle { font-size: 14px; }
+  .course-meta { gap: 16px 22px; }
+  .cover-route { gap: 12px; font-size: 9px; }
+  .learning-panel { padding: 28px 20px 40px; scroll-margin-top: 132px; }
+  .learning-panel h2 { font-size: 27px; }
+  .panel-heading { align-items: flex-start; }
+  .stage-count { font-size: 10px; padding: 4px 7px; }
+  .learning-stages { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .learning-stage { padding: 18px; }
+  .learning-stage h3 { font-size: 18px; }
+  .stage-outcome { font-size: 13px; }
+  .course-module { scroll-margin-top: 132px; }
+  .concept-card { scroll-margin-top: 132px; }
+  .screen { min-height: auto; padding: 44px 20px; }
+  .hero-screen { min-height: 420px; }
+  .code-translation { grid-template-columns: minmax(0,1fr); }
+  .code-pane, .code-translation figcaption { padding: 18px; }
+  .quiz, .data-flow, .component-chat { padding: 18px; }
+  .quiz h3 { font-size: 20px; }
+  .course-footer { padding: 26px 20px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+  .chat-message { opacity: 1; transform: none; }
+}
+@media print {
+  :root { --rail-width: 0px; }
+  .course-rail, .progress, .start-link, .replay-chat, .motion-toggle, .cover-route { display: none !important; }
+  .course-cover { margin-top: 0; }
+  .course-cover, .screen { min-height: auto; page-break-after: always; }
+  .chat-message { opacity: 1; transform: none; }
+  body { background: white; }
+}
+
+/* Source tables scroll inside the lesson, so narrow screens retain every cell. */
+.table-scroll { max-width: 100%; overflow-x: auto; margin: 22px 0; border: 1px solid #d3dce5; border-radius: 8px; }
+.table-scroll table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.table-scroll th, .table-scroll td { padding: 13px 16px; border-bottom: 1px solid #dbe3ea; text-align: left; vertical-align: top; line-height: 1.7; overflow-wrap: anywhere; }
+.table-scroll th { color: #153747; background: #edf5f7; font-weight: 700; }
+.table-scroll tr:last-child td { border-bottom: 0; }
+.table-scroll:focus-visible, .code-pane pre:focus-visible { outline: 3px solid #069db0; outline-offset: 3px; }
+</style>
+</head>
+<body style="--accent: #D95D39">
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+  <aside class="course-rail" aria-label="Course navigation">
+    <a class="course-mark" href="#course-start" aria-label="Codebase to Mastery">
+      <span class="brand-emblem" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-name">Codebase<span>to Mastery</span></span>
+    </a>
+    <a class="overview-link" href="#course-start">学习总览 <span aria-hidden="true">↗</span></a>
+    <p class="nav-label">课程目录</p>
+    <nav class="module-nav" aria-label="课程目录"><button class="nav-dot" type="button" data-target="module-01" aria-label="进入 一条消息进入 Conversation" title="一条消息进入 Conversation"><span class="nav-title">一条消息进入 Conversation</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-02" aria-label="进入 Event Log 是事实账本" title="Event Log 是事实账本"><span class="nav-title">Event Log 是事实账本</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-03" aria-label="进入 Agent Step 把历史变成下一步" title="Agent Step 把历史变成下一步"><span class="nav-title">Agent Step 把历史变成下一步</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-04" aria-label="进入 Tool 与 Workspace 是行动边界" title="Tool 与 Workspace 是行动边界"><span class="nav-title">Tool 与 Workspace 是行动边界</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-05" aria-label="进入 Run Loop 决定继续还是停" title="Run Loop 决定继续还是停"><span class="nav-title">Run Loop 决定继续还是停</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-06" aria-label="进入 Agent Server、恢复与分叉" title="Agent Server、恢复与分叉"><span class="nav-title">Agent Server、恢复与分叉</span><span class="nav-arrow" aria-hidden="true">↗</span></button></nav>
+    <div class="rail-source"><span class="rail-source-label">学习源码</span><strong>roadmap-openhands-agent-sdk-course-source</strong></div>
+    <p class="key-hint"><kbd>J</kbd><kbd>K</kbd><span>切换章节</span></p>
+  </aside>
+
+  <header class="course-cover" id="course-start">
+    <div class="cover-topline"><p class="cover-kicker">源码掌握工坊</p><span class="format-tag">离线交互课</span></div>
+    <h1>读懂 OpenHands Agent SDK：一条消息如何变成代码行动与可恢复事件</h1>
+    <p class="cover-subtitle">沿真实源码，从 Conversation、Event Log 与 Agent.step，一路追到工具执行、Workspace、Agent Server 与恢复 / 分叉。</p>
+    <dl class="course-meta">
+      <div><dt>学习源码</dt><dd>roadmap-openhands-agent-sdk-course-source</dd></div>
+      <div><dt>源码版本</dt><dd>004c674a96d7</dd></div>
+      <div><dt>章节</dt><dd>6</dd></div>
+    </dl>
+    <div class="cover-actions"><a class="start-link" href="#learning-path">开始学习 <span aria-hidden="true">→</span></a>
+    <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">减少动效</button></div>
+    <div class="cover-route" aria-hidden="true"><span>READ</span><b>→</b><span>TRACE</span><b>→</b><span>REASON</span><b>→</b><span>TEACH BACK</span></div>
+  </header>
+
+  <section id="learning-path" class="learning-panel" data-kit-id="4c5309ae-ed98-4c60-83d8-c05b0854e0e5"><div class="panel-heading"><p class="eyebrow">The mastery path</p><span class="stage-count">4 个学习阶段</span></div><h2>由浅入深的学习路径</h2><p class="panel-scope">Conversation 接收消息→EventStore 持久化→Agent.step 读取活动历史→Action/Observation→运行状态转换→Server 调度→恢复与分叉</p><div class="learning-stages"><article class="learning-stage"><div class="stage-topline"><span class="stage-number">01</span><span class="stage-kind">orient</span></div><h3>建立地图</h3><p class="stage-outcome">解释入口、角色和控制面。</p><div class="gate"><span>先想一想</span><p>画出主线并指出真正开始执行的位置。</p></div><div class="stage-links"><a href="#module-01">进入课程</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">02</span><span class="stage-kind">trace</span></div><h3>逐步追踪</h3><p class="stage-outcome">追踪调用、数据与状态变化。</p><div class="gate"><span>先想一想</span><p>从一个输入写出调用和状态表，并定位源码。</p></div><div class="stage-links"><a href="#module-02">Event Log 是事实账本</a> <a href="#module-03">Agent Step 把历史变成下一步</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">03</span><span class="stage-kind">reason</span></div><h3>解释边界</h3><p class="stage-outcome">分析许可、失败、持久化与恢复。</p><div class="gate"><span>先想一想</span><p>解释两个不同层级的故障，并给出证据与反例。</p></div><div class="stage-links"><a href="#module-04">Tool 与 Workspace 是行动边界</a> <a href="#module-05">Run Loop 决定继续还是停</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">04</span><span class="stage-kind">teach-back</span></div><h3>复述与迁移</h3><p class="stage-outcome">将契约迁移到自建 Agent 与评测系统。</p><div class="gate"><span>先想一想</span><p>不看答案写出完整主线与未验证边界，再对照评分依据。</p></div><div class="stage-links"><a href="#module-06">进入课程</a><span aria-hidden="true">→</span></div></article></div><details class="scope-note"><summary>实践范围与边界</summary><p>局部重建持久化优先事件账本与 Action/Observation 配对；扩展断线重放，暂缓生产服务器鉴权与真实工具。</p></details><div class="recall-heading"><p class="eyebrow">Recall &amp; connect</p><h3>概念地图与主动回忆</h3><p>回答保存在本机浏览器；阅读和自评不代表已掌握。</p></div><details class="concept-card" id="concept-c01-01"><summary>Conversation 是应用控制面</summary><p>示例建立 Agent、工具、Workspace 与 Conversation，再发送消息并启动运行。入口的这些对象分别决定推理、行动能力、执行位置与任务状态。
+
+本课程范围是 software-agent-sdk 仓库，不等于整个 OpenHands 平台。网页产品、部署、Canvas 与 SDK 的边界应分开；一个 hello world 不能证明远程服务已经可用。</p><p>前置概念: —</p><a href="#module-01">能够解释“Conversation 是应用控制面”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-01-0"><label for="recall-c01-01-0">SDK 示例跑通就证明整个平台部署完成吗？</label><textarea id="recall-c01-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 examples/01_standalone_sdk/01_hello_world.py:15-28，对照状态、身份、异常和保存边界。</li></ul><p>不能。确认示例使用的 Conversation 和 Workspace 类型；SDK、Agent Server 与完整平台分别验收。</p><ul><li>明确本题契约：Conversation 是应用控制面</li><li>依据源码解释原因：不能。确认示例使用的 Conversation 和 Workspace 类型；SDK、Agent Server 与完整平台分别验收。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">examples/01_standalone_sdk/01_hello_world.py:15-28</p><p>白话翻译
+        Agent 先拿到模型与工具规格，Conversation 再绑定当前目录。消息进入会话后，显式的 run() 才启动执行。</p><pre><code>agent = Agent(
+    llm=llm,
+    tools=[
+        Tool(name=TerminalTool.name),
+        Tool(name=FileEditorTool.name),
+        Tool(name=TaskTrackerTool.name),
+    ],
+)
+
+cwd = os.getcwd()
+conversation = Conversation(agent=agent, workspace=cwd)
+
+conversation.send_message(&quot;Write 3 facts about the current project into FACTS.txt.&quot;)
+conversation.run()</code></pre></details></details><details class="concept-card" id="concept-c01-02"><summary>send_message 与 run 分开</summary><p>send_message 加入用户消息，并将 FINISHED/STUCK 等状态转为可再次运行的 IDLE；此动作本身不是调用模型生成答案。
+
+输入排队、开始执行、收到事件、结束一轮属于四个时间点。调用者若只 send 不 run，可能只得到持久化消息；反过来多个发送与运行并发需要遵守状态与锁契约。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“send_message 与 run 分开”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-02-0"><label for="recall-c01-02-0">发送成功但没有assistant事件，先检查什么？</label><textarea id="recall-c01-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:1826-1839，对照状态、身份、异常和保存边界。</li></ul><p>确认是否调用 run/远程调度、当前状态和队列；send_message只加入消息，不能直接证明模型调用已发生。</p><ul><li>明确本题契约：send_message 与 run 分开</li><li>依据源码解释原因：确认是否调用 run/远程调度、当前状态和队列；send_message只加入消息，不能直接证明模型调用已发生。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:1826-1839</p><p>白话翻译
+        字符串被包装成唯一允许进入该 API 的 user Message。新消息会把 FINISHED / STUCK 重置为 IDLE，但还没有调用 LLM。</p><pre><code>        if isinstance(message, str):
+            message = Message(role=&quot;user&quot;, content=[TextContent(text=message)])
+
+        assert message.role == &quot;user&quot;, (
+            &quot;Only user messages are allowed to be sent to the agent.&quot;
+        )
+        with self._state:
+            if self._state.execution_status in (
+                ConversationExecutionStatus.FINISHED,
+                ConversationExecutionStatus.STUCK,
+            ):
+                self._state.execution_status = (
+                    ConversationExecutionStatus.IDLE
+                )  # new message resets terminal states</code></pre></details></details><details class="concept-card" id="concept-c01-03"><summary>用户消息也有事件身份</summary><p>用户输入被包装为 MessageEvent，包含来源与内容，并走统一事件回调路径。事件身份提供追踪入口，知识附加与 sender 信息也影响后续上下文。
+
+不要把界面上的一行文字当完整消息协议。调查串会话时，关联 conversation ID、event ID 与父关系，再看渲染；UI内容相同不代表事件相同。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“用户消息也有事件身份”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-03-0"><label for="recall-c01-03-0">两次相同正文的用户消息如何区分？</label><textarea id="recall-c01-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:1863-1870，对照状态、身份、异常和保存边界。</li></ul><p>靠事件ID、所属Conversation和父关系，而不是正文字符串；重复文本也可能是不同轮次。</p><ul><li>明确本题契约：用户消息也有事件身份</li><li>依据源码解释原因：靠事件ID、所属Conversation和父关系，而不是正文字符串；重复文本也可能是不同轮次。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:1863-1870</p><p>白话翻译
+        准备好的消息被包装成 MessageEvent，再进入统一 callback；可选的知识扩展与 sender 也一同记录。</p><pre><code>            user_msg_event = MessageEvent(
+                source=&quot;user&quot;,
+                llm_message=message,
+                activated_skills=activated_skill_names,
+                extended_content=extended_content,
+                sender=sender,
+            )
+            self._on_event(user_msg_event)</code></pre></details></details><details class="concept-card" id="concept-c02-01"><summary>先保存再发布</summary><p>本地主线先将事件 append 到状态/存储，再经 PubSub 和回调通知观察者。可视化异常不应改变已经保存的事实。
+
+此顺序减少“UI已看到但账本没有”的窗口，不过它仍不自动证明所有订阅者收到事件。网络断线、回调失败和重放需要单独协议，不能从 append 成功推导 exactly once。</p><p>前置概念: c01-01</p><a href="#module-02">能够解释“先保存再发布”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-01-0"><label for="recall-c02-01-0">回调崩溃后事件应该消失吗？</label><textarea id="recall-c02-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:415-438，对照状态、身份、异常和保存边界。</li></ul><p>按持久化优先主线，保存成功的事件仍在账本；回调错误属于观测失败。核对存储后再考虑重放，不能倒推任务未发生。</p><ul><li>明确本题契约：先保存再发布</li><li>依据源码解释原因：按持久化优先主线，保存成功的事件仍在账本；回调错误属于观测失败。核对存储后再考虑重放，不能倒推任务未发生。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:415-438</p><p>白话翻译
+        每个 Event 都先交给 append_event。如果持久化失败，排在后面的 PubSub / 用户 callback 不会收到这条未落盘事件；本地终端 visualizer 是例外，但它不构成客户端可依赖的通知。</p><pre><code>        # Default callback: persist every event to state
+        def _default_callback(e):
+            # This callback runs while holding the conversation state&#x27;s lock
+            # (see BaseConversation.compose_callbacks usage inside `with self._state:`
+            # regions), so updating state here is thread-safe.
+            # Single chokepoint: stamps parent_id (catching any event a hook
+            # swapped in downstream of _tree_stamping) and advances HEAD.
+            self._state.append_event(e)
+            # Track user MessageEvent IDs here so hook callbacks (which may
+            # synthesize or alter user messages) are captured in one place.
+            if isinstance(e, MessageEvent) and e.source == &quot;user&quot;:
+                # Track the latest real user message ID for hook-blocked checks.
+                # Stop-hook feedback is emitted with source=&quot;environment&quot;.
+                self._state.last_user_message_id = e.id
+
+        callback_list = list(callbacks) if callbacks else []
+        # _default_callback (persist) runs before the caller-supplied callbacks
+        # (e.g. a PubSub publish), so no subscriber is told about an event that
+        # is not on disk yet. compose_callbacks&#x27; plain for-loop has no
+        # try/except, so if persist raises here, the callbacks after it in the
+        # list never run. The visualizer is prepended below and so still renders
+        # ahead of persist — that is local terminal output, not an announcement
+        # a client can act on.
+        composed_list = [_default_callback] + callback_list</code></pre></details></details><details class="concept-card" id="concept-c02-02"><summary>活动叶节点决定当前历史</summary><p>状态添加事件时为其选择父节点，默认以活动叶节点为父，再更新当前 HEAD。事件集合可以形成树，模型通常读取活动分支的历史视图。
+
+把磁盘上所有事件按时间拼接会混入旁支。调试分叉时先标出父关系和HEAD，再求根到叶路径；时间排序不等于因果顺序。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“活动叶节点决定当前历史”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-02-0"><label for="recall-c02-02-0">恢复时读取整个目录按时间拼接有什么风险？</label><textarea id="recall-c02-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/conversation/state.py:304-337，对照状态、身份、异常和保存边界。</li></ul><p>可能混入其他分支、重复旧事件或丢因果关系。应依据事件父链与活动HEAD重建当前分支。</p><ul><li>明确本题契约：活动叶节点决定当前历史</li><li>依据源码解释原因：可能混入其他分支、重复旧事件或丢因果关系。应依据事件父链与活动HEAD重建当前分支。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/conversation/state.py:304-337</p><p>白话翻译
+        事件不是简单 append 到数组尾部：未指定 parent 时会指向当前活动 leaf。追加后，普通事件成为新 HEAD。于是一个日志能保存多个分支，而 active branch 只选当前推理需要的路径。</p><pre><code>    def _stamp_parent_id(self, event: Event) -&gt; Event:
+        &quot;&quot;&quot;Return ``event`` with ``parent_id`` set to the active leaf if unset.&quot;&quot;&quot;
+        if event.parent_id is not None:
+            return event
+        parent = self._resolve_active_leaf()
+        # Empty HEAD over a non-empty log = deliberate new root (navigate_to(None));
+        # mark it so it is not misread as a legacy event chained to its neighbour.
+        if parent is None and len(self._events) &gt; 0:
+            parent = ROOT_PARENT_ID
+        return event.model_copy(update={&quot;parent_id&quot;: parent})
+
+    def append_event(self, event: Event) -&gt; int:
+        &quot;&quot;&quot;Single storage chokepoint: stamp parent_id, append, advance HEAD.
+
+        Stamping here (not only at the emit callback) ensures no event enters the
+        log unstamped, even one a hook swaps in downstream. ``fork`` copies
+        pre-stamped events and sets HEAD itself, so it bypasses this.
+
+        Returns:
+            The sequence number ``EventLog`` assigned to the appended event.
+        &quot;&quot;&quot;
+        event = self._stamp_parent_id(event)
+        seq = self._events.append(event)
+        # ConversationStateUpdateEvent is a state-sync artifact, not a tree node;
+        # advancing HEAD for it would recurse (moving HEAD re-emits one).
+        from openhands.sdk.event.conversation_state import (
+            ConversationStateUpdateEvent,
+        )
+
+        if not isinstance(event, ConversationStateUpdateEvent):
+            self.leaf_event_id = event.id
+            if self.head_is_empty:  # HEAD now points at a real event again
+                self.head_is_empty = False
+        return seq</code></pre></details></details><details class="concept-card" id="concept-c02-03"><summary>文件写入与索引一致性</summary><p>EventStore 在锁内同步状态并检查重复ID、父节点存在等约束，写入事件JSON后维护索引。事件引用不能随意指向不存在的父。
+
+文件存在和内存索引更新都有失败边界。独立重建应显式注入存储失败，验证失败前不向订阅者发布；真实跨进程并发与断电一致性留待存储专项。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“文件写入与索引一致性”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-03-0"><label for="recall-c02-03-0">重复 event ID 应追加第二份吗？</label><textarea id="recall-c02-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/conversation/event_store.py:188-238，对照状态、身份、异常和保存边界。</li></ul><p>应按存储契约拒绝或显式定义幂等，不能悄悄覆盖。核对父节点、唯一ID与写入顺序，并保留错误。</p><ul><li>明确本题契约：文件写入与索引一致性</li><li>依据源码解释原因：应按存储契约拒绝或显式定义幂等，不能悄悄覆盖。核对父节点、唯一ID与写入顺序，并保留错误。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/conversation/event_store.py:188-238</p><p>白话翻译
+        锁内先同步长度，再拒绝重复 ID 和不存在的显式 parent。JSON 文件成功写入后，内存索引、缓存和长度才一并前进。这里保证的是日志结构，不是工具副作用的事务回滚。</p><pre><code>    def append(self, event: Event) -&gt; int:
+        &quot;&quot;&quot;Append an event with locking for thread/process safety.
+
+        Returns:
+            The sequence number (index) the log assigned to ``event``.
+
+        Raises:
+            TimeoutError: If the lock cannot be acquired within LOCK_TIMEOUT_SECONDS.
+            ValueError: If an event with the same ID already exists or its explicit
+                parent does not exist.
+        &quot;&quot;&quot;
+        evt_id = event.id
+
+        try:
+            with self._fs.lock(self._lock_path, timeout=LOCK_TIMEOUT_SECONDS):
+                # Sync with disk only if the marker cannot rule out another writer
+                if not self._marker_matches_length():
+                    disk_length = self._count_events_on_disk()
+                    if disk_length &gt; self._length:
+                        self._sync_from_disk(disk_length)
+
+                if evt_id in self._id_to_idx:
+                    existing_idx = self._id_to_idx[evt_id]
+                    raise ValueError(
+                        f&quot;Event with ID &#x27;{evt_id}&#x27; already exists at index &quot;
+                        f&quot;{existing_idx}&quot;
+                    )
+
+                if (
+                    event.parent_id not in (None, ROOT_PARENT_ID)
+                    and event.parent_id not in self._id_to_idx
+                ):
+                    raise ValueError(
+                        f&quot;Parent event &#x27;{event.parent_id}&#x27; does not exist &quot;
+                        f&quot;for event &#x27;{evt_id}&#x27;&quot;
+                    )
+
+                payload = event.model_dump_json(exclude_none=True)
+                write_guard = (
+                    nullcontext() if self._write_guard is None else self._write_guard()
+                )
+                idx = self._length
+                with write_guard:
+                    target_path = self._path(idx, event_id=evt_id)
+                    self._fs.write(target_path, payload)
+                self._idx_to_id[idx] = evt_id
+                self._id_to_idx[evt_id] = idx
+                self._event_cache[idx] = event
+                self._length += 1
+                self._advance_length_marker(idx)
+                return idx</code></pre></details></details><details class="concept-card" id="concept-c03-01"><summary>待执行动作优先于新模型调用</summary><p>Agent.step 可先处理已确认的 pending action；只有需要新决策时才构造上下文并调用模型。一次 step 因而不必等于一次推理请求。
+
+上下文压缩也可能返回 CondensationEvent 而非业务动作。监控应分别计数步、模型请求、动作执行与压缩，避免把循环迭代数当token成本。</p><p>前置概念: c02-01</p><a href="#module-03">能够解释“待执行动作优先于新模型调用”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-01-0"><label for="recall-c03-01-0">run loop进行了10步，就是10次模型请求吗？</label><textarea id="recall-c03-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/agent/agent.py:651-695，对照状态、身份、异常和保存边界。</li></ul><p>不是。待执行动作、压缩与其他分支可占步骤；根据真实调用事件与费用统计模型请求。</p><ul><li>明确本题契约：待执行动作优先于新模型调用</li><li>依据源码解释原因：不是。待执行动作、压缩与其他分支可占步骤；根据真实调用事件与费用统计模型请求。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/agent/agent.py:651-695</p><p>白话翻译
+        如果上轮 Action 等待确认，这一轮先执行它，而不是再次问模型。否则 Agent 检查消息闸门、建立会话调用上下文，再把 state.view 转成 LLM 消息。需要压缩时，本轮只发 condensation event。</p><pre><code>        state = conversation.state
+        # Check for pending actions (implicit confirmation)
+        # and execute them before sampling new actions.
+        pending_actions = ConversationState.get_unmatched_actions(state.active_branch())
+        if pending_actions:
+            logger.info(
+                &quot;Confirmation mode: Executing %d pending action(s)&quot;,
+                len(pending_actions),
+            )
+            self._execute_actions(conversation, pending_actions, on_event)
+            return
+
+        # Check if the last user message was blocked by a UserPromptSubmit hook
+        # If so, skip processing and mark conversation as finished
+        if state.last_user_message_id is not None:
+            reason = state.pop_blocked_message(state.last_user_message_id)
+            if reason is not None:
+                logger.info(f&quot;User message blocked by hook: {reason}&quot;)
+                state.execution_status = ConversationExecutionStatus.FINISHED
+                return
+        elif state.blocked_messages:
+            logger.debug(
+                &quot;Blocked messages exist but last_user_message_id is None; &quot;
+                &quot;skipping hook check for legacy conversation state.&quot;
+            )
+
+        # Build per-conversation context once and thread it through all
+        # LLM calls in this step (avoids shared mutable state on the LLM).
+        call_context: LLMCallContext = conversation.get_llm_call_context()
+
+        # Establish route-aware runtime metadata (cached, no I/O on a hit)
+        # before the condenser decides a token threshold, so a routed model&#x27;s
+        # real endpoint limit drives condensation on the first step.
+        self.llm.resolve_runtime_metadata()
+
+        # Prepare LLM messages from the cached, incrementally-maintained view.
+        # See https://github.com/OpenHands/software-agent-sdk/issues/3053.
+        _messages_or_condensation = prepare_llm_messages(
+            state.view, condenser=self.condenser, llm=self.llm
+        )
+
+        # Process condensation event before agent sampels another action
+        if isinstance(_messages_or_condensation, Condensation):
+            on_event(_messages_or_condensation)
+            return</code></pre></details></details><details class="concept-card" id="concept-c03-02"><summary>模型结果先分派再执行</summary><p>response_dispatch 优先处理 tool calls，再考虑普通文本或空回复错误。合法工具请求转成 ActionEvent，并在确认策略之后进入执行。
+
+同一回复同时有正文和动作时，不能把正文先当最终答案。故障应归到响应解析、确认或工具层，不要用一条“模型失败”覆盖全部原因。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“模型结果先分派再执行”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-02-0"><label for="recall-c03-02-0">模型同时给正文与tool_calls，是否立即FINISHED？</label><textarea id="recall-c03-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/agent/response_dispatch.py:45-78，对照状态、身份、异常和保存边界。</li></ul><p>按分派主线先处理工具请求；检查Action及确认/执行路径。正文存在不能覆盖待行动。</p><ul><li>明确本题契约：模型结果先分派再执行</li><li>依据源码解释原因：按分派主线先处理工具请求；检查Action及确认/执行路径。正文存在不能覆盖待行动。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/agent/response_dispatch.py:45-78</p><p>白话翻译
+        四类互斥，且有优先级：同时带文字和 tool calls 时仍走工具分支。dispatch 是 SDK 的确定性控制逻辑。</p><pre><code>class LLMResponseType(StrEnum):
+    &quot;&quot;&quot;Mutually exclusive classification of an LLM response.&quot;&quot;&quot;
+
+    TOOL_CALLS = &quot;tool_calls&quot;
+    CONTENT = &quot;content&quot;
+    REASONING_ONLY = &quot;reasoning_only&quot;
+    EMPTY = &quot;empty&quot;
+
+
+def classify_response(message: Message) -&gt; LLMResponseType:
+    &quot;&quot;&quot;Classify an LLM response message into exactly one type.
+
+    Decision priority (first match wins):
+      1. TOOL_CALLS  — message contains tool calls
+      2. CONTENT     — message contains non-blank TextContent
+      3. REASONING_ONLY — message has reasoning but no visible content
+      4. EMPTY       — nothing useful
+
+    This function is pure: no side effects, no logging, no mutation.
+    &quot;&quot;&quot;
+    if message.tool_calls:
+        return LLMResponseType.TOOL_CALLS
+
+    if any(isinstance(c, TextContent) and c.text.strip() for c in message.content):
+        return LLMResponseType.CONTENT
+
+    if (
+        message.responses_reasoning_item is not None
+        or message.reasoning_content is not None
+        or message.thinking_blocks
+    ):
+        return LLMResponseType.REASONING_ONLY
+
+    return LLMResponseType.EMPTY</code></pre></details></details><details class="concept-card" id="concept-c03-03"><summary>FINISHED 是一轮状态</summary><p>普通文本响应可产生 MessageEvent 并把 Agent 状态置为 FINISHED，等待下一条输入。这个状态表示当前运行阶段结束，不是答案正确的评分。
+
+用户新消息、stop hook 与并发队列可影响后续运行。任务验收应另外测试产物、补丁或回答质量；把状态枚举与评测结果绑定会掩盖失败。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“FINISHED 是一轮状态”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-03-0"><label for="recall-c03-03-0">FINISHED能作为代码修复测试通过的依据吗？</label><textarea id="recall-c03-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/agent/response_dispatch.py:248-261，对照状态、身份、异常和保存边界。</li></ul><p>不能。它说明运行状态；修复结果需要独立测试与产物验证，且要记录错误、动作和观察证据。</p><ul><li>明确本题契约：FINISHED 是一轮状态</li><li>依据源码解释原因：不能。它说明运行状态；修复结果需要独立测试与产物验证，且要记录错误、动作和观察证据。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/agent/response_dispatch.py:248-261</p><p>白话翻译
+        可见文本被记成 agent MessageEvent，然后状态变为 FINISHED：它表示当前 run 等待用户下一次输入，不证明回答内容正确。</p><pre><code>    def _handle_content_response(
+        self,
+        message: Message,
+        llm_response: LLMResponse,
+        conversation: LocalConversation,
+        state: ConversationState,
+        on_event: ConversationCallbackType,
+        stream: StreamContext | None = None,
+    ) -&gt; None:
+        &quot;&quot;&quot;Handle LLM response with text content — finishes conversation.&quot;&quot;&quot;
+        self._emit_message_event(message, llm_response, conversation, on_event, stream)
+        self._maybe_emit_vllm_tokens(llm_response, on_event)
+        logger.debug(&quot;LLM produced a message response - awaits user input&quot;)
+        state.execution_status = ConversationExecutionStatus.FINISHED</code></pre></details></details><details class="concept-card" id="concept-c04-01"><summary>工具注册表解决能力定位</summary><p>注册表按名称找到工具定义/工厂，并结合 ConversationState 与 Workspace 实例化执行能力。名称存在只说明可以定位，未证明已调用。
+
+工具描述、参数schema、执行器和观察编码各有边界。迁移到自建Runtime时先保留 ActionID/tool_call_id 关联，再处理应用权限与数据脱敏。</p><p>前置概念: c03-01</p><a href="#module-04">能够解释“工具注册表解决能力定位”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-01-0"><label for="recall-c04-01-0">注册 terminal 后怎样证明执行发生？</label><textarea id="recall-c04-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/tool/registry.py:149-172，对照状态、身份、异常和保存边界。</li></ul><p>找Action事件、执行入口及匹配的Observation；仅有注册名称或模型schema不足以确认调用。</p><ul><li>明确本题契约：工具注册表解决能力定位</li><li>依据源码解释原因：找Action事件、执行入口及匹配的Observation；仅有注册名称或模型schema不足以确认调用。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/tool/registry.py:149-172</p><p>白话翻译
+        Agent 中的 Tool(name=...) 先按名字查 registry；未动态注册时再查内建类。resolver 拿到当前 ConversationState，因此同一工具名可以按本会话的 Workspace 与参数实例化。</p><pre><code>def resolve_tool(
+    tool_spec: Tool, conv_state: &quot;ConversationState&quot;
+) -&gt; Sequence[ToolDefinition]:
+    with _LOCK:
+        resolver = _REG.get(tool_spec.name)
+
+    if resolver is None:
+        from openhands.sdk.tool.builtins import BUILT_IN_TOOL_CLASSES
+
+        tool_class = BUILT_IN_TOOL_CLASSES.get(tool_spec.name)
+        if tool_class is None:
+            raise KeyError(f&quot;ToolDefinition &#x27;{tool_spec.name}&#x27; is not registered&quot;)
+        resolver = _resolver_from_subclass(tool_spec.name, tool_class)
+
+    params = dict(tool_spec.params)
+    response_schema = params.pop(&quot;response_schema&quot;, None)
+    tools = resolver(params, conv_state)
+    if response_schema is not None:
+        if len(tools) != 1:
+            raise ValueError(
+                &quot;response_schema requires a spec that resolves to exactly one tool&quot;
+            )
+        tools = [tools[0].set_response_schema(response_schema)]
+    return tools</code></pre></details></details><details class="concept-card" id="concept-c04-02"><summary>Workspace 统一接口不保证隔离</summary><p>LocalWorkspace 直接使用主机资源。Workspace 抽象提供文件与命令入口，但隔离强度由具体实现和部署决定。
+
+工具标注 writable/destructive 等属性帮助描述能力，不自动构成授权拒绝规则。不要从同一个执行接口推断主机、容器、远程环境拥有相同权限。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“Workspace 统一接口不保证隔离”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-02-0"><label for="recall-c04-02-0">有Workspace就能称为安全沙箱吗？</label><textarea id="recall-c04-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/workspace/local.py:17-34，对照状态、身份、异常和保存边界。</li></ul><p>不能。查具体实现与部署边界；Local直接访问主机。描述性工具属性与实际权限/隔离机制分别验证。</p><ul><li>明确本题契约：Workspace 统一接口不保证隔离</li><li>依据源码解释原因：不能。查具体实现与部署边界；Local直接访问主机。描述性工具属性与实际权限/隔离机制分别验证。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/workspace/local.py:17-34</p><p>白话翻译
+        LocalWorkspace 明示直接访问宿主文件系统与命令环境。它适合开发和测试，但不能被描述成容器级或远程级隔离。</p><pre><code>class LocalWorkspace(BaseWorkspace):
+    &quot;&quot;&quot;Local workspace implementation that operates on the host filesystem.
+
+    LocalWorkspace provides direct access to the local filesystem and command execution
+    environment. It&#x27;s suitable for development and testing scenarios where the agent
+    should operate directly on the host system.
+
+    Example:
+        &gt;&gt;&gt; workspace = LocalWorkspace(working_dir=&quot;/path/to/project&quot;)
+        &gt;&gt;&gt; with workspace:
+        ...     result = workspace.execute_command(&quot;ls -la&quot;)
+        ...     content = workspace.read_file(&quot;README.md&quot;)
+    &quot;&quot;&quot;
+
+    def __init__(self, *, working_dir: str | Path, **kwargs: Any):
+        # Accept Path in signature for ergonomics and type checkers,
+        # but normalize to str for the underlying model field.
+        super().__init__(working_dir=str(working_dir), **kwargs)</code></pre></details></details><details class="concept-card" id="concept-c04-03"><summary>Observation 必须配对动作</summary><p>工具调用返回 Observation 时保留 ActionID 与 tool_call_id；输入错误可变成 AgentError 等事件。多个同名调用不能按正文或完成顺序配对。
+
+一次工具失败仍须关闭对应请求的消息往返，否则下次模型输入不完整。独立教学对照将展示错配ID如何让看起来合理的输出属于错误动作。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“Observation 必须配对动作”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-03-0"><label for="recall-c04-03-0">两个terminal动作都输出ok，可以互换结果吗？</label><textarea id="recall-c04-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/agent/agent.py:1384-1446，对照状态、身份、异常和保存边界。</li></ul><p>不能。依ActionID和tool_call_id配对，保留错误语义；相同正文不能证明同一行动。</p><ul><li>明确本题契约：Observation 必须配对动作</li><li>依据源码解释原因：不能。依ActionID和tool_call_id配对，保留错误语义；相同正文不能证明同一行动。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/agent/agent.py:1384-1446</p><p>白话翻译
+        Agent 按 tool_name 找到定义并调用它。成功结果被包装成与 Action ID、tool call ID 关联的 ObservationEvent；参数类 ValueError 则变成 AgentErrorEvent，让下一步有机会纠正。</p><pre><code>    def _execute_action_event(
+        self,
+        conversation: LocalConversation,
+        action_event: ActionEvent,
+    ) -&gt; list[Event]:
+        &quot;&quot;&quot;Execute a single tool and return the resulting events.
+
+        Called from parallel threads by _execute_actions. This method must
+        not mutate shared conversation state (blocked_actions,
+        execution_status) — those transitions are handled by the caller
+        on the main thread.
+
+        Note: the tool itself receives ``conversation`` and may mutate it
+        (e.g. filesystem, working directory). Thread safety of individual
+        tools is the tool&#x27;s responsibility.
+
+        Returns a list of events (observation or error). Events are NOT
+        emitted here — the caller is responsible for emitting them in order.
+        &quot;&quot;&quot;
+        tool = self.tools_map.get(action_event.tool_name, None)
+        if tool is None:
+            raise RuntimeError(
+                f&quot;Tool &#x27;{action_event.tool_name}&#x27; not found. This should not happen &quot;
+                &quot;as it was checked earlier.&quot;
+            )
+
+        # Execute actions!
+        try:
+            if should_enable_observability():
+                tool_name = extract_action_name(action_event)
+                observation: Observation = observe(
+                    name=tool_name,
+                    span_type=&quot;TOOL&quot;,
+                    # Only the action is input; the conversation would serialize
+                    # as a bare object repr carrying a memory address.
+                    ignore_inputs=[&quot;conversation&quot;],
+                    metadata={&quot;tool_call_id&quot;: action_event.tool_call.id},
+                )(tool)(action_event.action, conversation)
+            else:
+                observation = tool(action_event.action, conversation)
+            assert isinstance(observation, Observation), (
+                f&quot;Tool &#x27;{tool.name}&#x27; executor must return an Observation&quot;
+            )
+        except ValueError as e:
+            # Tool execution raised a ValueError (e.g., invalid argument combination)
+            # Convert to AgentErrorEvent so the agent can correct itself
+            err = f&quot;Error executing tool &#x27;{tool.name}&#x27;: {e}&quot;
+            logger.warning(err)
+            error_event = AgentErrorEvent(
+                error=err,
+                tool_name=tool.name,
+                tool_call_id=action_event.tool_call.id,
+                classification=AGENT_OUTCOME,
+            )
+            return [error_event]
+
+        obs_event = ObservationEvent(
+            observation=observation,
+            action_id=action_event.id,
+            tool_name=tool.name,
+            tool_call_id=action_event.tool_call.id,
+        )
+        return [obs_event]</code></pre></details></details><details class="concept-card" id="concept-c05-01"><summary>运行状态不是布尔busy</summary><p>状态枚举区分 IDLE、RUNNING、等待确认、暂停、完成、错误等阶段。IDLE意味着可开始，并不是任务已经成功完成。
+
+控制面应明确每个操作允许的源状态、目标状态与事件，避免一个布尔值将暂停和完成混在一起。阅读测试时关注非法转换与并发输入。</p><p>前置概念: c04-01</p><a href="#module-05">能够解释“运行状态不是布尔busy”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-01-0"><label for="recall-c05-01-0">IDLE可以向用户显示任务完成吗？</label><textarea id="recall-c05-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/conversation/state.py:48-79，对照状态、身份、异常和保存边界。</li></ul><p>应依据业务运行记录判断；IDLE本身只说明状态可等待/开始，和FINISHED、PAUSED、ERROR不同。</p><ul><li>明确本题契约：运行状态不是布尔busy</li><li>依据源码解释原因：应依据业务运行记录判断；IDLE本身只说明状态可等待/开始，和FINISHED、PAUSED、ERROR不同。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/conversation/state.py:48-79</p><p>白话翻译
+        IDLE 是“可接新任务”而不是 run 的终点；WAITING_FOR_CONFIRMATION 也不是失败。远程客户端若把初始 IDLE 当终止，会在连接刚建立时误判运行已经结束。</p><pre><code>class ConversationExecutionStatus(str, Enum):
+    &quot;&quot;&quot;Enum representing the current execution state of the conversation.&quot;&quot;&quot;
+
+    IDLE = &quot;idle&quot;  # Conversation is ready to receive tasks
+    RUNNING = &quot;running&quot;  # Conversation is actively processing
+    PAUSED = &quot;paused&quot;  # Conversation execution is paused by user
+    WAITING_FOR_CONFIRMATION = (
+        &quot;waiting_for_confirmation&quot;  # Conversation is waiting for user confirmation
+    )
+    FINISHED = &quot;finished&quot;  # Conversation has completed the current task
+    ERROR = &quot;error&quot;  # Conversation encountered an error (optional for future use)
+    STUCK = &quot;stuck&quot;  # Conversation is stuck in a loop or unable to proceed
+    DELETING = &quot;deleting&quot;  # Conversation is in the process of being deleted
+
+    def is_terminal(self) -&gt; bool:
+        &quot;&quot;&quot;Check if this status represents a terminal state.
+
+        Terminal states indicate the run has completed and the agent is no longer
+        actively processing. These are: FINISHED, ERROR, STUCK.
+
+        Note: IDLE is NOT a terminal state - it&#x27;s the initial state of a conversation
+        before any run has started. Including IDLE would cause false positives when
+        the WebSocket delivers the initial state update during connection.
+
+        Returns:
+            True if this is a terminal status, False otherwise.
+        &quot;&quot;&quot;
+        return self in (
+            ConversationExecutionStatus.FINISHED,
+            ConversationExecutionStatus.ERROR,
+            ConversationExecutionStatus.STUCK,
+        )</code></pre></details></details><details class="concept-card" id="concept-c05-02"><summary>循环要处理新输入与停止条件</summary><p>run loop 每轮执行 step，再检查确认、限制和其他停止条件。源码处理新消息与结束状态的竞态，不能简单见FINISHED就无条件跳出。
+
+复现“发送后没处理”时需记录消息入账时间、状态转换和循环检查点。静态路径支持提出假设，不代替实际并发压力测试。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“循环要处理新输入与停止条件”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-02-0"><label for="recall-c05-02-0">为何不能把循环改成step后遇FINISHED立刻break？</label><textarea id="recall-c05-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:1977-2042，对照状态、身份、异常和保存边界。</li></ul><p>可能忽略该期间新入账消息或停止hook的继续条件；先冻结竞态语义与队列检查，再用受控输入验证。</p><ul><li>明确本题契约：循环要处理新输入与停止条件</li><li>依据源码解释原因：可能忽略该期间新入账消息或停止hook的继续条件；先冻结竞态语义与队列检查，再用受控输入验证。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:1977-2042</p><p>白话翻译
+        每轮恰好调用一次 Agent step。若产生待确认 Action 就停；若超预算或超迭代上限则写结构化错误。源码刻意不在 step 后立刻因 FINISHED 退出，以便锁后到达的新消息仍能被下一轮吸收。</p><pre><code>                    # clear the flag before calling agent.step() (user approved)
+                    if (
+                        self._state.execution_status
+                        == ConversationExecutionStatus.WAITING_FOR_CONFIRMATION
+                    ):
+                        self._state.execution_status = (
+                            ConversationExecutionStatus.RUNNING
+                        )
+
+                    # Mark the step as holding the state lock so state-mutating
+                    # tools (e.g. switch_llm) running on worker threads skip
+                    # re-acquiring it instead of deadlocking (#3485).
+                    self._step_holds_state_lock = True
+                    try:
+                        self.agent.step(
+                            self, on_event=self._on_event, on_token=self._on_token
+                        )
+                    finally:
+                        self._step_holds_state_lock = False
+                    iteration += 1
+
+                    # Check for non-finished terminal conditions
+                    # Note: We intentionally do NOT check for FINISHED status here.
+                    # This allows concurrent user messages to be processed:
+                    # 1. Agent finishes and sets status to FINISHED
+                    # 2. User sends message concurrently via send_message()
+                    # 3. send_message() waits for FIFO lock, then sets status to IDLE
+                    # 4. Run loop continues to next iteration and processes the message
+                    # 5. Without this design, concurrent messages would be lost
+                    if (
+                        self.state.execution_status
+                        == ConversationExecutionStatus.WAITING_FOR_CONFIRMATION
+                    ):
+                        break
+
+                    budget_detail = self._budget_exceeded_detail()
+                    if budget_detail and (
+                        self._state.execution_status
+                        != ConversationExecutionStatus.FINISHED
+                    ):
+                        self._emit_run_limit_error(&quot;MaxBudgetReached&quot;, budget_detail)
+                        break
+
+                    if iteration &gt;= self.max_iteration_per_run:
+                        # If the agent finished on this final iteration,
+                        # preserve the FINISHED status rather than
+                        # overwriting it with ERROR.
+                        if (
+                            self._state.execution_status
+                            == ConversationExecutionStatus.FINISHED
+                        ):
+                            break
+                        error_msg = (
+                            f&quot;Agent reached maximum iterations limit &quot;
+                            f&quot;({self.max_iteration_per_run}).&quot;
+                        )
+                        logger.error(error_msg)
+                        self._state.execution_status = ConversationExecutionStatus.ERROR
+                        self._on_event(
+                            ConversationErrorEvent(
+                                source=&quot;environment&quot;,
+                                code=&quot;MaxIterationsReached&quot;,
+                                detail=error_msg,
+                            )
+                        )
+                        break</code></pre></details></details><details class="concept-card" id="concept-c05-03"><summary>中断需要补全未完成工具往返</summary><p>中断路径可为已有Action但缺Observation的调用生成合成错误观察，避免恢复后模型看到悬空工具请求。
+
+中断不等于现实副作用回滚；工具可能已完成写入却还未返回观察。恢复应保留“结果未知”的边界并查询/幂等处理，不能用合成错误断言实际没有执行。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“中断需要补全未完成工具往返”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-03-0"><label for="recall-c05-03-0">收到中断错误观察，能保证工具没有改文件吗？</label><textarea id="recall-c05-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:2507-2542，对照状态、身份、异常和保存边界。</li></ul><p>不能。合成观察修复协议完整性，不撤销外部动作。检查执行账本、文件证据与请求幂等，明确未知结果。</p><ul><li>明确本题契约：中断需要补全未完成工具往返</li><li>依据源码解释原因：不能。合成观察修复协议完整性，不撤销外部动作。检查执行账本、文件证据与请求幂等，明确未知结果。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:2507-2542</p><p>白话翻译
+        interrupt 不是删除会话。SDK 还为没有 Observation 的在途 Action 补合成错误结果，避免恢复后给模型一段结构不完整的 tool history。</p><pre><code>        except asyncio.CancelledError:
+            # CancelledError is intentionally NOT re-raised.  ``interrupt()``
+            # uses ``asyncio.Task.cancel()`` to break out of ``arun()`` and
+            # expects the task to terminate cleanly.  Re-raising would
+            # propagate the cancellation to EventService/caller which would
+            # surface it as an unexpected error.  Instead we transition to
+            # PAUSED so the conversation can be resumed later.
+            logger.info(&quot;arun() interrupted via task cancellation&quot;)
+            with self._state:
+                updated_agent_state = dict(self._state.agent_state)
+                inflight_prompt_user_message_id = updated_agent_state.pop(
+                    ACP_INFLIGHT_PROMPT_USER_MESSAGE_ID, None
+                )
+                superseded_by_new_message = bool(
+                    updated_agent_state.pop(ACP_SUPERSEDE_INFLIGHT_PROMPT, False)
+                )
+                completed_cancelled_prompt = (
+                    self._state.execution_status == ConversationExecutionStatus.FINISHED
+                )
+                if (
+                    superseded_by_new_message or completed_cancelled_prompt
+                ) and inflight_prompt_user_message_id is not None:
+                    updated_agent_state[ACP_LAST_PROMPT_USER_MESSAGE_ID] = (
+                        inflight_prompt_user_message_id
+                    )
+                self._state.agent_state = updated_agent_state
+
+                # Emit synthetic error observations for any ActionEvents
+                # that were in-flight when the interrupt landed.  Without
+                # these the LLM history would contain tool-call requests
+                # with no tool-result, which causes provider errors on
+                # the next completion call.
+                self._emit_orphaned_action_errors()
+
+                self._state.execution_status = ConversationExecutionStatus.PAUSED
+                self._on_event(InterruptEvent())</code></pre></details></details><details class="concept-card" id="concept-c06-01"><summary>远程发送与调度仍是两件事</summary><p>Server 的消息入口可通过 request.run 选择是否调度运行；run入口还处理重复请求与生命周期约束。HTTP接受请求不等于Agent已经完成。
+
+客户端应展示接受、排队、运行、完成与失败，不能把200响应当模型结果。服务器fallback到线程运行的路径也不是异步性能保证。</p><p>前置概念: c05-01</p><a href="#module-06">能够解释“远程发送与调度仍是两件事”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-01-0"><label for="recall-c06-01-0">远程接口200返回后能立即读最终答案吗？</label><textarea id="recall-c06-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-agent-server/openhands/agent_server/event_router.py:213-221，对照状态、身份、异常和保存边界。</li></ul><p>先确定request.run和调度状态，再追踪事件或完成状态；200说明入口接受，不保证Agent完成。</p><ul><li>明确本题契约：远程发送与调度仍是两件事</li><li>依据源码解释原因：先确定request.run和调度状态，再追踪事件或完成状态；200说明入口接受，不保证Agent完成。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-agent-server/openhands/agent_server/event_router.py:213-221</p><p>白话翻译
+        事件端点把请求体重建为 SDK Message，再交给当前 conversation 的 EventService；request.run 决定只入队还是连带请求运行。</p><pre><code>@event_write_router.post(&quot;&quot;)
+async def send_message(
+    request: SendMessageRequest,
+    event_service: EventService = Depends(get_event_service),
+) -&gt; Success:
+    &quot;&quot;&quot;Send a message to a conversation&quot;&quot;&quot;
+    message = Message(role=request.role, content=request.content)
+    await event_service.send_message(message, request.run)
+    return Success()</code></pre></details></details><details class="concept-card" id="concept-c06-02"><summary>订阅重放与实时流分开</summary><p>WebSocket 把连接绑定Conversation，组织历史订阅与实时事件。鉴权入口、历史重放和网络交付是不同责任。
+
+断线后可能重放，客户端需依据event ID处理重复与缺口。静态代码不证明网络exactly once；本课没有启动生产服务器或测鉴权。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“订阅重放与实时流分开”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-02-0"><label for="recall-c06-02-0">重连后同一事件再次出现应怎样处理？</label><textarea id="recall-c06-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-agent-server/openhands/agent_server/sockets.py:227-301，对照状态、身份、异常和保存边界。</li></ul><p>按稳定event ID和游标去重并检查缺口，必要时对照持久历史；不要假设每条只传一次。</p><ul><li>明确本题契约：订阅重放与实时流分开</li><li>依据源码解释原因：按稳定event ID和游标去重并检查缺口，必要时对照持久历史；不要假设每条只传一次。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-agent-server/openhands/agent_server/sockets.py:227-301</p><p>白话翻译
+        subscriber 先通过认证并绑定 conversation。客户端可只听新事件，也可要求补发全部或某个时间点后的历史，再继续实时订阅。</p><pre><code>@conversation_sockets_router.websocket(&quot;/events/{conversation_id}&quot;)
+async def events_socket(
+    conversation_id: UUID,
+    websocket: WebSocket,
+    session_api_key: Annotated[str | None, Query(alias=&quot;session_api_key&quot;)] = None,
+    resend_mode: Annotated[
+        Literal[&quot;all&quot;, &quot;since&quot;] | None,
+        Query(
+            description=(
+                &quot;Mode for resending historical events on connect. &quot;
+                &quot;&#x27;all&#x27; sends all events, &#x27;since&#x27; sends events after &#x27;after_timestamp&#x27;.&quot;
+            )
+        ),
+    ] = None,
+    after_timestamp: Annotated[
+        datetime | None,
+        Query(
+            description=(
+                &quot;Required when resend_mode=&#x27;since&#x27;. Events with timestamp &gt;= this &quot;
+                &quot;value will be sent. Accepts ISO 8601 format. Timezone-aware &quot;
+                &quot;datetimes are converted to server local time; naive datetimes &quot;
+                &quot;assumed in server timezone.&quot;
+            )
+        ),
+    ] = None,
+    # Deprecated parameter - kept for backward compatibility
+    resend_all: Annotated[
+        bool,
+        Query(
+            include_in_schema=False,
+            deprecated=True,
+        ),
+    ] = False,
+):
+    &quot;&quot;&quot;WebSocket endpoint for conversation events.
+
+    Args:
+        conversation_id: The conversation ID to subscribe to.
+        websocket: The WebSocket connection.
+        session_api_key: Optional API key for authentication.
+        resend_mode: Mode for resending historical events on connect.
+            - &#x27;all&#x27;: Resend all existing events
+            - &#x27;since&#x27;: Resend events after &#x27;after_timestamp&#x27; (requires after_timestamp)
+            - None: Don&#x27;t resend, just subscribe to new events
+        after_timestamp: Required when resend_mode=&#x27;since&#x27;. Events with
+            timestamp &gt;= this value will be sent. Timestamps are interpreted in
+            server local time. Timezone-aware datetimes are converted to server
+            timezone. Enables efficient bi-directional loading where REST fetches
+            historical events and WebSocket handles events after a specific point.
+        resend_all: DEPRECATED. Use resend_mode=&#x27;all&#x27; instead. Kept for
+            backward compatibility - if True and resend_mode is None, behaves
+            as resend_mode=&#x27;all&#x27;.
+    &quot;&quot;&quot;
+    if not await _accept_authenticated_websocket(websocket, session_api_key):
+        return
+
+    logger.info(f&quot;Event Websocket Connected: {conversation_id}&quot;)
+    conv_service = _get_conversation_service(websocket)
+    try:
+        event_service = await conv_service.get_event_service(conversation_id)
+    except CredentialBindingActivationRequired:
+        await websocket.close(
+            code=1013,
+            reason=&quot;credential_binding_activation_required&quot;,
+        )
+        return
+    if event_service is None:
+        logger.warning(f&quot;Converation not found: {conversation_id}&quot;)
+        await websocket.close(code=4004, reason=&quot;Conversation not found&quot;)
+        return
+
+    try:
+        subscriber_id = await event_service.subscribe_to_events(
+            _WebSocketSubscriber(websocket)
+        )</code></pre></details></details><details class="concept-card" id="concept-c06-03"><summary>fork 复制历史不回滚工作区</summary><p>fork 从历史切点组织新Conversation与Agent记忆，但外部Workspace的文件和操作不是随事件树自动倒带。
+
+分叉任务若需可重复实验，必须明确是否复制目录、快照文件或使用独立工作区。单独恢复事件账本只能恢复推理视图，不能证明行动世界也一致。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“fork 复制历史不回滚工作区”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-03-0"><label for="recall-c06-03-0">从改文件前的事件fork，文件会自动恢复吗？</label><textarea id="recall-c06-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:787-818，对照状态、身份、异常和保存边界。</li></ul><p>不会由事件分叉自动保证。另定义Workspace快照/复制与隔离，记录外部状态；区分历史分支与现实副作用。</p><ul><li>明确本题契约：fork 复制历史不回滚工作区</li><li>依据源码解释原因：不会由事件分叉自动保证。另定义Workspace快照/复制与隔离，记录外部状态；区分历史分支与现实副作用。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py:787-818</p><p>白话翻译
+        fork 像用同一剧本成立复排剧组。它复制 Agent 记忆，可从某个事件切点继续，但源会话仍在。</p><pre><code>    def fork(
+        self,
+        *,
+        conversation_id: ConversationID | None = None,
+        agent: AgentBase | None = None,
+        title: str | None = None,
+        tags: dict[str, str] | None = None,
+        reset_metrics: bool = True,
+        from_event_id: EventID | None = None,
+    ) -&gt; &quot;LocalConversation&quot;:
+        &quot;&quot;&quot;Deep-copy this conversation with a new ID.
+
+        Events are copied so the source remains immutable. The fork starts
+        in ``execution_status=&#x27;idle&#x27;``; calling ``run()`` resumes from the
+        copied state — meaning the agent has full event memory of the source.
+
+        Args:
+            conversation_id: ID for the forked conversation (auto-generated
+                if ``None``).
+            agent: Agent for the fork. Defaults to a deep-copy of the
+                source agent.
+            title: Optional title for the forked conversation.
+            tags: Optional tags for the forked conversation.
+            reset_metrics: If ``True`` (default), cost/token stats start
+                fresh on the fork.
+            from_event_id: If set, copy only the branch up to this event
+                (``path_to_root``) and set the fork&#x27;s HEAD there. If ``None``
+                (default), copy the whole log and keep the source&#x27;s HEAD.
+
+        Returns:
+            A new ``LocalConversation`` that shares the same event history
+            but has its own identity and independent state going forward.</code></pre></details></details><button type="button" class="export-learning-notes">导出回忆记录</button><p class="notes-feedback" aria-live="polite"></p><details class="export-preview" hidden><summary>可复制的导出记录</summary><label for="export-data">尚未评价的回忆记录（JSON）</label><textarea id="export-data" readonly rows="6"></textarea><a class="export-download" download="code-learning-recall.json">下载 JSON</a></details></section>
+  <main id="course"><section class="course-module" id="module-01" data-title="一条消息进入 Conversation">
+  <div class="screen hero-screen" data-number="01">
+    <p class="eyebrow">Module 1 · Conversation boundary</p>
+    <h2>先分清“谁会做事”，再问消息去了哪里</h2>
+    <p class="lede">学完这一节，你能把 Agent 配置、Conversation runtime 与 Workspace 分开，并沿一次 <code>send_message()</code> 看见用户输入怎样进入事件链。</p>
+    <p><dfn data-definition="Agent 是冻结的模型、工具与提示配置，负责决定下一步。">Agent</dfn> 像厨师的配方与技能；<dfn data-definition="Conversation 持有一次会话的状态、事件、运行循环与回调。">Conversation</dfn> 是实际出餐台；<dfn data-definition="Workspace 是工具读取文件、执行命令和产生副作用的工作环境。">Workspace</dfn> 则是厨房。</p>
+    <div class="callout"><strong>关键边界：</strong><code>send_message()</code> 先登记用户输入；真正反复请求模型并执行工具的是后续 <code>run()</code>。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The smallest assembly</p>
+    <h3>官方示例把“装配、入队、运行”写成三个动作</h3>
+    <figure class="code-translation" data-source="examples/01_standalone_sdk/01_hello_world.py" data-lines="15-28">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>agent = Agent(
+    llm=llm,
+    tools=[
+        Tool(name=TerminalTool.name),
+        Tool(name=FileEditorTool.name),
+        Tool(name=TaskTrackerTool.name),
+    ],
+)
+
+cwd = os.getcwd()
+conversation = Conversation(agent=agent, workspace=cwd)
+
+conversation.send_message("Write 3 facts about the current project into FACTS.txt.")
+conversation.run()</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">Agent</span> 先拿到模型与工具规格，<span class="path-chip">Conversation</span> 再绑定当前目录。消息进入会话后，显式的 <span class="path-chip">run()</span> 才启动执行。</p>
+      </figcaption>
+    </figure>
+    <div class="callout"><strong>不要混写：</strong><code>Tool(name=...)</code> 此时是“允许使用什么”的规格，不等于终端已经执行。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Factory, not one implementation</p>
+    <h3><code>Conversation</code> 是入口工厂，本地与远程是两条实现</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/conversation.py" data-lines="34-43">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class Conversation:
+    """Factory class for creating conversation instances with OpenHands agents.
+
+    This factory automatically creates either a LocalConversation or RemoteConversation
+    based on the workspace type provided. LocalConversation runs the agent locally,
+    while RemoteConversation connects to a remote agent server.
+
+    Returns:
+        LocalConversation if workspace is local, RemoteConversation if workspace
+        is remote.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>同一个公开入口会看 Workspace 类型：本地工作区让 SDK 在当前进程跑 Agent；远程工作区则把会话交给 Agent Server。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/conversation.py" data-lines="149-155">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    ) -&gt; BaseConversation:
+        from openhands.sdk.conversation.impl.local_conversation import LocalConversation
+        from openhands.sdk.conversation.impl.remote_conversation import (
+            RemoteConversation,
+        )
+
+        if isinstance(workspace, RemoteWorkspace):</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>分流条件不是“是否有网络”，而是传入对象是否属于 <span class="path-chip">RemoteWorkspace</span>。本课前五章先追本地 runtime，第六章再接回远程边界。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Message ingress</p>
+    <h3>字符串先被规范化，再成为事件</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py" data-lines="1826-1839">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        if isinstance(message, str):
+            message = Message(role="user", content=[TextContent(text=message)])
+
+        assert message.role == "user", (
+            "Only user messages are allowed to be sent to the agent."
+        )
+        with self._state:
+            if self._state.execution_status in (
+                ConversationExecutionStatus.FINISHED,
+                ConversationExecutionStatus.STUCK,
+            ):
+                self._state.execution_status = (
+                    ConversationExecutionStatus.IDLE
+                )  # new message resets terminal states</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>字符串被包装成唯一允许进入该 API 的 user Message。新消息会把 FINISHED / STUCK 重置为 IDLE，但还没有调用 LLM。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py" data-lines="1863-1870">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>            user_msg_event = MessageEvent(
+                source="user",
+                llm_message=message,
+                activated_skills=activated_skill_names,
+                extended_content=extended_content,
+                sender=sender,
+            )
+            self._on_event(user_msg_event)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>准备好的消息被包装成 <dfn data-definition="MessageEvent 是事件账本中的一条消息记录，带来源、LLM Message 与可选扩展上下文。">MessageEvent</dfn>，再进入统一 callback；可选的知识扩展与 sender 也一同记录。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="用户字符串进入 Conversation 的数据流">
+      <button type="button" class="flow-step is-active" data-detail="调用者交给 send_message 一段字符串或已构造的用户 Message。">1. String / Message</button>
+      <button type="button" class="flow-step" data-detail="字符串被统一包装为 role=user、包含 TextContent 的 Message。">2. Normalize</button>
+      <button type="button" class="flow-step" data-detail="SDK 生成 source=user 的 MessageEvent，并记录 sender 与扩展上下文。">3. MessageEvent</button>
+      <button type="button" class="flow-step" data-detail="_on_event 进入统一回调链；下一章会看到它先写事件日志。">4. Callback chain</button>
+      <button type="button" class="flow-step" data-detail="只有调用 run 后，运行循环才会读取这些事件并请求模型。">5. Later: run</button>
+      <p class="flow-detail" aria-live="polite">调用者交给 send_message 一段字符串或已构造的用户 Message。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>把“已收到任务”和“已开始执行”分开</h3>
+    <p>厨房已经收到了订单，不代表厨师已经开火。这个区分会贯穿 OpenHands：事件进入账本、Agent step、工具副作用和客户端看到更新，都是不同时间点。</p>
+    <div class="quiz" data-explanation="send_message 只把用户输入规范化并发出 MessageEvent；官方最小示例随后显式调用 run，后者才进入 Agent 的迭代执行。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>刚执行完 <code>conversation.send_message("修复测试")</code>，哪项结论最准确？</h3>
+      <div class="quiz-options">
+        <button type="button">LLM 已经返回了下一步工具调用</button>
+        <button type="button" data-correct="true">用户消息已经进入会话事件链，但 Agent 还要等 <code>run()</code></button>
+        <button type="button">TerminalTool 已经在 Workspace 中执行</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-02" data-title="Event Log 是事实账本">
+  <div class="screen hero-screen" data-number="02">
+    <p class="eyebrow">Module 2 · Event sourcing</p>
+    <h2>先记账，再广播</h2>
+    <p class="lede">学完这一节，你能区分完整事件日志、当前活动分支、派生 View 与外部订阅通知，并解释事件为什么要先落账。</p>
+    <p><dfn data-definition="EventLog 是按序保存 Event 的持久事实账本；每条记录有稳定 ID。">EventLog</dfn> 像银行总账；<dfn data-definition="HEAD 是当前活动分支最后一条事件的 ID，也是下一条事件默认的 parent。">HEAD</dfn> 像读到哪一页的书签。总账不会因移动书签而删除旧页。</p>
+    <div class="callout"><strong>事实层次：</strong>事件写入成功、View 能看见、回调收到、UI 渲染完成，是四个不同断言。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Callback ordering</p>
+    <h3>默认回调是单一持久化入口，而且排在用户回调之前</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py" data-lines="415-438">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        # Default callback: persist every event to state
+        def _default_callback(e):
+            # This callback runs while holding the conversation state's lock
+            # (see BaseConversation.compose_callbacks usage inside `with self._state:`
+            # regions), so updating state here is thread-safe.
+            # Single chokepoint: stamps parent_id (catching any event a hook
+            # swapped in downstream of _tree_stamping) and advances HEAD.
+            self._state.append_event(e)
+            # Track user MessageEvent IDs here so hook callbacks (which may
+            # synthesize or alter user messages) are captured in one place.
+            if isinstance(e, MessageEvent) and e.source == "user":
+                # Track the latest real user message ID for hook-blocked checks.
+                # Stop-hook feedback is emitted with source="environment".
+                self._state.last_user_message_id = e.id
+
+        callback_list = list(callbacks) if callbacks else []
+        # _default_callback (persist) runs before the caller-supplied callbacks
+        # (e.g. a PubSub publish), so no subscriber is told about an event that
+        # is not on disk yet. compose_callbacks' plain for-loop has no
+        # try/except, so if persist raises here, the callbacks after it in the
+        # list never run. The visualizer is prepended below and so still renders
+        # ahead of persist — that is local terminal output, not an announcement
+        # a client can act on.
+        composed_list = [_default_callback] + callback_list</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>每个 Event 都先交给 <span class="path-chip">append_event</span>。如果持久化失败，排在后面的 PubSub / 用户 callback 不会收到这条未落盘事件；本地终端 visualizer 是例外，但它不构成客户端可依赖的通知。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Parent and active branch</p>
+    <h3>追加事件同时写 parent，并把 HEAD 向前移动</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/state.py" data-lines="304-337">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def _stamp_parent_id(self, event: Event) -&gt; Event:
+        """Return ``event`` with ``parent_id`` set to the active leaf if unset."""
+        if event.parent_id is not None:
+            return event
+        parent = self._resolve_active_leaf()
+        # Empty HEAD over a non-empty log = deliberate new root (navigate_to(None));
+        # mark it so it is not misread as a legacy event chained to its neighbour.
+        if parent is None and len(self._events) &gt; 0:
+            parent = ROOT_PARENT_ID
+        return event.model_copy(update={"parent_id": parent})
+
+    def append_event(self, event: Event) -&gt; int:
+        """Single storage chokepoint: stamp parent_id, append, advance HEAD.
+
+        Stamping here (not only at the emit callback) ensures no event enters the
+        log unstamped, even one a hook swaps in downstream. ``fork`` copies
+        pre-stamped events and sets HEAD itself, so it bypasses this.
+
+        Returns:
+            The sequence number ``EventLog`` assigned to the appended event.
+        """
+        event = self._stamp_parent_id(event)
+        seq = self._events.append(event)
+        # ConversationStateUpdateEvent is a state-sync artifact, not a tree node;
+        # advancing HEAD for it would recurse (moving HEAD re-emits one).
+        from openhands.sdk.event.conversation_state import (
+            ConversationStateUpdateEvent,
+        )
+
+        if not isinstance(event, ConversationStateUpdateEvent):
+            self.leaf_event_id = event.id
+            if self.head_is_empty:  # HEAD now points at a real event again
+                self.head_is_empty = False
+        return seq</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>事件不是简单 append 到数组尾部：未指定 parent 时会指向当前活动 leaf。追加后，普通事件成为新 HEAD。于是一个日志能保存多个分支，而 <dfn data-definition="active branch 是从当前 HEAD 沿 parent 回到 root 的那条事件路径。">active branch</dfn> 只选当前推理需要的路径。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Durable append</p>
+    <h3>真正写盘前，EventLog 先守住两个不变量</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/event_store.py" data-lines="188-238">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def append(self, event: Event) -&gt; int:
+        """Append an event with locking for thread/process safety.
+
+        Returns:
+            The sequence number (index) the log assigned to ``event``.
+
+        Raises:
+            TimeoutError: If the lock cannot be acquired within LOCK_TIMEOUT_SECONDS.
+            ValueError: If an event with the same ID already exists or its explicit
+                parent does not exist.
+        """
+        evt_id = event.id
+
+        try:
+            with self._fs.lock(self._lock_path, timeout=LOCK_TIMEOUT_SECONDS):
+                # Sync with disk only if the marker cannot rule out another writer
+                if not self._marker_matches_length():
+                    disk_length = self._count_events_on_disk()
+                    if disk_length &gt; self._length:
+                        self._sync_from_disk(disk_length)
+
+                if evt_id in self._id_to_idx:
+                    existing_idx = self._id_to_idx[evt_id]
+                    raise ValueError(
+                        f"Event with ID '{evt_id}' already exists at index "
+                        f"{existing_idx}"
+                    )
+
+                if (
+                    event.parent_id not in (None, ROOT_PARENT_ID)
+                    and event.parent_id not in self._id_to_idx
+                ):
+                    raise ValueError(
+                        f"Parent event '{event.parent_id}' does not exist "
+                        f"for event '{evt_id}'"
+                    )
+
+                payload = event.model_dump_json(exclude_none=True)
+                write_guard = (
+                    nullcontext() if self._write_guard is None else self._write_guard()
+                )
+                idx = self._length
+                with write_guard:
+                    target_path = self._path(idx, event_id=evt_id)
+                    self._fs.write(target_path, payload)
+                self._idx_to_id[idx] = evt_id
+                self._id_to_idx[evt_id] = idx
+                self._event_cache[idx] = event
+                self._length += 1
+                self._advance_length_marker(idx)
+                return idx</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>锁内先同步长度，再拒绝重复 ID 和不存在的显式 parent。JSON 文件成功写入后，内存索引、缓存和长度才一并前进。这里保证的是日志结构，不是工具副作用的事务回滚。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Component conversation</p>
+    <h3>总账、书签与广播各自只负责一件事</h3>
+    <div class="component-chat" aria-label="Conversation、State、EventLog 与 Subscriber 的事件交接">
+      <div class="chat-message" data-speaker="Conversation">我生成了一条 Event，交给统一 <code>_on_event</code> 链。</div>
+      <div class="chat-message" data-speaker="ConversationState">我补上 parent，让它接到当前 HEAD，再调用 EventLog。</div>
+      <div class="chat-message" data-speaker="EventLog">ID 与 parent 合法，文件已写入；这是它的 sequence number。</div>
+      <div class="chat-message" data-speaker="ConversationState">我把普通事件设为新 HEAD，并据此派生活动 View。</div>
+      <div class="chat-message" data-speaker="Subscriber">现在我才收到通知；我知道被告知的事件已经进账，但仍要自己处理它。</div>
+      <button type="button" class="replay-chat">重放事件交接</button>
+    </div>
+    <div class="quiz" data-explanation="默认持久化 callback 排在用户 callback 前；后者失败不会撤销已经写入的事件，但持久化失败会阻止后续 callback 收到它。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>事件已经写入 EventLog，随后一个 UI callback 抛错。哪项最准确？</h3>
+      <div class="quiz-options">
+        <button type="button">EventLog 会自动删除刚才的事件</button>
+        <button type="button" data-correct="true">持久事件仍在；UI 通知链失败要作为另一条故障处理</button>
+        <button type="button">工具副作用也一定被回滚</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-03" data-title="Agent Step 把历史变成下一步">
+  <div class="screen hero-screen" data-number="03">
+    <p class="eyebrow">Module 3 · Reasoning step</p>
+    <h2>一步不是“一次模型调用”的别名</h2>
+    <p class="lede">学完这一节，你能解释一个 Agent step 如何从活动历史构造模型输入，再把响应分派成可见文本或工具行动。</p>
+    <p><dfn data-definition="step 是 Agent 读取当前会话、请求模型并处理这一次响应的最小决策回合。">step</dfn> 像值班编辑的一轮工作：先读卷宗，再约稿，最后决定直接刊登、派记者，或要求重写。<dfn data-definition="View 是从活动事件分支派生出的、供 Agent 构造模型上下文的当前视图。">View</dfn> 不是全量 EventLog。</p>
+    <div class="callout"><strong>不要跳步：</strong>LLM 不直接调用 Python executor。它先返回结构化 tool call，SDK 还要验证、记成 ActionEvent，并经过确认与执行边界。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Before sampling</p>
+    <h3>Agent 先处理未匹配行动，再从活动 View 准备消息</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/agent/agent.py" data-lines="651-695">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        state = conversation.state
+        # Check for pending actions (implicit confirmation)
+        # and execute them before sampling new actions.
+        pending_actions = ConversationState.get_unmatched_actions(state.active_branch())
+        if pending_actions:
+            logger.info(
+                "Confirmation mode: Executing %d pending action(s)",
+                len(pending_actions),
+            )
+            self._execute_actions(conversation, pending_actions, on_event)
+            return
+
+        # Check if the last user message was blocked by a UserPromptSubmit hook
+        # If so, skip processing and mark conversation as finished
+        if state.last_user_message_id is not None:
+            reason = state.pop_blocked_message(state.last_user_message_id)
+            if reason is not None:
+                logger.info(f"User message blocked by hook: {reason}")
+                state.execution_status = ConversationExecutionStatus.FINISHED
+                return
+        elif state.blocked_messages:
+            logger.debug(
+                "Blocked messages exist but last_user_message_id is None; "
+                "skipping hook check for legacy conversation state."
+            )
+
+        # Build per-conversation context once and thread it through all
+        # LLM calls in this step (avoids shared mutable state on the LLM).
+        call_context: LLMCallContext = conversation.get_llm_call_context()
+
+        # Establish route-aware runtime metadata (cached, no I/O on a hit)
+        # before the condenser decides a token threshold, so a routed model's
+        # real endpoint limit drives condensation on the first step.
+        self.llm.resolve_runtime_metadata()
+
+        # Prepare LLM messages from the cached, incrementally-maintained view.
+        # See https://github.com/OpenHands/software-agent-sdk/issues/3053.
+        _messages_or_condensation = prepare_llm_messages(
+            state.view, condenser=self.condenser, llm=self.llm
+        )
+
+        # Process condensation event before agent sampels another action
+        if isinstance(_messages_or_condensation, Condensation):
+            on_event(_messages_or_condensation)
+            return</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>如果上轮 Action 等待确认，这一轮先执行它，而不是再次问模型。否则 Agent 检查消息闸门、建立会话调用上下文，再把 <span class="path-chip">state.view</span> 转成 LLM 消息。需要压缩时，本轮只发 condensation event。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Model boundary</p>
+    <h3>工具定义随消息一起交给模型，返回值再被分类</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/agent/agent.py" data-lines="727-735">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        try:
+            llm_response = self.llm.generate(
+                messages=_messages,
+                tools=list(self.tools_map.values()),
+                store=False,
+                add_security_risk_prediction=True,
+                on_token=stream.token_callback,
+                call_context=call_context,
+            )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>模型拿到的是当前消息与工具 schema。这里请求它“选择或填写工具”，不是把 executor 交给模型进程；实际执行仍留在 SDK。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/agent/response_dispatch.py" data-lines="45-78">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class LLMResponseType(StrEnum):
+    """Mutually exclusive classification of an LLM response."""
+
+    TOOL_CALLS = "tool_calls"
+    CONTENT = "content"
+    REASONING_ONLY = "reasoning_only"
+    EMPTY = "empty"
+
+
+def classify_response(message: Message) -&gt; LLMResponseType:
+    """Classify an LLM response message into exactly one type.
+
+    Decision priority (first match wins):
+      1. TOOL_CALLS  — message contains tool calls
+      2. CONTENT     — message contains non-blank TextContent
+      3. REASONING_ONLY — message has reasoning but no visible content
+      4. EMPTY       — nothing useful
+
+    This function is pure: no side effects, no logging, no mutation.
+    """
+    if message.tool_calls:
+        return LLMResponseType.TOOL_CALLS
+
+    if any(isinstance(c, TextContent) and c.text.strip() for c in message.content):
+        return LLMResponseType.CONTENT
+
+    if (
+        message.responses_reasoning_item is not None
+        or message.reasoning_content is not None
+        or message.thinking_blocks
+    ):
+        return LLMResponseType.REASONING_ONLY
+
+    return LLMResponseType.EMPTY</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>四类互斥，且有优先级：同时带文字和 tool calls 时仍走工具分支。<dfn data-definition="dispatch 是根据响应形状选择对应处理路径，而不是再让模型决定。">dispatch</dfn> 是 SDK 的确定性控制逻辑。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Two important exits</p>
+    <h3>工具响应继续行动；文本响应结束当前任务</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/agent/response_dispatch.py" data-lines="145-192">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def _handle_tool_calls(
+        self,
+        message: Message,
+        llm_response: LLMResponse,
+        conversation: LocalConversation,
+        state: ConversationState,
+        on_event: ConversationCallbackType,
+        stream: StreamContext | None = None,
+    ) -&gt; None:
+        """Handle LLM response containing tool calls."""
+        if not all(isinstance(c, TextContent) for c in message.content):
+            logger.warning(
+                "LLM returned tool calls but message content is not all "
+                "TextContent - ignoring non-text content"
+            )
+
+        thought_content = [c for c in message.content if isinstance(c, TextContent)]
+
+        action_events: list[ActionEvent] = []
+        assert message.tool_calls, "classify_response guarantees tool_calls"
+        for i, tool_call in enumerate(message.tool_calls):
+            action_event = self._get_action_event(
+                tool_call,
+                conversation=conversation,
+                llm_response_id=llm_response.id,
+                on_event=on_event,
+                security_analyzer=state.security_analyzer,
+                thought=thought_content if i == 0 else [],
+                reasoning_content=(message.reasoning_content if i == 0 else None),
+                thinking_blocks=(list(message.thinking_blocks) if i == 0 else []),
+                responses_reasoning_item=(
+                    message.responses_reasoning_item if i == 0 else None
+                ),
+                # The streamed text is this action's thought, so the first
+                # action event is what retires the slot.
+                stream=stream if i == 0 else None,
+            )
+            if action_event is None:
+                continue
+            action_events.append(action_event)
+
+        if self._requires_user_confirmation(state, action_events):
+            return
+
+        if action_events:
+            self._execute_actions(conversation, action_events, on_event)
+
+        self._maybe_emit_vllm_tokens(llm_response, on_event)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>每个 tool call 先变成 ActionEvent。若策略要求确认，处理函数就停在执行前；否则批量执行。ActionEvent 是可审计的意图，不等于已完成的副作用。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/agent/response_dispatch.py" data-lines="248-261">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def _handle_content_response(
+        self,
+        message: Message,
+        llm_response: LLMResponse,
+        conversation: LocalConversation,
+        state: ConversationState,
+        on_event: ConversationCallbackType,
+        stream: StreamContext | None = None,
+    ) -&gt; None:
+        """Handle LLM response with text content — finishes conversation."""
+        self._emit_message_event(message, llm_response, conversation, on_event, stream)
+        self._maybe_emit_vllm_tokens(llm_response, on_event)
+        logger.debug("LLM produced a message response - awaits user input")
+        state.execution_status = ConversationExecutionStatus.FINISHED</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>可见文本被记成 agent MessageEvent，然后状态变为 FINISHED：它表示当前 run 等待用户下一次输入，不证明回答内容正确。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>编辑部的分拣规则是确定的</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Tool calls</h4><p>先记 ActionEvent；可能等待确认，也可能执行工具。</p></article>
+      <article class="actor-card"><h4>Content</h4><p>记 agent MessageEvent，并把本轮标为 FINISHED。</p></article>
+      <article class="actor-card"><h4>Reasoning only</h4><p>保留响应，再给模型纠正提示，继续循环。</p></article>
+      <article class="actor-card"><h4>Empty</h4><p>同样纠正，而不是把空白当完成。</p></article>
+    </div>
+    <div class="quiz" data-explanation="classify_response 优先检查 tool_calls；即使同一消息还含文字，也走工具分支，生成 ActionEvent 并经过确认/执行流程。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>模型响应同时含“我来修复”文本和一个终端 tool call，会走哪条主路径？</h3>
+      <div class="quiz-options">
+        <button type="button">按 CONTENT 结束，因为人类能看见文字</button>
+        <button type="button" data-correct="true">按 TOOL_CALLS，先生成 ActionEvent 并经过行动边界</button>
+        <button type="button">随机选择一条，防止模型偏置</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-04" data-title="Tool 与 Workspace 是行动边界">
+  <div class="screen hero-screen" data-number="04">
+    <p class="eyebrow">Module 4 · Side-effect boundary</p>
+    <h2>模型只填“提单”，执行器才搬货</h2>
+    <p class="lede">学完这一节，你能把 Tool spec、registry、ToolDefinition、executor、Workspace、Action 与 Observation 放到正确层次。</p>
+    <p><dfn data-definition="Tool spec 是 Agent 配置中按名称和参数声明可用工具的轻量规格。">Tool spec</dfn> 像提单；<dfn data-definition="ToolDefinition 同时描述给模型看的 schema 与 SDK 可调用的 executor。">ToolDefinition</dfn> 像已登记的装卸设备；<dfn data-definition="executor 是真正接收 Action 并产生 Observation 的运行对象。">executor</dfn> 才会触碰环境。</p>
+    <div class="callout"><strong>风险边界：</strong>ActionEvent 证明“Agent 提出了行动”；ObservationEvent 才证明 executor 返回了结果。两者之间可能等待确认、验证失败或抛错。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Resolve the specification</p>
+    <h3>Registry 把名字解析成当前会话可执行的工具定义</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/tool/registry.py" data-lines="149-172">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def resolve_tool(
+    tool_spec: Tool, conv_state: "ConversationState"
+) -&gt; Sequence[ToolDefinition]:
+    with _LOCK:
+        resolver = _REG.get(tool_spec.name)
+
+    if resolver is None:
+        from openhands.sdk.tool.builtins import BUILT_IN_TOOL_CLASSES
+
+        tool_class = BUILT_IN_TOOL_CLASSES.get(tool_spec.name)
+        if tool_class is None:
+            raise KeyError(f"ToolDefinition '{tool_spec.name}' is not registered")
+        resolver = _resolver_from_subclass(tool_spec.name, tool_class)
+
+    params = dict(tool_spec.params)
+    response_schema = params.pop("response_schema", None)
+    tools = resolver(params, conv_state)
+    if response_schema is not None:
+        if len(tools) != 1:
+            raise ValueError(
+                "response_schema requires a spec that resolves to exactly one tool"
+            )
+        tools = [tools[0].set_response_schema(response_schema)]
+    return tools</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Agent 中的 <span class="path-chip">Tool(name=...)</span> 先按名字查 registry；未动态注册时再查内建类。resolver 拿到当前 ConversationState，因此同一工具名可以按本会话的 Workspace 与参数实例化。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Bind to the workspace</p>
+    <h3>TerminalTool 从 ConversationState 读取工作目录</h3>
+    <figure class="code-translation" data-source="openhands-tools/openhands/tools/terminal/definition.py" data-lines="282-354">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    @classmethod
+    def create(
+        cls,
+        conv_state: "ConversationState",
+        username: str | None = None,
+        no_change_timeout_seconds: int | None = None,
+        terminal_type: Literal["tmux", "subprocess", "powershell"] | None = None,
+        shell_path: str | None = None,
+        executor: ToolExecutor | None = None,
+        *,
+        env: Mapping[str, str] | None = None,
+    ) -&gt; Sequence["TerminalTool"]:
+        """Initialize TerminalTool with executor parameters.
+
+        Args:
+            conv_state: Conversation state to get working directory from.
+                         If provided, working_dir will be taken from
+                         conv_state.workspace
+            username: Optional username for the shell session
+            no_change_timeout_seconds: Timeout for no output change
+            terminal_type: Force a specific session type:
+                         ('tmux', 'subprocess', or 'powershell').
+                         If None, auto-detect based on system capabilities:
+                         - On Windows: PowerShell-backed backend
+                         - On Unix-like systems: tmux if available, otherwise subprocess
+            shell_path: Path to the shell binary. On Unix this applies to the
+                       subprocess backend; on Windows it can point to a
+                       PowerShell executable.
+            env: Extra environment variables to add to the terminal session.
+                 These are client-controlled session settings and are not part
+                 of the LLM-facing TerminalAction schema.
+        """
+        # Import here to avoid circular imports
+        from openhands.tools.terminal.impl import TerminalExecutor
+
+        working_dir = conv_state.workspace.working_dir
+        if not os.path.isdir(working_dir):
+            raise ValueError(f"working_dir '{working_dir}' is not a valid directory")
+
+        # Initialize the executor
+        if executor is None:
+            executor = TerminalExecutor(
+                working_dir=working_dir,
+                username=username,
+                no_change_timeout_seconds=no_change_timeout_seconds,
+                terminal_type=terminal_type,
+                shell_path=shell_path,
+                env=env,
+                full_output_save_dir=conv_state.env_observation_persistence_dir,
+            )
+
+        tool_description = (
+            WINDOWS_TOOL_DESCRIPTION
+            if platform.system() == "Windows"
+            else UNIX_TOOL_DESCRIPTION
+        )
+
+        # Initialize the parent ToolDefinition with the executor
+        return [
+            cls(
+                action_type=TerminalAction,
+                observation_type=TerminalObservation,
+                description=tool_description,
+                annotations=ToolAnnotations(
+                    title="terminal",
+                    readOnlyHint=False,
+                    destructiveHint=True,
+                    idempotentHint=False,
+                    openWorldHint=True,
+                ),
+                executor=executor,
+            )
+        ]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>TerminalTool 不是全局共享的裸 shell：它用当前会话的 <span class="path-chip">workspace.working_dir</span> 创建 TerminalExecutor，并声明自己可写、可破坏、非幂等且会接触开放世界。annotation 是提示，不是强制隔离。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Execute and observe</p>
+    <h3>Action 进 executor，Observation 才回事件链</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/agent/agent.py" data-lines="1384-1446">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def _execute_action_event(
+        self,
+        conversation: LocalConversation,
+        action_event: ActionEvent,
+    ) -&gt; list[Event]:
+        """Execute a single tool and return the resulting events.
+
+        Called from parallel threads by _execute_actions. This method must
+        not mutate shared conversation state (blocked_actions,
+        execution_status) — those transitions are handled by the caller
+        on the main thread.
+
+        Note: the tool itself receives ``conversation`` and may mutate it
+        (e.g. filesystem, working directory). Thread safety of individual
+        tools is the tool's responsibility.
+
+        Returns a list of events (observation or error). Events are NOT
+        emitted here — the caller is responsible for emitting them in order.
+        """
+        tool = self.tools_map.get(action_event.tool_name, None)
+        if tool is None:
+            raise RuntimeError(
+                f"Tool '{action_event.tool_name}' not found. This should not happen "
+                "as it was checked earlier."
+            )
+
+        # Execute actions!
+        try:
+            if should_enable_observability():
+                tool_name = extract_action_name(action_event)
+                observation: Observation = observe(
+                    name=tool_name,
+                    span_type="TOOL",
+                    # Only the action is input; the conversation would serialize
+                    # as a bare object repr carrying a memory address.
+                    ignore_inputs=["conversation"],
+                    metadata={"tool_call_id": action_event.tool_call.id},
+                )(tool)(action_event.action, conversation)
+            else:
+                observation = tool(action_event.action, conversation)
+            assert isinstance(observation, Observation), (
+                f"Tool '{tool.name}' executor must return an Observation"
+            )
+        except ValueError as e:
+            # Tool execution raised a ValueError (e.g., invalid argument combination)
+            # Convert to AgentErrorEvent so the agent can correct itself
+            err = f"Error executing tool '{tool.name}': {e}"
+            logger.warning(err)
+            error_event = AgentErrorEvent(
+                error=err,
+                tool_name=tool.name,
+                tool_call_id=action_event.tool_call.id,
+                classification=AGENT_OUTCOME,
+            )
+            return [error_event]
+
+        obs_event = ObservationEvent(
+            observation=observation,
+            action_id=action_event.id,
+            tool_name=tool.name,
+            tool_call_id=action_event.tool_call.id,
+        )
+        return [obs_event]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Agent 按 tool_name 找到定义并调用它。成功结果被包装成与 Action ID、tool call ID 关联的 <dfn data-definition="Observation 是工具执行返回的结构化结果；ObservationEvent 把它关联回提出行动的 ActionEvent。">ObservationEvent</dfn>；参数类 ValueError 则变成 AgentErrorEvent，让下一步有机会纠正。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Workspace is not a synonym for sandbox</p>
+    <h3>接口承诺工作环境；具体隔离取决于实现</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/workspace/base.py" data-lines="27-52">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class BaseWorkspace(DiscriminatedUnionMixin, ABC):
+    """Abstract base class for workspace implementations.
+
+    Workspaces provide a sandboxed environment where agents can execute commands,
+    read/write files, and perform other operations. All workspace implementations
+    support the context manager protocol for safe resource management.
+
+    Example:
+        ```python
+        with workspace:
+            result = workspace.execute_command("echo 'hello'")
+            content = workspace.read_file("example.txt")
+        ```
+    """
+
+    working_dir: Annotated[
+        str,
+        BeforeValidator(_convert_path_to_str),
+        Field(
+            description=(
+                "The working directory for agent operations and tool execution. "
+                "Accepts both string paths and Path objects. "
+                "Path objects are automatically converted to strings."
+            )
+        ),
+    ]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>BaseWorkspace 把命令、文件与工作目录抽象成统一环境，但“沙箱强度”必须看具体 backend；接口名字本身不是安全证明。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/workspace/local.py" data-lines="17-34">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class LocalWorkspace(BaseWorkspace):
+    """Local workspace implementation that operates on the host filesystem.
+
+    LocalWorkspace provides direct access to the local filesystem and command execution
+    environment. It's suitable for development and testing scenarios where the agent
+    should operate directly on the host system.
+
+    Example:
+        &gt;&gt;&gt; workspace = LocalWorkspace(working_dir="/path/to/project")
+        &gt;&gt;&gt; with workspace:
+        ...     result = workspace.execute_command("ls -la")
+        ...     content = workspace.read_file("README.md")
+    """
+
+    def __init__(self, *, working_dir: str | Path, **kwargs: Any):
+        # Accept Path in signature for ergonomics and type checkers,
+        # but normalize to str for the underlying model field.
+        super().__init__(working_dir=str(working_dir), **kwargs)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">LocalWorkspace</span> 明示直接访问宿主文件系统与命令环境。它适合开发和测试，但不能被描述成容器级或远程级隔离。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>港口里的五次交接</h3>
+    <div class="component-chat" aria-label="Agent、Registry、Tool 与 Workspace 的行动交接">
+      <div class="chat-message" data-speaker="Agent">模型给了 tool call；我先生成 ActionEvent。</div>
+      <div class="chat-message" data-speaker="Confirmation policy">这项行动是否要用户批准？未放行就停在副作用之前。</div>
+      <div class="chat-message" data-speaker="Tool registry">我把名称与参数解析成当前会话的 ToolDefinition。</div>
+      <div class="chat-message" data-speaker="Executor → Workspace">我在绑定的工作环境执行 Action，并返回 Observation。</div>
+      <div class="chat-message" data-speaker="Agent → EventLog">我把成功结果或结构化错误关联回原 Action。</div>
+      <button type="button" class="replay-chat">重放行动交接</button>
+    </div>
+    <div class="quiz" data-explanation="LocalWorkspace 的源码明确写着直接访问宿主文件系统和命令环境；安全边界要由具体 Workspace backend 与外层权限共同保证。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>课程示例把 <code>cwd</code> 传给 LocalWorkspace。最安全的理解是？</h3>
+      <div class="quiz-options">
+        <button type="button">它自动创建了与宿主完全隔离的容器</button>
+        <button type="button" data-correct="true">工具可能直接修改该宿主目录；运行前应把目录和权限视为真实副作用范围</button>
+        <button type="button">ActionEvent 一生成，所有修改就一定成功</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-05" data-title="Run Loop 决定继续还是停">
+  <div class="screen hero-screen" data-number="05">
+    <p class="eyebrow">Module 5 · Control loop</p>
+    <h2>状态灯决定下一架飞机能不能起飞</h2>
+    <p class="lede">学完这一节，你能读懂 run loop 的继续、等待、暂停、卡死、完成与错误条件，而不把一次 step 当成整场任务。</p>
+    <p><dfn data-definition="execution status 是 Conversation 对当前运行阶段的显式状态，而不是从最后一条消息猜出来的。">execution status</dfn> 像塔台灯号；<dfn data-definition="terminal 状态表示当前 run 不再主动处理，包括 FINISHED、ERROR 与 STUCK。">terminal</dfn> 只说明运行停下，不评价结果质量。</p>
+    <div class="callout"><strong>常见误读：</strong>FINISHED 之后仍要经过 stop hook；新用户消息也能把 FINISHED / STUCK 重置为 IDLE，开始下一轮。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">State vocabulary</p>
+    <h3>七种状态把“没开始、正在做、等批准、停下”拆开</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/state.py" data-lines="48-79">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class ConversationExecutionStatus(str, Enum):
+    """Enum representing the current execution state of the conversation."""
+
+    IDLE = "idle"  # Conversation is ready to receive tasks
+    RUNNING = "running"  # Conversation is actively processing
+    PAUSED = "paused"  # Conversation execution is paused by user
+    WAITING_FOR_CONFIRMATION = (
+        "waiting_for_confirmation"  # Conversation is waiting for user confirmation
+    )
+    FINISHED = "finished"  # Conversation has completed the current task
+    ERROR = "error"  # Conversation encountered an error (optional for future use)
+    STUCK = "stuck"  # Conversation is stuck in a loop or unable to proceed
+    DELETING = "deleting"  # Conversation is in the process of being deleted
+
+    def is_terminal(self) -&gt; bool:
+        """Check if this status represents a terminal state.
+
+        Terminal states indicate the run has completed and the agent is no longer
+        actively processing. These are: FINISHED, ERROR, STUCK.
+
+        Note: IDLE is NOT a terminal state - it's the initial state of a conversation
+        before any run has started. Including IDLE would cause false positives when
+        the WebSocket delivers the initial state update during connection.
+
+        Returns:
+            True if this is a terminal status, False otherwise.
+        """
+        return self in (
+            ConversationExecutionStatus.FINISHED,
+            ConversationExecutionStatus.ERROR,
+            ConversationExecutionStatus.STUCK,
+        )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>IDLE 是“可接新任务”而不是 run 的终点；WAITING_FOR_CONFIRMATION 也不是失败。远程客户端若把初始 IDLE 当终止，会在连接刚建立时误判运行已经结束。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>IDLE / RUNNING</h4><p>可接任务 / 正在逐轮处理。</p></article>
+      <article class="actor-card"><h4>WAITING</h4><p>Action 已提出，副作用前等批准。</p></article>
+      <article class="actor-card"><h4>PAUSED</h4><p>用户暂停或中断，可再次 run。</p></article>
+      <article class="actor-card"><h4>FINISHED / ERROR / STUCK</h4><p>当前 run 的三种 terminal 结果。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Enter and inspect</p>
+    <h3><code>run()</code> 先切 RUNNING，再在每轮开头检查能否继续</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py" data-lines="1903-1975">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def run(self) -&gt; None:
+        """Runs the conversation until the agent finishes.
+
+        In confirmation mode:
+        - First call: creates actions but doesn't execute them, stops and waits
+        - Second call: executes pending actions (implicit confirmation)
+
+        In normal mode:
+        - Creates and executes actions immediately
+
+        Can be paused between steps
+        """
+        # Ensure agent is fully initialized (loads plugins and initializes agent)
+        self._ensure_agent_ready()
+        self._cancel_token = CancellationToken()
+
+        with self._state:
+            if self._state.execution_status in [
+                ConversationExecutionStatus.IDLE,
+                ConversationExecutionStatus.PAUSED,
+                ConversationExecutionStatus.ERROR,
+                ConversationExecutionStatus.STUCK,
+            ]:
+                self._state.execution_status = ConversationExecutionStatus.RUNNING
+
+        iteration = 0
+        _run_start_event_count = len(self._state.events)
+        try:
+            while True:
+                logger.debug(f"Conversation run iteration {iteration}")
+                with self._state:
+                    # Pause attempts to acquire the state lock
+                    # Before value can be modified step can be taken
+                    # Ensure step conditions are checked when lock is already acquired
+                    if self._state.execution_status in [
+                        ConversationExecutionStatus.PAUSED,
+                        ConversationExecutionStatus.STUCK,
+                    ]:
+                        break
+
+                    # Handle stop hooks on FINISHED
+                    if (
+                        self._state.execution_status
+                        == ConversationExecutionStatus.FINISHED
+                    ):
+                        if self._hook_processor is not None:
+                            should_stop, feedback = self._hook_processor.run_stop(
+                                reason="agent_finished"
+                            )
+                            if not should_stop:
+                                logger.info("Stop hook denied agent stopping")
+                                if feedback:
+                                    prefixed = (
+                                        f"{ACP_STOP_HOOK_FEEDBACK_PREFIX} {feedback}"
+                                    )
+                                    feedback_msg = MessageEvent(
+                                        source="environment",
+                                        llm_message=Message(
+                                            role="user",
+                                            content=[TextContent(text=prefixed)],
+                                        ),
+                                    )
+                                    self._on_event(feedback_msg)
+                                self._state.execution_status = (
+                                    ConversationExecutionStatus.RUNNING
+                                )
+                                continue
+                        # No hooks or hooks allowed stopping
+                        break
+
+                    # Check for stuck patterns if enabled
+                    if self._check_stuck_or_nudge():
+                        continue</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>初始化后，若从 IDLE / PAUSED / ERROR / STUCK 进入就置为 RUNNING。每轮先处理暂停与卡死；FINISHED 还要让 stop hook 决定是否真停，hook 可补一条反馈并把状态拉回 RUNNING。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">One controlled iteration</p>
+    <h3>step 之后还有确认、预算与迭代上限三道护栏</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py" data-lines="1977-2042">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>                    # clear the flag before calling agent.step() (user approved)
+                    if (
+                        self._state.execution_status
+                        == ConversationExecutionStatus.WAITING_FOR_CONFIRMATION
+                    ):
+                        self._state.execution_status = (
+                            ConversationExecutionStatus.RUNNING
+                        )
+
+                    # Mark the step as holding the state lock so state-mutating
+                    # tools (e.g. switch_llm) running on worker threads skip
+                    # re-acquiring it instead of deadlocking (#3485).
+                    self._step_holds_state_lock = True
+                    try:
+                        self.agent.step(
+                            self, on_event=self._on_event, on_token=self._on_token
+                        )
+                    finally:
+                        self._step_holds_state_lock = False
+                    iteration += 1
+
+                    # Check for non-finished terminal conditions
+                    # Note: We intentionally do NOT check for FINISHED status here.
+                    # This allows concurrent user messages to be processed:
+                    # 1. Agent finishes and sets status to FINISHED
+                    # 2. User sends message concurrently via send_message()
+                    # 3. send_message() waits for FIFO lock, then sets status to IDLE
+                    # 4. Run loop continues to next iteration and processes the message
+                    # 5. Without this design, concurrent messages would be lost
+                    if (
+                        self.state.execution_status
+                        == ConversationExecutionStatus.WAITING_FOR_CONFIRMATION
+                    ):
+                        break
+
+                    budget_detail = self._budget_exceeded_detail()
+                    if budget_detail and (
+                        self._state.execution_status
+                        != ConversationExecutionStatus.FINISHED
+                    ):
+                        self._emit_run_limit_error("MaxBudgetReached", budget_detail)
+                        break
+
+                    if iteration &gt;= self.max_iteration_per_run:
+                        # If the agent finished on this final iteration,
+                        # preserve the FINISHED status rather than
+                        # overwriting it with ERROR.
+                        if (
+                            self._state.execution_status
+                            == ConversationExecutionStatus.FINISHED
+                        ):
+                            break
+                        error_msg = (
+                            f"Agent reached maximum iterations limit "
+                            f"({self.max_iteration_per_run})."
+                        )
+                        logger.error(error_msg)
+                        self._state.execution_status = ConversationExecutionStatus.ERROR
+                        self._on_event(
+                            ConversationErrorEvent(
+                                source="environment",
+                                code="MaxIterationsReached",
+                                detail=error_msg,
+                            )
+                        )
+                        break</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>每轮恰好调用一次 Agent step。若产生待确认 Action 就停；若超预算或超迭代上限则写结构化错误。源码刻意不在 step 后立刻因 FINISHED 退出，以便锁后到达的新消息仍能被下一轮吸收。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Interrupt is resumable</p>
+    <h3>异步中断先补齐事件历史，再把状态转为 PAUSED</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py" data-lines="2507-2542">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        except asyncio.CancelledError:
+            # CancelledError is intentionally NOT re-raised.  ``interrupt()``
+            # uses ``asyncio.Task.cancel()`` to break out of ``arun()`` and
+            # expects the task to terminate cleanly.  Re-raising would
+            # propagate the cancellation to EventService/caller which would
+            # surface it as an unexpected error.  Instead we transition to
+            # PAUSED so the conversation can be resumed later.
+            logger.info("arun() interrupted via task cancellation")
+            with self._state:
+                updated_agent_state = dict(self._state.agent_state)
+                inflight_prompt_user_message_id = updated_agent_state.pop(
+                    ACP_INFLIGHT_PROMPT_USER_MESSAGE_ID, None
+                )
+                superseded_by_new_message = bool(
+                    updated_agent_state.pop(ACP_SUPERSEDE_INFLIGHT_PROMPT, False)
+                )
+                completed_cancelled_prompt = (
+                    self._state.execution_status == ConversationExecutionStatus.FINISHED
+                )
+                if (
+                    superseded_by_new_message or completed_cancelled_prompt
+                ) and inflight_prompt_user_message_id is not None:
+                    updated_agent_state[ACP_LAST_PROMPT_USER_MESSAGE_ID] = (
+                        inflight_prompt_user_message_id
+                    )
+                self._state.agent_state = updated_agent_state
+
+                # Emit synthetic error observations for any ActionEvents
+                # that were in-flight when the interrupt landed.  Without
+                # these the LLM history would contain tool-call requests
+                # with no tool-result, which causes provider errors on
+                # the next completion call.
+                self._emit_orphaned_action_errors()
+
+                self._state.execution_status = ConversationExecutionStatus.PAUSED
+                self._on_event(InterruptEvent())</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><dfn data-definition="interrupt 是取消正在进行的异步 run，并把会话保存为可恢复 PAUSED 状态。">interrupt</dfn> 不是删除会话。SDK 还为没有 Observation 的在途 Action 补合成错误结果，避免恢复后给模型一段结构不完整的 tool history。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="arun 捕获 CancelledError 后不继续抛出，而是补齐孤儿 Action、设为 PAUSED 并发出 InterruptEvent；后续 run 可恢复。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>用户在一次异步 LLM 请求中途点击 interrupt，最符合源码的结果是？</h3>
+      <div class="quiz-options">
+        <button type="button">整个 Conversation 与 EventLog 被删除</button>
+        <button type="button" data-correct="true">当前 run 被取消，会话转为 PAUSED，并保留可恢复的事件历史</button>
+        <button type="button">状态必然直接变成 FINISHED</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-06" data-title="Agent Server、恢复与分叉">
+  <div class="screen hero-screen" data-number="06">
+    <p class="eyebrow">Module 6 · Remote runtime</p>
+    <h2>舞台在 Server，窗口与直播只是入口和投影</h2>
+    <p class="lede">学完这一节，你能区分 REST 命令、后台 run、WebSocket 事件、持久恢复与 fork，并知道 Canvas 并不拥有 Agent runtime。</p>
+    <p><dfn data-definition="Agent Server 是把 SDK Conversation 暴露为权威 REST 与 WebSocket API 的服务运行层。">Agent Server</dfn> 像剧院舞台；REST 是售票窗口，WebSocket 是直播频道，EventLog 与 base state 是档案室。</p>
+    <div class="callout"><strong>仓库边界：</strong>当前提交的根协作规则明确：本仓库拥有 SDK、Agent Server 与权威 API；Agent Canvas UI 在 <code>OpenHands/OpenHands</code> 仓库。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">REST commands</p>
+    <h3>发消息与启动 run 是两个服务操作</h3>
+    <figure class="code-translation" data-source="openhands-agent-server/openhands/agent_server/event_router.py" data-lines="213-221">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>@event_write_router.post("")
+async def send_message(
+    request: SendMessageRequest,
+    event_service: EventService = Depends(get_event_service),
+) -&gt; Success:
+    """Send a message to a conversation"""
+    message = Message(role=request.role, content=request.content)
+    await event_service.send_message(message, request.run)
+    return Success()</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>事件端点把请求体重建为 SDK Message，再交给当前 conversation 的 EventService；<span class="path-chip">request.run</span> 决定只入队还是连带请求运行。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="openhands-agent-server/openhands/agent_server/conversation_router.py" data-lines="338-366">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>@conversation_router.post(
+    "/{conversation_id}/run",
+    responses={
+        404: {"description": "Item not found"},
+        409: {"description": "Conversation is already running"},
+    },
+)
+async def run_conversation(
+    conversation_id: UUID,
+    conversation_service: ConversationService = Depends(get_conversation_service),
+) -&gt; Success:
+    """Start running the conversation in the background."""
+    event_service = await conversation_service.get_event_service(conversation_id)
+    if event_service is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+    try:
+        await event_service.run()
+    except ValueError as e:
+        if str(e) == "conversation_already_running":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Conversation already running. Wait for completion or pause first."
+                ),
+            )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    return Success()</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>单独的 run 端点取出同一个 EventService，并拒绝重复运行。HTTP Success 表示后台 run 已被接受，不表示 Agent 已完成任务。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Background driver</p>
+    <h3>EventService 最终仍驱动一个 SDK Conversation</h3>
+    <figure class="code-translation" data-source="openhands-agent-server/openhands/agent_server/event_service.py" data-lines="1243-1312">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    async def run(self, acp_internal_rerun_generation: int | None = None):
+        """Run the conversation asynchronously in the background.
+
+        This method starts the conversation run in a background task and returns
+        immediately.  When possible, the conversation is driven via its native
+        ``arun()`` coroutine so LLM I/O does not tie up a thread-pool worker.
+        For conversations that do not expose ``arun()`` (e.g., custom
+        subclasses) or whose agent only implements sync ``step()`` (no
+        ``astep()`` override), the synchronous ``run()`` is executed
+        in the thread pool as before.
+
+        Raises:
+            ValueError: If the service is inactive or conversation is already running.
+        """
+        if not self._conversation or self._closing:
+            raise ValueError("inactive_service")
+
+        # Use lock to make check-and-set atomic, preventing race conditions
+        async with self._run_lock:
+            if (
+                await self._get_execution_status()
+                == ConversationExecutionStatus.RUNNING
+            ):
+                raise ValueError("conversation_already_running")
+            if self._closing:
+                raise ValueError("inactive_service")
+            if (
+                acp_internal_rerun_generation is not None
+                and self._explicit_interrupt_generation != acp_internal_rerun_generation
+            ):
+                return
+
+            # Check if there's already a running task
+            if self._run_task is not None and not self._run_task.done():
+                raise ValueError("conversation_already_running")
+
+            # Capture conversation reference for the closure
+            conversation = self._conversation
+
+            # Start run in background
+            loop = asyncio.get_running_loop()
+
+            async def _run_and_publish():
+                try:
+                    # Prefer the native async path when available so the event
+                    # loop is free during LLM I/O.  Fall back to thread-pool
+                    # execution for backward compatibility.
+                    #
+                    # All guards are required:
+                    #  • iscoroutinefunction – filters out non-async objects
+                    #    (e.g. MagicMock in tests).
+                    #  • conversation override – BaseConversation's default
+                    #    ``arun()`` delegates to sync ``run()``, so we require an
+                    #    *actual* override to avoid running a sync-only subclass
+                    #    on the event loop.
+                    #  • agent override – ``LocalConversation`` always overrides
+                    #    ``arun()``, but an agent without an ``astep()`` override
+                    #    runs sync ``step()`` in a worker thread; route it
+                    #    through sync ``run()`` instead.
+                    arun = getattr(conversation, "arun", None)
+                    has_native_arun = (
+                        arun is not None
+                        and asyncio.iscoroutinefunction(arun)
+                        and type(conversation).arun is not BaseConversation.arun
+                        and type(conversation.agent).astep is not AgentBase.astep
+                    )
+                    if has_native_arun:
+                        await conversation.arun()
+                    else:
+                        await loop.run_in_executor(self._run_executor, conversation.run)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>服务层只负责并发与生命周期：用锁拒绝重复任务，优先调用原生 <span class="path-chip">conversation.arun()</span>，否则把同步 run 放到线程池。Agent 的决策语义仍在 SDK Conversation / Agent 中。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="远程客户端到 OpenHands runtime 的数据流">
+      <button type="button" class="flow-step is-active" data-detail="Canvas 或 TypeScript client 发送消息/运行请求；它不在浏览器里执行 Agent。">1. Remote client</button>
+      <button type="button" class="flow-step" data-detail="REST router 做请求验证，并定位 conversation 的 EventService。">2. REST router</button>
+      <button type="button" class="flow-step" data-detail="EventService 管理后台任务、订阅者和生命周期锁。">3. EventService</button>
+      <button type="button" class="flow-step" data-detail="LocalConversation 的 arun/run 执行前五章的同一事件与工具循环。">4. SDK runtime</button>
+      <button type="button" class="flow-step" data-detail="持久事件和状态更新通过订阅服务投影给 WebSocket 客户端。">5. WebSocket</button>
+      <p class="flow-detail" aria-live="polite">Canvas 或 TypeScript client 发送消息/运行请求；它不在浏览器里执行 Agent。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Live projection</p>
+    <h3>WebSocket 可补发历史，再订阅新事件</h3>
+    <figure class="code-translation" data-source="openhands-agent-server/openhands/agent_server/sockets.py" data-lines="227-301">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>@conversation_sockets_router.websocket("/events/{conversation_id}")
+async def events_socket(
+    conversation_id: UUID,
+    websocket: WebSocket,
+    session_api_key: Annotated[str | None, Query(alias="session_api_key")] = None,
+    resend_mode: Annotated[
+        Literal["all", "since"] | None,
+        Query(
+            description=(
+                "Mode for resending historical events on connect. "
+                "'all' sends all events, 'since' sends events after 'after_timestamp'."
+            )
+        ),
+    ] = None,
+    after_timestamp: Annotated[
+        datetime | None,
+        Query(
+            description=(
+                "Required when resend_mode='since'. Events with timestamp &gt;= this "
+                "value will be sent. Accepts ISO 8601 format. Timezone-aware "
+                "datetimes are converted to server local time; naive datetimes "
+                "assumed in server timezone."
+            )
+        ),
+    ] = None,
+    # Deprecated parameter - kept for backward compatibility
+    resend_all: Annotated[
+        bool,
+        Query(
+            include_in_schema=False,
+            deprecated=True,
+        ),
+    ] = False,
+):
+    """WebSocket endpoint for conversation events.
+
+    Args:
+        conversation_id: The conversation ID to subscribe to.
+        websocket: The WebSocket connection.
+        session_api_key: Optional API key for authentication.
+        resend_mode: Mode for resending historical events on connect.
+            - 'all': Resend all existing events
+            - 'since': Resend events after 'after_timestamp' (requires after_timestamp)
+            - None: Don't resend, just subscribe to new events
+        after_timestamp: Required when resend_mode='since'. Events with
+            timestamp &gt;= this value will be sent. Timestamps are interpreted in
+            server local time. Timezone-aware datetimes are converted to server
+            timezone. Enables efficient bi-directional loading where REST fetches
+            historical events and WebSocket handles events after a specific point.
+        resend_all: DEPRECATED. Use resend_mode='all' instead. Kept for
+            backward compatibility - if True and resend_mode is None, behaves
+            as resend_mode='all'.
+    """
+    if not await _accept_authenticated_websocket(websocket, session_api_key):
+        return
+
+    logger.info(f"Event Websocket Connected: {conversation_id}")
+    conv_service = _get_conversation_service(websocket)
+    try:
+        event_service = await conv_service.get_event_service(conversation_id)
+    except CredentialBindingActivationRequired:
+        await websocket.close(
+            code=1013,
+            reason="credential_binding_activation_required",
+        )
+        return
+    if event_service is None:
+        logger.warning(f"Converation not found: {conversation_id}")
+        await websocket.close(code=4004, reason="Conversation not found")
+        return
+
+    try:
+        subscriber_id = await event_service.subscribe_to_events(
+            _WebSocketSubscriber(websocket)
+        )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><dfn data-definition="subscriber 是接收 EventService 发布事件的下游消费者；WebSocket 只是其中一种。">subscriber</dfn> 先通过认证并绑定 conversation。客户端可只听新事件，也可要求补发全部或某个时间点后的历史，再继续实时订阅。</p>
+      </figcaption>
+    </figure>
+    <div class="callout"><strong>证据边界：</strong>服务器成功 <em>send</em> 事件，只证明投影已交给连接；不能证明 UI 已渲染，更不能证明工具结果正确。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Resume from durable state</p>
+    <h3>恢复路径把 base snapshot 与逐事件日志重新接起来</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/state.py" data-lines="521-568">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        try:
+            base_text = file_store.read(BASE_STATE)
+        except FileNotFoundError:
+            base_text = None
+
+        # ---- Resume path ----
+        if base_text:
+            # Use cipher context for decrypting secrets if provided
+            context = {"cipher": cipher} if cipher else None
+            state = cls.model_validate(json.loads(base_text), context=context)
+
+            # Restore the conversation with the same id
+            if state.id != id:
+                raise ValueError(
+                    f"Conversation ID mismatch: provided {id}, "
+                    f"but persisted state has {state.id}"
+                )
+
+            # Attach event log early so we can read history for tool verification
+            state._fs = file_store
+            state._events = EventLog(file_store, dir_path=EVENTS_DIR)
+            state._cipher = cipher
+
+            # Cold-load: rebuild the cached view with full property
+            # enforcement — persisted events may come from an older code
+            # version or be corrupted.
+            state.rebuild_view()
+
+            # Commit runtime-provided values (may autosave)
+            state._autosave_enabled = True
+            # Agent: base_state.json is the single source of truth. When the
+            # caller does not supply an agent (``agent is None``), keep the
+            # persisted one untouched — this is what lets a persisted
+            # switch_llm survive an idle-eviction reload. When a caller *does*
+            # supply an agent (legacy behavior), verify tool compatibility and
+            # let it override, so existing callers that reconfigure on resume
+            # keep working.
+            if agent is not None:
+                agent.verify(state.agent, events=state._events)
+                state.agent = agent
+            state.workspace = workspace
+            state.max_iterations = max_iterations
+
+            # Note: stats are already deserialized from base_state.json above.
+            # Do NOT reset stats here - this would lose accumulated metrics.
+
+            logger.info("Resumed conversation %s from persistent storage", state.id)
+            return state</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><dfn data-definition="resume 是用同一 conversation ID 重新加载持久快照与事件历史，并继续使用当前活动分支。">resume</dfn> 先校验 ID，挂回 EventLog，重建 View，再应用运行时 Workspace 与限制。base state 保存结构化状态；事件不塞进同一大 JSON，而是单独回放。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Fork without rollback</p>
+    <h3>Fork 复制历史，随后独立前进</h3>
+    <figure class="code-translation" data-source="openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py" data-lines="787-818">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def fork(
+        self,
+        *,
+        conversation_id: ConversationID | None = None,
+        agent: AgentBase | None = None,
+        title: str | None = None,
+        tags: dict[str, str] | None = None,
+        reset_metrics: bool = True,
+        from_event_id: EventID | None = None,
+    ) -&gt; "LocalConversation":
+        """Deep-copy this conversation with a new ID.
+
+        Events are copied so the source remains immutable. The fork starts
+        in ``execution_status='idle'``; calling ``run()`` resumes from the
+        copied state — meaning the agent has full event memory of the source.
+
+        Args:
+            conversation_id: ID for the forked conversation (auto-generated
+                if ``None``).
+            agent: Agent for the fork. Defaults to a deep-copy of the
+                source agent.
+            title: Optional title for the forked conversation.
+            tags: Optional tags for the forked conversation.
+            reset_metrics: If ``True`` (default), cost/token stats start
+                fresh on the fork.
+            from_event_id: If set, copy only the branch up to this event
+                (``path_to_root``) and set the fork's HEAD there. If ``None``
+                (default), copy the whole log and keep the source's HEAD.
+
+        Returns:
+            A new ``LocalConversation`` that shares the same event history
+            but has its own identity and independent state going forward.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><dfn data-definition="fork 是把全部事件日志或某个 event 的祖先路径复制到新 ID，之后两边状态独立。">fork</dfn> 像用同一剧本成立复排剧组。它复制 Agent 记忆，可从某个事件切点继续，但源会话仍在。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="fork 复制事件与会话状态到新 ID，不会撤销源 Workspace 里已经发生的文件或外部系统副作用；需要另外的版本控制或事务机制。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>从“修改文件”之前的 Event fork，然后在新会话走另一条路线。源目录里的旧修改会怎样？</h3>
+      <div class="quiz-options">
+        <button type="button">fork 自动回滚源 Workspace 到该 Event</button>
+        <button type="button" data-correct="true">事件历史被切片复制，但既有外部副作用不会因此回滚</button>
+        <button type="button">源 Conversation 会被 fork 替换并删除</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout"><strong>全课结论：</strong>OpenHands 的可恢复性核心是“事件历史 + 状态快照 + 明确运行边界”；它提高可追溯性，却不会把任意现实副作用自动变成可逆事务。</div>
+  </div>
+</section></main>
+
+  <footer class="course-footer">
+    <p>源码摘录授权见 <a href="source-license.txt">上游许可</a>；课程工具许可见 <a href="tooling-license.txt">MIT</a>。</p>
+    <p>基于已检查的源码。摘录保留原文件与连续行号，学习结论可回到证据。</p>
+    <a href="#course-start">返回顶部 ↑</a>
+  </footer>
+  <script>(() => {
+  const modules = [...document.querySelectorAll('.course-module')];
+  const dots = [...document.querySelectorAll('.nav-dot')];
+  const progress = document.querySelector('#progress-bar');
+  const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let userReducedMotion = false;
+  try { userReducedMotion = localStorage.getItem('code-learning:reduce-motion') === 'true'; } catch (_) {}
+  let reduceMotion = systemReducedMotion || userReducedMotion;
+  const motionToggle = document.querySelector('#motion-toggle');
+  const applyMotion = () => {
+    reduceMotion = systemReducedMotion || userReducedMotion;
+    document.documentElement.dataset.reducedMotion = String(reduceMotion);
+    if (motionToggle) {
+      motionToggle.setAttribute('aria-pressed', String(reduceMotion));
+      motionToggle.disabled = systemReducedMotion;
+    }
+  };
+  applyMotion();
+  motionToggle?.addEventListener('click', () => {
+    userReducedMotion = !userReducedMotion;
+    try { localStorage.setItem('code-learning:reduce-motion', String(userReducedMotion)); } catch (_) {}
+    applyMotion();
+  });
+
+  let activeModuleId;
+  const setActiveModule = (id) => {
+    if (activeModuleId === id) return;
+    activeModuleId = id;
+    dots.forEach((dot) => {
+      const active = dot.dataset.target === id;
+      dot.classList.toggle('is-active', active);
+      if (active) dot.setAttribute('aria-current', 'step');
+      else dot.removeAttribute('aria-current');
+      const nav = dot.parentElement;
+      if (active && nav.scrollWidth > nav.clientWidth) {
+        nav.scrollTo({ left: dot.offsetLeft - nav.offsetLeft - (nav.clientWidth - dot.offsetWidth) / 2,
+          behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    });
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      document.getElementById(dot.dataset.target)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  });
+
+  const updateProgress = () => {
+    const available = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = available > 0 ? Math.min(1, Math.max(0, window.scrollY / available)) : 0;
+    if (progress) progress.style.width = `${ratio * 100}%`;
+    const current = currentModuleIndex();
+    if (modules.length) setActiveModule(current >= 0 ? modules[current].id : null);
+  };
+  document.addEventListener('scroll', updateProgress, { passive: true });
+
+  const currentModuleIndex = () => {
+    const center = window.scrollY + window.innerHeight * 0.45;
+    let best = -1;
+    modules.forEach((module, index) => {
+      if (module.offsetTop <= center) best = index;
+    });
+    return best;
+  };
+  updateProgress();
+
+  document.addEventListener('keydown', (event) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) return;
+    if (document.activeElement?.closest('[data-code-scroll], .table-scroll')) return;
+    const forward = event.key === 'j' || event.key === 'J' || event.key === 'ArrowDown';
+    const backward = event.key === 'k' || event.key === 'K' || event.key === 'ArrowUp';
+    if (!forward && !backward) return;
+    const offset = forward ? 1 : -1;
+    const target = modules[Math.min(modules.length - 1, Math.max(0, currentModuleIndex() + offset))];
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+  });
+
+  document.querySelectorAll('dfn[data-definition]').forEach((term) => {
+    term.tabIndex = 0;
+    term.setAttribute('aria-label', `${term.textContent}: ${term.dataset.definition}`);
+  });
+
+  document.querySelectorAll('.code-translation').forEach((translation) => {
+    const label = translation.querySelector('.source-label');
+    if (label) {
+      const range = (translation.dataset.lines || '').replace('-', '–');
+      label.textContent = `源码 · ${translation.dataset.source || 'unknown source'}:${range}`;
+    }
+    const code = translation.querySelector('pre');
+    if (code) {
+      code.tabIndex = 0;
+      code.setAttribute('data-code-scroll', '');
+      code.setAttribute('aria-label', '源码摘录，可用方向键滚动');
+    }
+  });
+
+  document.querySelectorAll('.table-scroll').forEach((table) => {
+    table.tabIndex = 0;
+    table.setAttribute('aria-label', '对照表，可用方向键横向滚动');
+  });
+
+  document.querySelectorAll('.quiz').forEach((quiz) => {
+    const choices = [...quiz.querySelectorAll('.quiz-options button')];
+    const feedback = quiz.querySelector('.quiz-feedback');
+    choices.forEach((choice) => {
+      choice.addEventListener('click', () => {
+        choices.forEach((item) => item.classList.remove('is-correct', 'is-wrong'));
+        const correct = choice.dataset.correct === 'true';
+        choice.classList.add(correct ? 'is-correct' : 'is-wrong');
+        feedback.textContent = `${correct ? '正确。' : '再想一想。'}${quiz.dataset.explanation || ''}`;
+      });
+    });
+  });
+
+  const playChat = (chat) => {
+    const messages = [...chat.querySelectorAll('.chat-message')];
+    messages.forEach((message) => message.classList.remove('is-visible'));
+    messages.forEach((message, index) => {
+      if (reduceMotion) message.classList.add('is-visible');
+      else window.setTimeout(() => message.classList.add('is-visible'), 180 + index * 520);
+    });
+  };
+
+  document.querySelectorAll('.component-chat').forEach((chat) => {
+    playChat(chat);
+    chat.querySelector('.replay-chat')?.addEventListener('click', () => playChat(chat));
+  });
+
+  document.querySelectorAll('.data-flow').forEach((flow) => {
+    const steps = [...flow.querySelectorAll('.flow-step')];
+    const detail = flow.querySelector('.flow-detail');
+    steps.forEach((step) => {
+      step.addEventListener('click', () => {
+        steps.forEach((item) => item.classList.remove('is-active'));
+        step.classList.add('is-active');
+        if (detail) detail.textContent = step.dataset.detail || '';
+      });
+    });
+  });
+
+  const panel = document.querySelector('.learning-panel');
+  if (panel) {
+    const conceptCards = [...panel.querySelectorAll('.concept-card')];
+    const conceptNames = new Map(conceptCards.map(card => [card.id.replace('concept-', ''), card.querySelector('summary')?.textContent]));
+    conceptCards.forEach(card => {
+      const prerequisites = [...card.children].find(el => el.tagName === 'P' && el.textContent.startsWith('前置概念:'));
+      if (!prerequisites) return;
+      const ids = prerequisites.textContent.replace('前置概念:', '').trim().split(',').map(id => id.trim());
+      if (!ids.every(id => conceptNames.has(id))) return;
+      prerequisites.replaceChildren(document.createTextNode('前置概念：'));
+      ids.forEach((id, index) => {
+        if (index) prerequisites.append(document.createTextNode('、'));
+        const link = document.createElement('a');
+        link.href = `#concept-${id}`;
+        link.textContent = conceptNames.get(id);
+        link.className = 'concept-prerequisite';
+        link.addEventListener('click', () => { document.getElementById(`concept-${id}`).open = true; });
+        prerequisites.append(link);
+      });
+    });
+    const storageKey = `code-learning:${panel.dataset.kitId}`;
+    const sourceRevision = document.querySelectorAll('.course-meta dd')[1]?.textContent || 'unknown';
+    const feedback = panel.querySelector('.notes-feedback');
+    const zh = document.documentElement.lang.startsWith('zh');
+    let notes = {};
+    try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) { notes = {}; }
+    if (!notes || typeof notes !== 'object' || Array.isArray(notes)) notes = {};
+    panel.querySelectorAll('.recall').forEach((recall) => {
+      const field = recall.querySelector('textarea');
+      const key = recall.dataset.recallId;
+      field.value = typeof notes[key]?.response === 'string' ? notes[key].response : '';
+      field.addEventListener('input', () => {
+        notes[key] = { response: field.value, sourceRevision, recordedAt: new Date().toISOString(), kind: 'provisional-recall' };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(notes));
+          if (feedback) feedback.textContent = zh ? '回忆已保存到本机浏览器；尚未评价掌握程度。' : 'Recall saved in this browser; mastery has not been assessed.';
+        } catch (_) {
+          if (feedback) feedback.textContent = zh ? '浏览器未允许保存；可导出本次记录。' : 'Browser storage is unavailable; export this session to keep it.';
+        }
+      });
+    });
+    let exportURL;
+    panel.querySelector('.export-learning-notes')?.addEventListener('click', () => {
+      const content = { kitId: panel.dataset.kitId, sourceRevision, assessment: 'unassessed', notes };
+      const text = JSON.stringify(content, null, 2);
+      const preview = panel.querySelector('.export-preview');
+      if (preview) {
+        preview.hidden = false;
+        preview.open = true;
+        preview.querySelector('textarea').value = text;
+        if (exportURL) URL.revokeObjectURL(exportURL);
+        exportURL = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+        preview.querySelector('.export-download').href = exportURL;
+        if (feedback) feedback.textContent = zh ? '记录已准备好：可以下载 JSON，或从下方文本框复制。' : 'Records are ready: download JSON or copy the text below.';
+      }
+    });
+    window.addEventListener('pagehide', () => { if (exportURL) URL.revokeObjectURL(exportURL); });
+  }
+})();
+</script>
+</body>
+</html>
+

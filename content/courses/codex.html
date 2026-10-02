@@ -1,0 +1,2265 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="generator" content="codebase-to-mastery">
+  <title>读懂 Codex 上下文压缩</title>
+  <style>:root {
+  --paper: #eef3f6; --paper-deep: #e3ecef; --ink: #172d3a; --muted: #536b79;
+  --line: #d4e0e6; --card: #fff; --code: #112630; --code-ink: #e6f4f7;
+  --accent: #147d92; --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
+  --good: #16745a; --bad: #ae394b; --shadow: 0 6px 22px rgba(23,45,58,.04);
+  --radius: 12px; --measure: 72rem; --rail-width: 228px;
+  --rail: #122936; --rail-ink: #edf7f8; --lime: #b8e3a4;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scroll-behavior: smooth; }
+html, body { overflow-x: clip; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: .2em; }
+button, textarea { font: inherit; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -.025em; }
+h1 { margin: 0; max-width: 22ch; font-size: clamp(2.4rem,5vw,4.6rem); font-weight: 750; }
+h2 { margin: 0; font-size: clamp(2rem,3.6vw,3.3rem); }
+h3 { margin: 0 0 1rem; font-size: clamp(1.35rem,2.5vw,2rem); }
+p { overflow-wrap: anywhere; }
+.progress { position: fixed; inset: 0 0 auto var(--rail-width); height: 3px; z-index: 50; background: var(--paper-deep); }
+.progress span { display: block; width: 0; height: 100%; background: var(--accent); transition: width 120ms linear; }
+.course-rail { position: fixed; inset: 0 auto 0 0; z-index: 30; width: var(--rail-width); display: flex; flex-direction: column; padding: 32px 18px 22px; color: var(--rail-ink); background: var(--rail); overflow-y: auto; }
+.course-mark { display: flex; align-items: center; gap: 12px; padding: 0 8px 26px; text-decoration: none; flex-shrink: 0; }
+.brand-emblem { display: flex; align-items: flex-end; gap: 3px; width: 34px; height: 34px; padding: 8px 6px; border-radius: 9px; background: var(--lime); }
+.brand-emblem i { display: block; width: 5px; background: var(--rail); border-radius: 1px; }
+.brand-emblem i:nth-child(1) { height: 7px; }
+.brand-emblem i:nth-child(2) { height: 12px; }
+.brand-emblem i:nth-child(3) { height: 18px; }
+.brand-name { font-size: 15px; font-weight: 700; line-height: 1.35; letter-spacing: -.01em; }
+.brand-name > span { display: block; color: var(--lime); }
+.overview-link { display: flex; justify-content: space-between; align-items: center; padding: 12px; font-size: 13px; text-decoration: none; border: 1px solid #35505e; border-radius: 8px; }
+.overview-link:hover { background: #203c4b; }
+.nav-label { margin: 28px 12px 10px; color: #a5bdc9; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.module-nav { display: grid; gap: 6px; }
+.nav-dot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #c7d9e1; text-align: left; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.nav-title { min-width: 0; overflow-wrap: anywhere; }
+.nav-arrow { opacity: 0; color: var(--lime); }
+.nav-dot:hover { background: #203c4b; color: white; }
+.nav-dot.is-active { color: white; background: #244b5b; border-color: #416a7a; }
+.nav-dot.is-active .nav-arrow { opacity: 1; }
+.rail-source { display: grid; gap: 5px; margin: auto 8px 0; padding-top: 36px; font-size: 12px; overflow-wrap: anywhere; }
+.rail-source-label { color: #a5bdc9; font-size: 10px; letter-spacing: .08em; }
+.rail-source strong { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-weight: 500; }
+.key-hint { display: flex; align-items: center; gap: 5px; margin: 18px 8px 0; color: #a5bdc9; font-size: 10px; }
+.key-hint > span { margin-left: 5px; }
+kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px solid #4c6977; border-radius: 4px; text-align: center; font: 10px/1.5 ui-monospace,monospace; }
+.course-cover, .learning-panel, .course-module, .course-footer { margin-left: var(--rail-width); min-width: 0; }
+.course-cover { position: relative; display: grid; align-content: center; padding: 64px clamp(28px,4vw,64px) 46px; min-height: 520px; border-bottom: 1px solid var(--line); background: var(--card); }
+.cover-topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 32px; }
+.cover-kicker, .eyebrow, .pane-label, .quiz-kicker { margin: 0 0 10px; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.cover-topline .cover-kicker { margin: 0; }
+.format-tag, .stage-count { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.cover-subtitle, .lede { max-width: 48rem; margin: 20px 0; color: var(--muted); font-size: clamp(1rem,1.6vw,1.2rem); }
+.course-meta { display: flex; flex-wrap: wrap; gap: 16px 32px; margin: 16px 0 28px; }
+.course-meta div { min-width: 70px; }
+.course-meta dt { color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+.course-meta dd { margin: 5px 0 0; font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.cover-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.start-link { display: inline-flex; align-items: center; gap: 30px; width: fit-content; padding: 11px 16px; border-radius: 8px; background: var(--accent); color: white; text-decoration: none; font-size: 13px; font-weight: 700; }
+.motion-toggle { padding: 9px 13px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.motion-toggle[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.cover-route { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 38px; padding-top: 22px; border-top: 1px solid var(--line); font: 10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing: .12em; color: var(--muted); }
+.cover-route b { font-weight: 400; color: var(--accent); }
+.learning-panel { padding: 28px clamp(28px,4vw,64px) 56px; border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.panel-heading .eyebrow { margin: 0; }
+.learning-panel h2 { max-width: none; font-size: clamp(1.65rem,3vw,2.3rem); }
+.panel-scope { margin: 10px 0 18px; max-width: 66rem; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.learning-stages { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }
+.learning-stage { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.stage-topline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.stage-number { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; color: var(--accent); background: var(--accent-soft); font: 700 12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+.stage-kind { color: var(--muted); font: 9px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform: uppercase; letter-spacing: .08em; }
+.learning-stage h3 { margin: 0; font-size: 17px; line-height: 1.4; letter-spacing: -.02em; }
+.stage-outcome { margin: 8px 0 10px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.gate { margin: auto 0 0; padding: 8px 0 10px; border-top: 1px solid var(--line); }
+.gate > span { color: var(--accent); font-size: 10px; font-weight: 700; }
+.gate p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.stage-links { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 650; }
+.stage-links a { overflow-wrap: anywhere; text-decoration: none; }
+.stage-links a:hover { text-decoration: underline; }
+.scope-note { margin: 18px 0 0; padding: 12px 16px; box-shadow: none; font-size: 12px; }
+.scope-note p { margin-bottom: 0; color: var(--muted); }
+.recall-heading { margin: 46px 0 24px; }
+.recall-heading h3 { font-size: 24px; margin-bottom: 8px; }
+.recall-heading > p:last-child { margin: 0; color: var(--muted); font-size: 12px; }
+.concept-card { padding: 18px; margin: 10px 0; min-width: 0; box-shadow: none; }
+.concept-card > summary { font-size: 14px; }
+.concept-card > p { color: var(--muted); font-size: 13px; }
+.concept-card details { min-width: 0; }
+.recall { margin: 22px 0; }
+.recall label { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 650; }
+.recall textarea { display: block; width: 100%; resize: vertical; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); font-size: 13px; }
+.recall-answer { margin: 12px 0; padding: 14px; background: var(--accent-soft); border: 0; box-shadow: none; font-size: 13px; }
+.export-learning-notes { margin-top: 16px; padding: 11px 16px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 12px; cursor: pointer; }
+.notes-feedback { font-size: 12px; color: var(--muted); }
+.export-preview { margin: 16px 0; padding: 16px; }
+.export-preview label { display: block; margin: 12px 0; font-size: 12px; }
+.export-preview textarea { width: 100%; color: var(--ink); background: #f7fafb; font: 12px/1.6 ui-monospace,monospace; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.course-module { border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.course-module:nth-child(odd) { background: #f8fafb; }
+.screen { display: grid; grid-template-columns: minmax(0,1fr); align-content: center; min-height: 550px; max-width: var(--measure); margin: 0 auto; padding: 64px clamp(28px,4vw,64px); }
+.hero-screen { position: relative; }
+.hero-screen > p:not(.eyebrow):not(.lede) { max-width: 58rem; font-size: 15px; color: var(--muted); }
+.actor-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(14rem,100%),1fr)); gap: 14px; }
+.actor-card, .callout, .quiz, .data-flow, .component-chat, details { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.actor-card, .callout, details { padding: 20px; }
+.actor-card h4 { margin: 0 0 8px; font-size: 16px; }
+.actor-card p { margin: 0; color: var(--muted); font-size: 14px; }
+.callout { border-left: 3px solid var(--accent); font-size: 14px; }
+.callout.warning { border-left-color: var(--bad); }
+.path-chip { display: inline-flex; max-width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--accent); font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.code-translation { min-width: 0; contain: inline-size; display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); margin: 24px 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.code-pane { min-width: 0; padding: 22px; color: var(--code-ink); background: var(--code); }
+.code-pane .pane-label { color: #8cd4d9; font-family: ui-monospace,monospace; text-transform: none; letter-spacing: 0; }
+pre { margin: 0; max-width: 100%; overflow: auto; tab-size: 2; }
+pre > code { display: block; min-width: 100%; }
+code { font: 12px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.code-translation figcaption { min-width: 0; padding: 22px; background: white; font-size: 14px; }
+.quiz, .data-flow, .component-chat { padding: 24px; }
+.quiz h3 { font-size: 24px; line-height: 1.45; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-options button, .flow-step, .replay-chat { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); text-align: left; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+.quiz-options button:hover, .quiz-options button:focus-visible, .flow-step:hover, .flow-step:focus-visible { border-color: var(--accent); }
+.quiz-options button.is-correct { border-color: var(--good); background: color-mix(in srgb,var(--good) 8%,white); }
+.quiz-options button.is-wrong { border-color: var(--bad); background: color-mix(in srgb,var(--bad) 7%,white); }
+.quiz-feedback { min-height: 1.6em; margin-bottom: 0; font-size: 13px; font-weight: 600; }
+.component-chat { display: grid; gap: 12px; }
+.chat-message { width: min(34rem,85%); padding: 14px; border-radius: 10px 10px 10px 2px; background: var(--paper); font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 260ms ease, transform 260ms ease; }
+.chat-message::before { content: attr(data-speaker); display: block; margin-bottom: 4px; color: var(--muted); font: 700 10px ui-monospace,monospace; text-transform: uppercase; }
+.chat-message:nth-child(even) { justify-self: end; border-radius: 10px 10px 2px 10px; background: var(--accent-soft); }
+.chat-message.is-visible { opacity: 1; transform: none; }
+.replay-chat { width: fit-content; justify-self: center; margin-top: 6px; }
+.data-flow { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(10rem,100%),1fr)); gap: 10px; }
+.flow-step { text-align: center; }
+.flow-step.is-active { background: var(--accent); border-color: var(--accent); color: white; }
+.flow-detail { grid-column: 1 / -1; margin: 6px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+dfn { position: relative; border-bottom: 2px dotted var(--accent); font-style: normal; cursor: help; }
+dfn::after { content: attr(data-definition); position: absolute; left: 0; bottom: calc(100% + 10px); z-index: 40; width: min(18rem,70vw); padding: 12px; border-radius: 8px; color: white; background: var(--rail); box-shadow: var(--shadow); font-size: 12px; font-weight: 400; opacity: 0; pointer-events: none; transform: translateY(5px); transition: opacity 140ms ease, transform 140ms ease; }
+dfn:hover::after, dfn:focus::after { opacity: 1; transform: none; }
+details { margin-top: 16px; }
+summary { cursor: pointer; font-weight: 650; }
+.course-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 28px clamp(28px,4vw,64px); color: var(--muted); background: white; font-size: 12px; }
+.course-footer p { max-width: 40rem; margin: 0; }
+.course-footer a { color: var(--accent); }
+:focus-visible { outline: 3px solid #57b6c5; outline-offset: 4px; }
+html[data-reduced-motion="true"] *, html[data-reduced-motion="true"] *::before, html[data-reduced-motion="true"] *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+html[data-reduced-motion="true"] { scroll-behavior: auto !important; }
+html[data-reduced-motion="true"] .chat-message { opacity: 1; transform: none; }
+@media (max-width:1050px) {
+  :root { --rail-width: 204px; }
+  .learning-stages { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  :root { --rail-width: 0px; }
+  .progress { inset: 0 0 auto; }
+  .course-rail { inset: 0 0 auto; width: auto; height: 116px; padding: 12px 16px 10px; overflow: hidden; }
+  .course-mark { padding: 0; gap: 8px; width: fit-content; }
+  .brand-emblem { width: 28px; height: 28px; padding: 5px 3px; }
+  .brand-name { display: flex; gap: 4px; font-size: 13px; }
+  .brand-name > span { display: inline; }
+  .overview-link { position: absolute; right: 16px; top: 12px; padding: 5px 8px; gap: 10px; font-size: 10px; }
+  .nav-label, .key-hint, .rail-source { display: none; }
+  .module-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 13px; padding: 3px; }
+  .nav-dot { flex: 0 0 auto; width: auto; max-width: 220px; min-height: 35px; padding: 7px 10px; font-size: 11px; white-space: nowrap; border-color: #35505e; }
+  .nav-arrow { display: none; }
+  .course-cover { margin-top: 116px; min-height: auto; padding: 30px 20px; scroll-margin-top: 116px; }
+  .cover-topline { margin-bottom: 24px; }
+  .cover-kicker { font-size: 10px; }
+  .format-tag { font-size: 10px; padding: 4px 7px; }
+  h1 { font-size: 36px; }
+  h2 { font-size: 32px; }
+  .cover-subtitle { font-size: 14px; }
+  .course-meta { gap: 16px 22px; }
+  .cover-route { gap: 12px; font-size: 9px; }
+  .learning-panel { padding: 28px 20px 40px; scroll-margin-top: 132px; }
+  .learning-panel h2 { font-size: 27px; }
+  .panel-heading { align-items: flex-start; }
+  .stage-count { font-size: 10px; padding: 4px 7px; }
+  .learning-stages { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .learning-stage { padding: 18px; }
+  .learning-stage h3 { font-size: 18px; }
+  .stage-outcome { font-size: 13px; }
+  .course-module { scroll-margin-top: 132px; }
+  .concept-card { scroll-margin-top: 132px; }
+  .screen { min-height: auto; padding: 44px 20px; }
+  .hero-screen { min-height: 420px; }
+  .code-translation { grid-template-columns: minmax(0,1fr); }
+  .code-pane, .code-translation figcaption { padding: 18px; }
+  .quiz, .data-flow, .component-chat { padding: 18px; }
+  .quiz h3 { font-size: 20px; }
+  .course-footer { padding: 26px 20px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+  .chat-message { opacity: 1; transform: none; }
+}
+@media print {
+  :root { --rail-width: 0px; }
+  .course-rail, .progress, .start-link, .replay-chat, .motion-toggle, .cover-route { display: none !important; }
+  .course-cover { margin-top: 0; }
+  .course-cover, .screen { min-height: auto; page-break-after: always; }
+  .chat-message { opacity: 1; transform: none; }
+  body { background: white; }
+}
+
+/* Source tables scroll inside the lesson, so narrow screens retain every cell. */
+.table-scroll { max-width: 100%; overflow-x: auto; margin: 22px 0; border: 1px solid #d3dce5; border-radius: 8px; }
+.table-scroll table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.table-scroll th, .table-scroll td { padding: 13px 16px; border-bottom: 1px solid #dbe3ea; text-align: left; vertical-align: top; line-height: 1.7; overflow-wrap: anywhere; }
+.table-scroll th { color: #153747; background: #edf5f7; font-weight: 700; }
+.table-scroll tr:last-child td { border-bottom: 0; }
+.table-scroll:focus-visible, .code-pane pre:focus-visible { outline: 3px solid #069db0; outline-offset: 3px; }
+</style>
+</head>
+<body style="--accent: #10A37F">
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+  <aside class="course-rail" aria-label="Course navigation">
+    <a class="course-mark" href="#course-start" aria-label="Codebase to Mastery">
+      <span class="brand-emblem" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-name">Codebase<span>to Mastery</span></span>
+    </a>
+    <a class="overview-link" href="#course-start">学习总览 <span aria-hidden="true">↗</span></a>
+    <p class="nav-label">课程目录</p>
+    <nav class="module-nav" aria-label="课程目录"><button class="nav-dot" type="button" data-target="module-01" aria-label="进入 按下 /compact：从界面到任务" title="按下 /compact：从界面到任务"><span class="nav-title">按下 /compact：从界面到任务</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-02" aria-label="进入 三条压缩路径：谁在重组上下文" title="三条压缩路径：谁在重组上下文"><span class="nav-title">三条压缩路径：谁在重组上下文</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-03" aria-label="进入 本地摘要怎样等到真正完成" title="本地摘要怎样等到真正完成"><span class="nav-title">本地摘要怎样等到真正完成</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-04" aria-label="进入 替代历史究竟保留什么" title="替代历史究竟保留什么"><span class="nav-title">替代历史究竟保留什么</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-05" aria-label="进入 Checkpoint 何时成为新事实" title="Checkpoint 何时成为新事实"><span class="nav-title">Checkpoint 何时成为新事实</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-06" aria-label="进入 Resume 如何接上压缩后的历史" title="Resume 如何接上压缩后的历史"><span class="nav-title">Resume 如何接上压缩后的历史</span><span class="nav-arrow" aria-hidden="true">↗</span></button></nav>
+    <div class="rail-source"><span class="rail-source-label">学习源码</span><strong>roadmap-codex-context-compaction-course-source</strong></div>
+    <p class="key-hint"><kbd>J</kbd><kbd>K</kbd><span>切换章节</span></p>
+  </aside>
+
+  <header class="course-cover" id="course-start">
+    <div class="cover-topline"><p class="cover-kicker">源码掌握工坊</p><span class="format-tag">离线交互课</span></div>
+    <h1>读懂 Codex 上下文压缩</h1>
+    <p class="cover-subtitle">沿真实源码，看 /compact 如何从 TUI 命令、压缩策略与替代历史，一路走到 checkpoint、rollout 持久化与 resume 重建。</p>
+    <dl class="course-meta">
+      <div><dt>学习源码</dt><dd>roadmap-codex-context-compaction-course-source</dd></div>
+      <div><dt>源码版本</dt><dd>551844b3efc4</dd></div>
+      <div><dt>章节</dt><dd>6</dd></div>
+    </dl>
+    <div class="cover-actions"><a class="start-link" href="#learning-path">开始学习 <span aria-hidden="true">→</span></a>
+    <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">减少动效</button></div>
+    <div class="cover-route" aria-hidden="true"><span>READ</span><b>→</b><span>TRACE</span><b>→</b><span>REASON</span><b>→</b><span>TEACH BACK</span></div>
+  </header>
+
+  <section id="learning-path" class="learning-panel" data-kit-id="69b7704e-f17e-4735-b87a-a8b8abddd2db"><div class="panel-heading"><p class="eyebrow">The mastery path</p><span class="stage-count">4 个学习阶段</span></div><h2>由浅入深的学习路径</h2><p class="panel-scope">/compact→替换旧任务→策略分派→完成响应→replacement_history→checkpoint持久化→resume重建当前窗口</p><div class="learning-stages"><article class="learning-stage"><div class="stage-topline"><span class="stage-number">01</span><span class="stage-kind">orient</span></div><h3>建立地图</h3><p class="stage-outcome">解释入口、角色和控制面。</p><div class="gate"><span>先想一想</span><p>画出主线并指出真正开始执行的位置。</p></div><div class="stage-links"><a href="#module-01">进入课程</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">02</span><span class="stage-kind">trace</span></div><h3>逐步追踪</h3><p class="stage-outcome">追踪调用、数据与状态变化。</p><div class="gate"><span>先想一想</span><p>从一个输入写出调用和状态表，并定位源码。</p></div><div class="stage-links"><a href="#module-02">三条压缩路径：谁在重组上下文</a> <a href="#module-03">本地摘要怎样等到真正完成</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">03</span><span class="stage-kind">reason</span></div><h3>解释边界</h3><p class="stage-outcome">分析许可、失败、持久化与恢复。</p><div class="gate"><span>先想一想</span><p>解释两个不同层级的故障，并给出证据与反例。</p></div><div class="stage-links"><a href="#module-04">替代历史究竟保留什么</a> <a href="#module-05">Checkpoint 何时成为新事实</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">04</span><span class="stage-kind">teach-back</span></div><h3>复述与迁移</h3><p class="stage-outcome">将契约迁移到自建 Agent 与评测系统。</p><div class="gate"><span>先想一想</span><p>不看答案写出完整主线与未验证边界，再对照评分依据。</p></div><div class="stage-links"><a href="#module-06">进入课程</a><span aria-hidden="true">→</span></div></article></div><details class="scope-note"><summary>实践范围与边界</summary><p>局部重建replacement_history与后缀的恢复模型；扩展窗口ID一致性与中断流验证，暂缓真实模型、frozen binary和协议兼容实验。</p></details><div class="recall-heading"><p class="eyebrow">Recall &amp; connect</p><h3>概念地图与主动回忆</h3><p>回答保存在本机浏览器；阅读和自评不代表已掌握。</p></div><details class="concept-card" id="concept-c01-01"><summary>UI 命令只建立入口</summary><p>/compact 的说明文字和菜单描述不是压缩算法。真正路径从TUI分派到Session操作，再进入CompactTask。
+
+先标输入、操作消息、任务与模型调用四个边界，才能解释spinner为什么转但历史还未变。页面出现压缩提示不证明持久checkpoint已经接受。</p><p>前置概念: —</p><a href="#module-01">能够解释“UI 命令只建立入口”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-01-0"><label for="recall-c01-01-0">看到“压缩中”，能断言旧窗口已被替换吗？</label><textarea id="recall-c01-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/tui/src/slash_command.rs:86-94，对照状态、身份、异常和保存边界。</li></ul><p>不能。UI只说明操作过程；检查策略完成、checkpoint与历史安装的事件或状态。</p><ul><li>明确本题契约：UI 命令只建立入口</li><li>依据源码解释原因：不能。UI只说明操作过程；检查策略完成、checkpoint与历史安装的事件或状态。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/tui/src/slash_command.rs:86-94</p><p>白话翻译
+        /compact 被描述成“总结会话”，但这句话没有承诺逐字保留所有历史，也没有说明由本地模型、远端服务还是 token-budget 机制执行。实现细节要继续往下追。</p><pre><code>impl SlashCommand {
+    /// User-visible description shown in the popup.
+    pub fn description(self) -&gt; &amp;&#x27;static str {
+        match self {
+            SlashCommand::Feedback =&gt; &quot;send logs to maintainers&quot;,
+            SlashCommand::New =&gt; &quot;start a new chat during a conversation&quot;,
+            SlashCommand::Init =&gt; &quot;create an AGENTS.md file with instructions for Codex&quot;,
+            SlashCommand::Compact =&gt; &quot;summarize conversation to prevent hitting the context limit&quot;,
+            SlashCommand::Recap =&gt; &quot;summarize the current conversation now&quot;,</code></pre></details></details><details class="concept-card" id="concept-c01-02"><summary>交互限制与状态清理</summary><p>TUI 对任务状态做前置判断，清理显示用usage并更新状态，再发出压缩操作。界面计数变化属于显示状态，不等于模型上下文立即改变。
+
+诊断时区分UI缓存和core历史。将token显示归零当预算已释放会把观察层与状态层混为一谈；需要看核心新窗口和基线。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“交互限制与状态清理”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-02-0"><label for="recall-c01-02-0">usage显示被清零，可否报告压缩成功？</label><textarea id="recall-c01-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/tui/src/chatwidget/slash_dispatch.rs:294-312，对照状态、身份、异常和保存边界。</li></ul><p>不能。还要验证core完成事件、replacement_history和当前窗口安装；显示状态不是持久状态。</p><ul><li>明确本题契约：交互限制与状态清理</li><li>依据源码解释原因：不能。还要验证core完成事件、replacement_history和当前窗口安装；显示状态不是持久状态。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/tui/src/chatwidget/slash_dispatch.rs:294-312</p><p>白话翻译
+        若输入由父任务接管，命令当场拒绝。否则 TUI 清空展示中的 token 用量、点亮运行与状态指示、标记下一回合待开始，最后才通过事件通道发出 compact 请求。</p><pre><code>            SlashCommand::Compact =&gt; {
+                if self.blocks_direct_input {
+                    self.add_error_message(PARENT_OWNED_INPUT_MESSAGE.to_string());
+                    return;
+                }
+                self.clear_token_usage();
+                if !self.bottom_pane.is_task_running() {
+                    self.bottom_pane.set_task_running(/*running*/ true);
+                }
+                self.bottom_pane.ensure_status_indicator();
+                self.set_status(
+                    compaction::COMPACTION_HEADER.to_string(),
+                    Some(compaction::COMPACTION_DETAILS.to_string()),
+                    StatusDetailsCapitalization::Preserve,
+                    STATUS_DETAILS_DEFAULT_MAX_LINES,
+                );
+                self.input_queue.user_turn_pending_start = true;
+                self.app_event_tx.compact();
+            }</code></pre></details></details><details class="concept-card" id="concept-c01-03"><summary>压缩任务替换旧任务</summary><p>Session处理压缩操作时中止原任务并以新turn context启动CompactTask。任务被替换与当前对话历史被摘要是两个独立动作。
+
+外部任务可能已产生副作用，中止不能回滚这些动作。读到Replaced一类原因时，别误归为模型质量失败；它描述调度生命周期。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“压缩任务替换旧任务”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-03-0"><label for="recall-c01-03-0">旧任务收到Replaced，就说明摘要失败吗？</label><textarea id="recall-c01-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/session/handlers.rs:243-251，对照状态、身份、异常和保存边界。</li></ul><p>不一定。旧任务被新操作替换属于调度；压缩任务本身是否完成要看后续策略和持久化结果。</p><ul><li>明确本题契约：压缩任务替换旧任务</li><li>依据源码解释原因：不一定。旧任务被新操作替换属于调度；压缩任务本身是否完成要看后续策略和持久化结果。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/session/handlers.rs:243-251</p><p>白话翻译
+        压缩不是塞进正在运行的旧 turn。handler 先以 Replaced 原因中止旧任务，再用默认设置建立新 turn，并把 CompactTask 交给 session 调度。</p><pre><code>pub async fn compact(sess: &amp;Arc&lt;Session&gt;, sub_id: String) {
+    // Stop the old turn before the compact task picks up the next turn&#x27;s environments.
+    sess.abort_all_tasks(TurnAbortReason::Replaced).await;
+    let turn_context = sess
+        .new_turn_with_default_settings(sub_id, Default::default())
+        .await;
+
+    sess.spawn_task(turn_context, Vec::new(), CompactTask).await;
+}</code></pre></details></details><details class="concept-card" id="concept-c02-01"><summary>策略分派有优先级</summary><p>CompactTask按配置优先选择TokenBudget，其次RemoteV2，否则本地摘要。早返回意味着不能把几个策略同时当一次操作共同执行。
+
+冻结版本与feature配置非常关键：仅记录“用了compact”无法比较实现。名字相似的功能可能采用不同输入、输出和网络路径。</p><p>前置概念: c01-01</p><a href="#module-02">能够解释“策略分派有优先级”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-01-0"><label for="recall-c02-01-0">同时打开两个feature，是否会先裁剪再摘要？</label><textarea id="recall-c02-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/tasks/compact.rs:35-68，对照状态、身份、异常和保存边界。</li></ul><p>应按当前代码分派顺序与early return判断；不能凭配置名推导串联。记录实际选中策略。</p><ul><li>明确本题契约：策略分派有优先级</li><li>依据源码解释原因：应按当前代码分派顺序与early return判断；不能凭配置名推导串联。记录实际选中策略。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/tasks/compact.rs:35-68</p><p>白话翻译
+        TokenBudget 优先并提前返回；否则 capability 为 V2 就交给远端；不支持远端才合成 compact prompt，进入本地摘要实现。</p><pre><code>        let _profile_guard = ctx.turn_timing_state.begin_compaction();
+        if ctx.config.features.enabled(Feature::TokenBudget) {
+            crate::compact_token_budget::run_manual_compact_task(session, ctx).await?;
+            return Ok(None);
+        }
+
+        let result = match ctx.provider.capabilities().remote_compaction {
+            RemoteCompactionSupport::V2 =&gt; {
+                emit_compact_metric(
+                    &amp;session.services.session_telemetry,
+                    &quot;remote_v2&quot;,
+                    /*manual*/ true,
+                );
+                crate::compact_remote_v2::run_remote_compact_task(session.clone(), ctx).await
+            }
+            RemoteCompactionSupport::Unsupported =&gt; {
+                emit_compact_metric(
+                    &amp;session.services.session_telemetry,
+                    &quot;local&quot;,
+                    /*manual*/ true,
+                );
+                let input = vec![UserInput::Text {
+                    text: ctx
+                        .config
+                        .compact_prompt
+                        .as_deref()
+                        .unwrap_or(crate::compact::SUMMARIZATION_PROMPT)
+                        .to_string(),
+                    // Compaction prompt is synthesized; no UI element ranges to preserve.
+                    text_elements: Vec::new(),
+                }];
+                crate::compact::run_compact_task(session.clone(), ctx, input).await
+            }
+        };</code></pre></details></details><details class="concept-card" id="concept-c02-02"><summary>预算裁剪没有摘要也属于压缩</summary><p>TokenBudget使用公共任务生命周期，但策略本身不必生成自然语言摘要。这说明压缩的目标是改变保留上下文，而不是一定产生一段summary。
+
+评估信息损失要对照保留项、移除项与恢复窗口，而不是只检查摘要质量。功能配置、二进制schema兼容和运行成功也必须分开记录。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“预算裁剪没有摘要也属于压缩”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-02-0"><label for="recall-c02-02-0">没有summary字段就能判压缩失败吗？</label><textarea id="recall-c02-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/compact_token_budget.rs:19-36，对照状态、身份、异常和保存边界。</li></ul><p>不能。先确认策略是否为预算裁剪，再验证保留历史和窗口语义；摘要不是所有策略的必需产物。</p><ul><li>明确本题契约：预算裁剪没有摘要也属于压缩</li><li>依据源码解释原因：不能。先确认策略是否为预算裁剪，再验证保留历史和窗口语义；摘要不是所有策略的必需产物。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/compact_token_budget.rs:19-36</p><p>白话翻译
+        它仍发出共同的 compaction lifecycle 与 turn item，方便 hooks 和观察层保持一致；但“同生命周期”不代表“同摘要语义”。这里根本没有生成 summary。</p><pre><code>/// Runs token-budget manual compaction as a normal compaction lifecycle.
+///
+/// Token-budget compaction skips model/server summarization and installs a fresh context window
+/// instead. It is still modeled as compaction so compact hooks and `ContextCompaction` turn items
+/// observe the same lifecycle as local or remote compaction.
+pub(crate) async fn run_manual_compact_task(
+    sess: Arc&lt;Session&gt;,
+    turn_context: Arc&lt;TurnContext&gt;,
+) -&gt; CodexResult&lt;()&gt; {
+    sess.emit_turn_started(&amp;turn_context).await;
+
+    // Manual compaction runs outside run_turn, so it captures its own current step.
+    let step_context = sess
+        .capture_step_context(Arc::clone(&amp;turn_context), &amp;CancellationToken::new())
+        .await?;
+    let world_state = Arc::new(sess.build_world_state_for_step(&amp;step_context).await?);
+    run_compact_task_inner(&amp;sess, &amp;step_context, world_state, CompactionTrigger::Manual).await
+}</code></pre></details></details><details class="concept-card" id="concept-c02-03"><summary>自动触发与手动任务不同</summary><p>自动压缩位于正常turn执行流程，使用类似策略优先级，但阶段与初始上下文注入条件不同。手动路径的结论不能无条件复制到自动路径。
+
+设计比较时固定触发方式、压缩前history、策略与注入模式；否则恢复后的差异可能来自上下文基线，而非摘要模型。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“自动触发与手动任务不同”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-03-0"><label for="recall-c02-03-0">手动测试通过就覆盖自动compact了吗？</label><textarea id="recall-c02-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/session/turn.rs:1457-1503，对照状态、身份、异常和保存边界。</li></ul><p>没有。触发时点和注入条件可能不同；分别固定输入history与配置，验证各自新窗口和后续请求。</p><ul><li>明确本题契约：自动触发与手动任务不同</li><li>依据源码解释原因：没有。触发时点和注入条件可能不同；分别固定输入history与配置，验证各自新窗口和后续请求。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/session/turn.rs:1457-1503</p><p>白话翻译
+        自动路径的优先级仍是 token-budget → remote v2 / local，但它还携带 reason、phase、fallback context 与 initial-context 注入策略。触发方式和实现方式是两个维度。</p><pre><code>    if turn_context.config.features.enabled(Feature::TokenBudget) {
+        // Compaction is the reset request, so force a new context window
+        // instead of consuming a pending `new_context` tool request.
+        crate::compact_token_budget::run_inline_auto_compact_task(
+            Arc::clone(sess),
+            step_context,
+            initial_context_injection,
+        )
+        .await?;
+        return Ok(());
+    }
+
+    match turn_context.provider.capabilities().remote_compaction {
+        RemoteCompactionSupport::V2 =&gt; {
+            emit_compact_metric(
+                &amp;sess.services.session_telemetry,
+                &quot;remote_v2&quot;,
+                /*manual*/ false,
+            );
+            run_inline_remote_auto_compact_task_v2(
+                Arc::clone(sess),
+                step_context,
+                fallback_step_context,
+                client_session,
+                initial_context_injection,
+                reason,
+                phase,
+            )
+            .await?;
+        }
+        RemoteCompactionSupport::Unsupported =&gt; {
+            emit_compact_metric(
+                &amp;sess.services.session_telemetry,
+                &quot;local&quot;,
+                /*manual*/ false,
+            );
+            run_inline_auto_compact_task(
+                Arc::clone(sess),
+                Arc::clone(turn_context),
+                initial_context_injection,
+                reason,
+                phase,
+            )
+            .await?;
+        }
+    }
+    Ok(())</code></pre></details></details><details class="concept-card" id="concept-c03-01"><summary>手动摘要输入从历史快照构造</summary><p>本地路径克隆history并加入专门输入，处理不同消息形态及已执行工具调用。它不是对TUI可见文字直接做字符串摘要。
+
+注入模式控制独立摘要任务的上下文构造。调查漏记工具结果时应检查模型实际收到的请求，而不是只看滚动终端。</p><p>前置概念: c02-01</p><a href="#module-03">能够解释“手动摘要输入从历史快照构造”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-01-0"><label for="recall-c03-01-0">终端有工具输出，摘要模型一定看到了吗？</label><textarea id="recall-c03-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/compact.rs:257-300，对照状态、身份、异常和保存边界。</li></ul><p>不一定。核对history快照、消息转换与请求内容；UI文字和模型输入不完全等价。</p><ul><li>明确本题契约：手动摘要输入从历史快照构造</li><li>依据源码解释原因：不一定。核对history快照、消息转换与请求内容；UI文字和模型输入不完全等价。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/compact.rs:257-300</p><p>白话翻译
+        live history 先克隆，再追加合成的 compact 输入；真正送模前还会按模型输入模态裁剪，并附上已执行工具调用。重试复用同一个 client session，以保住 turn-scoped 状态。</p><pre><code>    let compaction_item = TurnItem::ContextCompaction(ContextCompactionItem::new());
+    sess.emit_turn_item_started(&amp;turn_context, &amp;compaction_item)
+        .await;
+    let initial_input_for_turn: ResponseInputItem = ResponseInputItem::from(input);
+
+    let mut history = sess.clone_history().await;
+    history.record_items(
+        &amp;[initial_input_for_turn.into()],
+        turn_context.model_info().truncation_policy.into(),
+    );
+
+    let max_retries = turn_context.provider.info().stream_max_retries();
+    let mut retries = 0;
+    let mut client_session = sess.services.model_client.new_session();
+    // Reuse one client session so turn-scoped state (sticky routing, websocket incremental
+    // request tracking)
+    // survives retries within this compact turn.
+    let responses_metadata = sess
+        .compaction_responses_metadata(turn_context.as_ref(), compaction_metadata)
+        .await;
+
+    let compaction_response = loop {
+        // Clone is required because of the loop
+        let mut turn_input = history
+            .clone()
+            .for_prompt(&amp;turn_context.model_info().input_modalities);
+        sess.services
+            .executed_tool_calls
+            .attach_to_compaction_prompt(&amp;mut turn_input);
+        let turn_input_len = turn_input.len();
+        let prompt = Prompt {
+            input: turn_input,
+            base_instructions: sess.get_prompt_base_instructions().await,
+            ..Default::default()
+        };
+        let attempt_result = drain_to_completed(
+            &amp;sess,
+            turn_context.as_ref(),
+            &amp;mut client_session,
+            &amp;responses_metadata,
+            &amp;prompt,
+            compaction_metadata.phase(),
+        )
+        .await;</code></pre></details></details><details class="concept-card" id="concept-c03-02"><summary>失败分支需要保留原因</summary><p>本地流处理区分任务中断、预算失败、上下文窗口超限与普通错误。窗口超限可触发历史调整重试，普通错误按策略退避。
+
+删掉字段或随意缩输入让请求成功会改变冻结实验，不能冒充原方案通过。报告要保留初始失败、实际变更和比较范围。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“失败分支需要保留原因”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-02-0"><label for="recall-c03-02-0">因schema不兼容失败，删字段后能报原策略通过吗？</label><textarea id="recall-c03-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/compact.rs:302-346，对照状态、身份、异常和保存边界。</li></ul><p>不能。新配置是另一实验。保留兼容性失败证据，明确变更后范围；0次请求也不能当模型运行。</p><ul><li>明确本题契约：失败分支需要保留原因</li><li>依据源码解释原因：不能。新配置是另一实验。保留兼容性失败证据，明确变更后范围；0次请求也不能当模型运行。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/compact.rs:302-346</p><p>白话翻译
+        中断、turn 被替换、预算耗尽都直接失败。只有 context window 超限时会逐个删最老 history item；普通 stream 错误则按 provider 的次数与退避策略重连。</p><pre><code>        match attempt_result {
+            Ok(response) =&gt; {
+                break response;
+            }
+            Err(err)
+                if matches!(
+                    err.details(),
+                    CodexErrorDetails::Interrupted | CodexErrorDetails::TurnAborted
+                ) =&gt;
+            {
+                return Err(err);
+            }
+            Err(e) if matches!(e.details(), CodexErrorDetails::SessionBudgetExceeded) =&gt; {
+                return Err(e);
+            }
+            Err(e) if matches!(e.details(), CodexErrorDetails::ContextWindowExceeded) =&gt; {
+                if turn_input_len &gt; 1 {
+                    // Trim from the beginning to preserve cache (prefix-based) and keep recent messages intact.
+                    error!(
+                        &quot;Context window exceeded while compacting; removing oldest history item. Error: {e}&quot;
+                    );
+                    history.remove_first_item();
+                    retries = 0;
+                    continue;
+                }
+                sess.set_total_tokens_full(turn_context.as_ref()).await;
+                return Err(e);
+            }
+            Err(e) =&gt; {
+                if retries &lt; max_retries {
+                    retries += 1;
+                    let delay = backoff(retries);
+                    sess.notify_stream_error(
+                        turn_context.as_ref(),
+                        format!(&quot;Reconnecting... {retries}/{max_retries}&quot;),
+                        e,
+                    )
+                    .await;
+                    tokio::time::sleep(delay).await;
+                    continue;
+                } else {
+                    return Err(e);
+                }
+            }
+        }</code></pre></details></details><details class="concept-card" id="concept-c03-03"><summary>OutputItemDone 不是 Completed</summary><p>响应流可先给出完成的单个输出项，但任务还要等到整体Completed以及对应response ID/usage。premature EOF 属于失败，不能凭已收集文本接受结果。
+
+这是恢复和计费边界：摘要内容可读不代表请求完整。教学对照会对“有文字但无Completed”的流拒绝成功，避免把中间产物当正式压缩结果。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“OutputItemDone 不是 Completed”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-03-0"><label for="recall-c03-03-0">已有summary文字但连接EOF，可以安装新history吗？</label><textarea id="recall-c03-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/compact.rs:797-845，对照状态、身份、异常和保存边界。</li></ul><p>先按完整响应协议判断；没有所需Completed不能仅靠输出项接受成功。记录中断，保留旧已接受历史。</p><ul><li>明确本题契约：OutputItemDone 不是 Completed</li><li>依据源码解释原因：先按完整响应协议判断；没有所需Completed不能仅靠输出项接受成功。记录中断，保留旧已接受历史。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/compact.rs:797-845</p><p>白话翻译
+        如果流先断，函数明确报错。OutputItemDone 只是中间产物；看到 Completed 后，代码记录 response ID 和用量，才返回可供下一阶段安装的 CompactionResponse。</p><pre><code>    let mut output = Vec::new();
+    loop {
+        let maybe_event = stream.next().await;
+        let Some(event) = maybe_event else {
+            return Err(CodexErr::Stream(
+                &quot;stream closed before response.completed&quot;.into(),
+            ));
+        };
+        match event {
+            Ok(ResponseEvent::OutputItemDone(item)) =&gt; {
+                if matches!(phase, CompactionPhase::PostTurn) {
+                    // Commit post-turn summaries only after success; failures must leave both
+                    // the live history and persisted rollout intact.
+                    output.push(item);
+                } else {
+                    sess.record_conversation_items(
+                        turn_context,
+                        turn_context.model_info(),
+                        std::slice::from_ref(&amp;item),
+                    )
+                    .await;
+                }
+            }
+            Ok(ResponseEvent::ServerReasoningIncluded(included)) =&gt; {
+                sess.set_server_reasoning_included(included).await;
+            }
+            Ok(ResponseEvent::RateLimits(snapshot)) =&gt; {
+                sess.update_rate_limits(turn_context, snapshot).await;
+            }
+            Ok(ResponseEvent::Completed {
+                response_id,
+                token_usage,
+                usage_metadata,
+                ..
+            }) =&gt; {
+                sess.record_observed_response_completed(
+                    turn_context,
+                    &amp;response_id,
+                    token_usage.as_ref(),
+                    usage_metadata.as_ref(),
+                )
+                .await;
+                sess.update_token_usage_info(turn_context, token_usage.as_ref())
+                    .await?;
+                return Ok(CompactionResponse {
+                    response_id,
+                    output,
+                });
+            }</code></pre></details></details><details class="concept-card" id="concept-c04-01"><summary>保留用户消息要排除旧摘要</summary><p>构建替代历史时收集用户消息，区分压缩摘要标记与真实输入，并保留必要身份元信息。旧summary不能重新伪装成用户原文。
+
+连续压缩的污染风险在于层层摘要当事实重复累积。追踪时给真实用户、压缩结果和工具观察分标签，检查每种记录进入新窗口的规则。</p><p>前置概念: c03-01</p><a href="#module-04">能够解释“保留用户消息要排除旧摘要”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-01-0"><label for="recall-c04-01-0">上次summary能当新一轮user消息再追加吗？</label><textarea id="recall-c04-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/compact.rs:578-600，对照状态、身份、异常和保存边界。</li></ul><p>应遵守压缩消息的专门过滤规则；不要把合成摘要当原始用户输入，保留类别与身份。</p><ul><li>明确本题契约：保留用户消息要排除旧摘要</li><li>依据源码解释原因：应遵守压缩消息的专门过滤规则；不要把合成摘要当原始用户输入，保留类别与身份。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/compact.rs:578-600</p><p>白话翻译
+        解析不成 UserMessage 的 item 被跳过；此前的 compaction summary 也明确排除，避免把旧摘要伪装成用户原话再重复装入。被选中的消息可携带 identity 与 metadata。</p><pre><code>fn compacted_user_message(
+    item: &amp;ResponseItem,
+    harness_metadata: Option&lt;CodexHarnessMetadata&gt;,
+) -&gt; Option&lt;CompactedUserMessage&gt; {
+    let Some(TurnItem::UserMessage(user)) = crate::event_mapping::parse_turn_item(item) else {
+        return None;
+    };
+    if is_summary_message(&amp;user.message()) {
+        return None;
+    }
+    Some(CompactedUserMessage {
+        id: item.id().cloned(),
+        message: user.message(),
+        internal_chat_message_metadata_passthrough: match item {
+            ResponseItem::Message {
+                internal_chat_message_metadata_passthrough,
+                ..
+            } =&gt; internal_chat_message_metadata_passthrough.clone(),
+            _ =&gt; None,
+        },
+        harness_metadata,
+    })
+}</code></pre></details></details><details class="concept-card" id="concept-c04-02"><summary>预算打包偏向较新用户消息</summary><p>本地路径用固定预算从较新用户消息向前装入，必要时截断边界消息，再恢复时间顺序。保留顺序与截断策略是信息损失评估的具体对象。
+
+这个机制不保证早期关键约束永不丢失。课程实验应把约束放在不同位置并测试恢复后可用性，不能从“保留用户消息”推导全量保真。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“预算打包偏向较新用户消息”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-02-0"><label for="recall-c04-02-0">重要约束放在最早一条，是否一定完整保留？</label><textarea id="recall-c04-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/compact.rs:674-719，对照状态、身份、异常和保存边界。</li></ul><p>没有这种保证。核对预算、消息长度与截断边界，显式测早期约束及最近更正，不用自然语言概括代替验证。</p><ul><li>明确本题契约：预算打包偏向较新用户消息</li><li>依据源码解释原因：没有这种保证。核对预算、消息长度与截断边界，显式测早期约束及最近更正，不用自然语言概括代替验证。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/compact.rs:674-719</p><p>白话翻译
+        默认上限来自 COMPACT_USER_MESSAGE_MAX_TOKENS = 20_000。算法从最新消息倒序装箱；最后一条若放不下会按剩余额度截断，之后再反转回时间顺序。</p><pre><code>pub(crate) fn build_compacted_history(
+    initial_context: Vec&lt;ResponseItemEnvelope&gt;,
+    user_messages: &amp;[CompactedUserMessage],
+    summary_text: &amp;str,
+) -&gt; Vec&lt;ResponseItemEnvelope&gt; {
+    build_compacted_history_with_limit(
+        initial_context,
+        user_messages,
+        summary_text,
+        COMPACT_USER_MESSAGE_MAX_TOKENS,
+    )
+}
+
+fn build_compacted_history_with_limit(
+    mut history: Vec&lt;ResponseItemEnvelope&gt;,
+    user_messages: &amp;[CompactedUserMessage],
+    summary_text: &amp;str,
+    max_tokens: usize,
+) -&gt; Vec&lt;ResponseItemEnvelope&gt; {
+    let mut selected_messages: Vec&lt;CompactedUserMessage&gt; = Vec::new();
+    if max_tokens &gt; 0 {
+        let mut remaining = max_tokens;
+        for message in user_messages.iter().rev() {
+            if remaining == 0 {
+                break;
+            }
+            let tokens = approx_token_count(&amp;message.message);
+            if tokens &lt;= remaining {
+                selected_messages.push(message.clone());
+                remaining = remaining.saturating_sub(tokens);
+            } else {
+                let truncated =
+                    truncate_text(&amp;message.message, TruncationPolicy::Tokens(remaining));
+                selected_messages.push(CompactedUserMessage {
+                    id: message.id.clone(),
+                    message: truncated,
+                    internal_chat_message_metadata_passthrough: message
+                        .internal_chat_message_metadata_passthrough
+                        .clone(),
+                    harness_metadata: message.harness_metadata.clone(),
+                });
+                break;
+            }
+        }
+        selected_messages.reverse();
+    }</code></pre></details></details><details class="concept-card" id="concept-c04-03"><summary>不同策略替代历史形状不同</summary><p>RemoteV2对输入与元数据分组施加预算并消费服务输出，不能假设和本地user+summary形状相同。统一安装接口不消除上游语义差异。
+
+比较策略时应使用项类型、身份、窗口链与后续实际请求来评价。仅统计文本长度更短会错过保留约束、工具配对或多模态丢失。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“不同策略替代历史形状不同”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-03-0"><label for="recall-c04-03-0">两个策略token都减半，能认为等效吗？</label><textarea id="recall-c04-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/compact_remote_v2.rs:505-532，对照状态、身份、异常和保存边界。</li></ul><p>不能。比较保留项身份、约束、工具关系、窗口元数据及恢复后请求；缩短幅度只是一个指标。</p><ul><li>明确本题契约：不同策略替代历史形状不同</li><li>依据源码解释原因：不能。比较保留项身份、约束、工具关系、窗口元数据及恢复后请求；缩短幅度只是一个指标。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/compact_remote_v2.rs:505-532</p><p>白话翻译
+        remote v2 先把 input 与 metadata 重新配对、按 group 过滤，再用独立预算截断，最后追加 server 返回的 compaction output。它甚至单独统计保留图片，因此不能假设等同于 local 的“用户消息＋文字摘要”。</p><pre><code>fn build_v2_compacted_history(
+    prompt_input: Vec&lt;ResponseItem&gt;,
+    prompt_input_metadata: Vec&lt;Option&lt;CodexHarnessMetadata&gt;&gt;,
+    compaction_output: ResponseItem,
+    retain_client_developer_messages: bool,
+    image_budget: RetainedImageBudget,
+) -&gt; (Vec&lt;ResponseItemEnvelope&gt;, usize) {
+    debug_assert_eq!(prompt_input.len(), prompt_input_metadata.len());
+    let prompt_input = prompt_input
+        .into_iter()
+        .zip(prompt_input_metadata)
+        .map(|(item, metadata)| ResponseItemEnvelope { item, metadata })
+        .collect::&lt;Vec&lt;_&gt;&gt;();
+    let retained = v2_history_item_groups(prompt_input)
+        .filter(|group| {
+            is_retained_for_remote_compaction_v2(&amp;group.source, retain_client_developer_messages)
+        })
+        .flat_map(HistoryItemGroup::into_items)
+        .collect::&lt;Vec&lt;_&gt;&gt;();
+    let mut retained =
+        truncate_retained_messages(retained, RETAINED_MESSAGE_TOKEN_BUDGET, image_budget);
+    let retained_image_count = retained
+        .iter()
+        .map(|envelope| retained_input_image_count(&amp;envelope.item))
+        .sum::&lt;usize&gt;();
+    retained.push(ResponseItemEnvelope::new(compaction_output));
+    (retained, retained_image_count)
+}</code></pre></details></details><details class="concept-card" id="concept-c05-01"><summary>窗口版本与上下文基线</summary><p>压缩完成后推进窗口编号并按阶段设置初始上下文与基线。新窗口既有内容，也有版本与注入语义。
+
+只保存summary字符串会丢掉恢复所需的窗口链。研究应标记压缩前后window身份、阶段和参考上下文，防止同一内容被错误注入两次。</p><p>前置概念: c04-01</p><a href="#module-05">能够解释“窗口版本与上下文基线”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-01-0"><label for="recall-c05-01-0">复制summary就足够建立新checkpoint吗？</label><textarea id="recall-c05-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/compact.rs:376-403，对照状态、身份、异常和保存边界。</li></ul><p>不够。还需replacement_history、窗口身份/链和上下文基线等协议元数据，按当前安装流程处理。</p><ul><li>明确本题契约：窗口版本与上下文基线</li><li>依据源码解释原因：不够。还需replacement_history、窗口身份/链和上下文基线等协议元数据，按当前安装流程处理。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/compact.rs:376-403</p><p>白话翻译
+        builder 先推进窗口编号，按 phase 决定是否放入 initial context，再把 new_history、reference context、world-state baseline 与 response/model/window 元数据一起交给唯一安装入口。</p><pre><code>    let (window_number, window_ids) = sess.advance_auto_compact_window().await;
+
+    let (initial_context, world_state_baseline) =
+        build_compaction_initial_context(sess.as_ref(), &amp;initial_context_injection).await;
+    if !initial_context.is_empty() {
+        new_history =
+            insert_initial_context_before_last_real_user_or_summary(new_history, initial_context);
+    }
+    let reference_context_item = match initial_context_injection {
+        InitialContextInjection::DoNotInject =&gt; None,
+        InitialContextInjection::BeforeLastUserMessage { step_context, .. } =&gt; {
+            Some(step_context.to_turn_context_item())
+        }
+    };
+    sess.replace_compacted_history(
+        new_history,
+        reference_context_item,
+        world_state_baseline,
+        CompactedHistoryMetadata {
+            message: summary_text,
+            window_number,
+            window_ids,
+            compaction_response_id: Some(compaction_response.response_id),
+            compaction_model_hash: turn_context.model_info().comp_hash.clone(),
+            reviewer_compaction_hash: None,
+        },
+    )
+    .await;</code></pre></details></details><details class="concept-card" id="concept-c05-02"><summary>先统一记录身份再持久化</summary><p>Session为待保留项目补齐ID，构造含replacement_history的新CompactedItem，保存窗口、远程响应与其他状态。持久记录和内存安装应引用一致身份。
+
+若重新生成不同ID，恢复时去重、窗口引用和后缀关联可能断开。教学模型会比较链一致与错误改ID，真实磁盘故障未在本包注入。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“先统一记录身份再持久化”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-02-0"><label for="recall-c05-02-0">持久化和内存各生成一组ID有问题吗？</label><textarea id="recall-c05-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/session/mod.rs:3936-3972，对照状态、身份、异常和保存边界。</li></ul><p>会破坏同一历史项的身份关联。按主线先统一身份，再让持久记录和活动history使用一致的ID及窗口链。</p><ul><li>明确本题契约：先统一记录身份再持久化</li><li>依据源码解释原因：会破坏同一历史项的身份关联。按主线先统一身份，再让持久记录和活动history使用一致的ID及窗口链。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/session/mod.rs:3936-3972</p><p>白话翻译
+        missing ID 在 clone 之前补齐，所以 live 与 persisted 两份 history 共享同一 identity。CompactedItem 不只存 message，还内嵌完整 replacement、窗口链、远端 response ID、MCP 来源和最近 token record。</p><pre><code>    pub(crate) async fn replace_compacted_history(
+        &amp;self,
+        mut items: Vec&lt;ResponseItemEnvelope&gt;,
+        reference_context_item: Option&lt;TurnContextItem&gt;,
+        world_state_baseline: Option&lt;Arc&lt;WorldState&gt;&gt;,
+        metadata: CompactedHistoryMetadata,
+    ) {
+        for envelope in &amp;mut items {
+            Self::assign_missing_response_item_id(&amp;mut envelope.item);
+        }
+        if let Some(checkpoint) = items.iter_mut().rev().find(|envelope| {
+            matches!(
+                envelope.item,
+                ResponseItem::Compaction { .. } | ResponseItem::ContextCompaction { .. }
+            )
+        }) {
+            checkpoint
+                .metadata
+                .get_or_insert_default()
+                .compaction_model_hash = metadata.compaction_model_hash;
+        }
+        let mut compacted_item = CompactedItem {
+            message: metadata.message,
+            replacement_history: Some(items.clone()),
+            retained_context: None,
+            guardian_history: None,
+            mcp_resource_origins: self.services.mcp_runtime.resource_origin_checkpoint(),
+            window_number: Some(metadata.window_number),
+            first_window_id: Some(metadata.window_ids.first_window_id.to_string()),
+            previous_window_id: metadata
+                .window_ids
+                .previous_window_id
+                .map(|id| id.to_string()),
+            window_id: Some(metadata.window_ids.window_id.to_string()),
+            compaction_response_id: metadata.compaction_response_id,
+            latest_token_usage_record: self.state.lock().await.latest_token_usage_record.clone(),
+        };</code></pre></details></details><details class="concept-card" id="concept-c05-03"><summary>安装与hook有顺序边界</summary><p>持久checkpoint、内存历史替换、上下文基线、参考信息和hook位于同一完成链的不同阶段。hook调用不等于每个后续行为都成功。
+
+复盘失败必须指出最后可确认的阶段和恢复起点。不能看到一行hook日志就宣称整个持久化链通过；实际运行需关联同次压缩事件。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“安装与hook有顺序边界”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-03-0"><label for="recall-c05-03-0">hook日志存在能证明下次resume正确吗？</label><textarea id="recall-c05-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/session/mod.rs:3997-4013，对照状态、身份、异常和保存边界。</li></ul><p>不能。核对checkpoint内容、活动history与恢复重建；hook是生命周期观察，恢复正确性需单独验收。</p><ul><li>明确本题契约：安装与hook有顺序边界</li><li>依据源码解释原因：不能。核对checkpoint内容、活动history与恢复重建；hook是生命周期观察，恢复正确性需单独验收。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/session/mod.rs:3997-4013</p><p>白话翻译
+        rollout 先记 Compacted checkpoint，再依次附带 baseline、reference context 与当前 settings 事件。持久化返回后，还排队一次来源为 Compact 的 session-start hook。</p><pre><code>        let mut rollout_items = vec![RolloutItem::Compacted(compacted_item)];
+        // Persist the baseline after the replacement history that established it.
+        if let Some(world_state_item) = world_state_item {
+            rollout_items.push(RolloutItem::WorldState(world_state_item));
+        }
+        if let Some(turn_context_item) = reference_context_item {
+            rollout_items.push(RolloutItem::TurnContext(turn_context_item));
+        }
+        // The frozen turn context must not override current settings in persisted metadata.
+        rollout_items.push(RolloutItem::EventMsg(
+            thread_settings::applied_event(self).await,
+        ));
+        self.persist_rollout_items(&amp;rollout_items).await;
+        {
+            let mut state = self.state.lock().await;
+            state.queue_pending_session_start_source(codex_hooks::SessionStartSource::Compact);
+        }</code></pre></details></details><details class="concept-card" id="concept-c06-01"><summary>恢复重建有明确输出</summary><p>rollout重建不只返回消息，还恢复上下文、设置、压缩基线和窗口链。正常turn入口使用这些结果构造新的运行环境。
+
+把恢复简化为读JSON后拼文本会遗漏策略和注入状态。尤其连续压缩，必须知道当前窗口来自哪个checkpoint。</p><p>前置概念: c05-01</p><a href="#module-06">能够解释“恢复重建有明确输出”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-01-0"><label for="recall-c06-01-0">实现resume只返回消息列表够吗？</label><textarea id="recall-c06-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/session/rollout_reconstruction.rs:9-23，对照状态、身份、异常和保存边界。</li></ul><p>对本课所追踪协议不够。还需基线、设置、参考上下文和窗口链，明确各自来源与兼容分支。</p><ul><li>明确本题契约：恢复重建有明确输出</li><li>依据源码解释原因：对本课所追踪协议不够。还需基线、设置、参考上下文和窗口链，明确各自来源与兼容分支。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/session/rollout_reconstruction.rs:9-23</p><p>白话翻译
+        返回值不只是 message list：retained/guardian context、previous settings、reference context、world-state baseline 和窗口链必须从同一次 replay 一起推导，避免各自指向不同时间点。</p><pre><code>// Return value of `Session::reconstruct_history_from_rollout`, bundling the rebuilt history with
+// the resume/fork hydration metadata derived from the same replay.
+#[derive(Debug)]
+pub(super) struct RolloutReconstruction {
+    pub(super) history: Vec&lt;ResponseItemEnvelope&gt;,
+    pub(super) retained_context: codex_history::RetainedContext,
+    pub(super) guardian_history: Option&lt;codex_history::GuardianHistoryCheckpoint&gt;,
+    pub(super) previous_turn_settings: Option&lt;PreviousTurnSettings&gt;,
+    pub(super) reference_context_item: Option&lt;TurnContextItem&gt;,
+    pub(super) world_state_baseline: Option&lt;WorldStateSnapshot&gt;,
+    pub(super) window_number: u64,
+    pub(super) first_window_id: Option&lt;Uuid&gt;,
+    pub(super) previous_window_id: Option&lt;Uuid&gt;,
+    pub(super) window_id: Option&lt;Uuid&gt;,
+}</code></pre></details></details><details class="concept-card" id="concept-c06-02"><summary>最近替代窗口加其后缀</summary><p>重建从最新有效replacement_history checkpoint建立基线，再按边界处理后续rollout。旧窗口不能无条件再次混入当前history。
+
+“恢复后文字更多”可能是污染而非更保真。教学反例把压缩前旧项追加回来，证明与期望当前窗口不同；这是独立模型，不是实际Codex进程。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“最近替代窗口加其后缀”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-02-0"><label for="recall-c06-02-0">旧rollout仍在磁盘，resume应全部拼回吗？</label><textarea id="recall-c06-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/session/rollout_reconstruction.rs:172-207，对照状态、身份、异常和保存边界。</li></ul><p>不能。用最新有效替代历史作为当前基线，再追加适用后缀并处理回滚片段；旧窗口不是当前上下文。</p><ul><li>明确本题契约：最近替代窗口加其后缀</li><li>依据源码解释原因：不能。用最新有效替代历史作为当前基线，再追加适用后缀并处理回滚片段；旧窗口不是当前上下文。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/session/rollout_reconstruction.rs:172-207</p><p>白话翻译
+        遇到 CompactedItem 时恢复窗口链，并把“带 replacement_history 的第一个新 checkpoint”记作 base，同时保存它之后的 suffix。回滚语义还会决定哪些 segment 真正存活。</p><pre><code>        for (index, item) in rollout_items.iter().enumerate().rev() {
+            match item {
+                RolloutItem::Compacted(compacted) =&gt; {
+                    let active_segment =
+                        active_segment.get_or_insert_with(ActiveReplaySegment::default);
+                    active_segment.world_state_replay.push(item);
+                    if active_segment.window.is_none()
+                        &amp;&amp; let Some(window_number) = compacted.window_number
+                    {
+                        active_segment.window = Some(ReconstructedWindow {
+                            number: window_number,
+                            first_id: compacted.first_window_id.as_deref().and_then(parse_uuid_v7),
+                            previous_id: compacted
+                                .previous_window_id
+                                .as_deref()
+                                .and_then(parse_uuid_v7),
+                            id: compacted.window_id.as_deref().and_then(parse_uuid_v7),
+                        });
+                    }
+                    // Looking backward, compaction clears any older baseline unless a newer
+                    // `TurnContextItem` in this same segment has already re-established it.
+                    if matches!(
+                        active_segment.reference_context_item,
+                        TurnReferenceContextItem::NeverSet
+                    ) {
+                        active_segment.reference_context_item = TurnReferenceContextItem::Cleared;
+                    }
+                    if active_segment.base_compaction.is_none()
+                        &amp;&amp; compacted.replacement_history.is_some()
+                    {
+                        active_segment.base_compaction = Some(ReplayCheckpoint {
+                            compacted,
+                            suffix: &amp;rollout_items[index + 1..],
+                        });
+                    }
+                }</code></pre></details></details><details class="concept-card" id="concept-c06-03"><summary>旧格式兼容与新运行分开</summary><p>重建保留summary-only等旧格式兼容路径。历史记录能成功解析与当前二进制能按相同配置发出新请求，是两种能力。
+
+本课已有历史replay和兼容性记录必须保留原口径；此次重新引用源码、跑教学模型，不会解除frozen binary缺失或FeatureToml兼容阻塞，也不自动证明未来模型请求正确。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“旧格式兼容与新运行分开”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-03-0"><label for="recall-c06-03-0">历史replay通过，能改标fresh runtime通过吗？</label><textarea id="recall-c06-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 codex-rs/core/src/session/rollout_reconstruction.rs:382-393，对照状态、身份、异常和保存边界。</li></ul><p>不能。分别报告历史重建、分析器敏感性、二进制/schema兼容和fresh runtime；必须有真实新请求和完整运行证据才验后一层。</p><ul><li>明确本题契约：旧格式兼容与新运行分开</li><li>依据源码解释原因：不能。分别报告历史重建、分析器敏感性、二进制/schema兼容和fresh runtime；必须有真实新请求和完整运行证据才验后一层。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">codex-rs/core/src/session/rollout_reconstruction.rs:382-393</p><p>白话翻译
+        旧 rollout 只有 summary message 时，源码明确承认 canonical context 的临时插入形状可能偏离分布。这是兼容路径，不是理想主路径。</p><pre><code>                RolloutItem::Compacted(compacted) =&gt; {
+                    // Reverse replay already chose the newest surviving checkpoint. Any newer
+                    // replacement checkpoint belongs to a rolled-back turn; replay its original
+                    // items so the rollback can still find the removed user boundary.
+                    if compacted.replacement_history.is_none() {
+                        saw_legacy_compaction_without_replacement_history = true;
+                        // Legacy rollouts without `replacement_history` should rebuild the
+                        // historical TurnContext at the correct insertion point from persisted
+                        // `TurnContextItem`s. These are rare enough that we currently just clear
+                        // `reference_context_item`, reinject canonical context at the end of the
+                        // resumed conversation, and accept the temporary out-of-distribution
+                        // prompt shape.</code></pre></details></details><button type="button" class="export-learning-notes">导出回忆记录</button><p class="notes-feedback" aria-live="polite"></p><details class="export-preview" hidden><summary>可复制的导出记录</summary><label for="export-data">尚未评价的回忆记录（JSON）</label><textarea id="export-data" readonly rows="6"></textarea><a class="export-download" download="code-learning-recall.json">下载 JSON</a></details></section>
+  <main id="course"><section class="course-module" id="module-01" data-title="按下 /compact：从界面到任务">
+  <div class="screen hero-screen" data-number="01">
+    <p class="eyebrow">Module 1 · Command ingress</p>
+    <h2>按下 <code>/compact</code>，还没有“直接改写历史”</h2>
+    <p class="lede">学完这一节，你能把用户看见的命令、TUI 状态切换和 core 里的压缩任务分开，并沿一条真实调用链找到执行边界。</p>
+    <p>把它想成在服务台办理“旧行李压缩”：窗口先验权限、挂起状态牌、开工单；真正重新打包发生在后场任务里。</p>
+    <div class="callout"><strong>第一条纪律：</strong>界面显示“正在压缩”只证明请求已派发，不证明摘要已生成、历史已替换或 checkpoint 已落盘。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">User promise</p>
+    <h3>命令面向用户的承诺很窄：防止撞上上下文上限</h3>
+    <figure class="code-translation" data-source="codex-rs/tui/src/slash_command.rs" data-lines="86-94">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>impl SlashCommand {
+    /// User-visible description shown in the popup.
+    pub fn description(self) -&gt; &amp;'static str {
+        match self {
+            SlashCommand::Feedback =&gt; "send logs to maintainers",
+            SlashCommand::New =&gt; "start a new chat during a conversation",
+            SlashCommand::Init =&gt; "create an AGENTS.md file with instructions for Codex",
+            SlashCommand::Compact =&gt; "summarize conversation to prevent hitting the context limit",
+            SlashCommand::Recap =&gt; "summarize the current conversation now",</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">/compact</span> 被描述成“总结会话”，但这句话没有承诺逐字保留所有历史，也没有说明由本地模型、远端服务还是 token-budget 机制执行。实现细节要继续往下追。</p>
+      </figcaption>
+    </figure>
+    <p><dfn data-definition="上下文窗口是单次模型请求能接收的有限输入空间，不等于完整的持久化会话。">上下文窗口</dfn> 是模型此刻能看到的工作台；rollout 则更像可重放的档案。两者不要混为一谈。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Front desk</p>
+    <h3>TUI 先做门禁和视觉反馈，再发送压缩事件</h3>
+    <figure class="code-translation" data-source="codex-rs/tui/src/chatwidget/slash_dispatch.rs" data-lines="294-312">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>            SlashCommand::Compact =&gt; {
+                if self.blocks_direct_input {
+                    self.add_error_message(PARENT_OWNED_INPUT_MESSAGE.to_string());
+                    return;
+                }
+                self.clear_token_usage();
+                if !self.bottom_pane.is_task_running() {
+                    self.bottom_pane.set_task_running(/*running*/ true);
+                }
+                self.bottom_pane.ensure_status_indicator();
+                self.set_status(
+                    compaction::COMPACTION_HEADER.to_string(),
+                    Some(compaction::COMPACTION_DETAILS.to_string()),
+                    StatusDetailsCapitalization::Preserve,
+                    STATUS_DETAILS_DEFAULT_MAX_LINES,
+                );
+                self.input_queue.user_turn_pending_start = true;
+                self.app_event_tx.compact();
+            }</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>若输入由父任务接管，命令当场拒绝。否则 TUI 清空展示中的 token 用量、点亮运行与状态指示、标记下一回合待开始，最后才通过事件通道发出 compact 请求。</p>
+      </figcaption>
+    </figure>
+    <div class="callout warning"><strong>调试提示：</strong>卡在状态指示器时，先确认事件有没有离开 TUI；不要仅凭界面状态推断 core 已完成压缩。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Back office</p>
+    <h3>core 会先终止旧任务，再为压缩开启一个新 turn</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/handlers.rs" data-lines="243-251">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>pub async fn compact(sess: &amp;Arc&lt;Session&gt;, sub_id: String) {
+    // Stop the old turn before the compact task picks up the next turn's environments.
+    sess.abort_all_tasks(TurnAbortReason::Replaced).await;
+    let turn_context = sess
+        .new_turn_with_default_settings(sub_id, Default::default())
+        .await;
+
+    sess.spawn_task(turn_context, Vec::new(), CompactTask).await;
+}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>压缩不是塞进正在运行的旧 turn。handler 先以 <span class="path-chip">Replaced</span> 原因中止旧任务，再用默认设置建立新 turn，并把 <span class="path-chip">CompactTask</span> 交给 session 调度。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="从斜杠命令到压缩任务的数据流">
+      <button type="button" class="flow-step is-active" data-detail="用户在 ChatWidget 中选择或输入 /compact。">1. Slash command</button>
+      <button type="button" class="flow-step" data-detail="TUI 检查直接输入权限，并更新运行状态与提示。">2. UI gate</button>
+      <button type="button" class="flow-step" data-detail="事件通道把 compact 意图送到应用与 core 边界。">3. App event</button>
+      <button type="button" class="flow-step" data-detail="Session handler 终止旧任务并建立新的 turn context。">4. New turn</button>
+      <button type="button" class="flow-step" data-detail="CompactTask 才会选择实际压缩实现。">5. CompactTask</button>
+      <p class="flow-detail" aria-live="polite">用户在 ChatWidget 中选择或输入 /compact。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>看到状态条时，哪些事实已经成立？</h3>
+    <div class="quiz" data-explanation="slash dispatch 只完成门禁、状态更新和事件派发；真正的实现选择与历史替换发生在后续 core 任务中。">
+      <p class="quiz-kicker">Try it</p>
+      <h3><code>/compact</code> 后 TUI 已显示压缩状态，最稳妥的判断是？</h3>
+      <div class="quiz-options">
+        <button type="button">新的替代历史一定已经持久化</button>
+        <button type="button" data-correct="true">请求已从界面发出，但还需跟踪 core 任务的完成与安装</button>
+        <button type="button">旧 turn 会继续执行，同时后台悄悄压缩</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-02" data-title="三条压缩路径：谁在重组上下文">
+  <div class="screen hero-screen" data-number="02">
+    <p class="eyebrow">Module 2 · Strategy routing</p>
+    <h2>“压缩”不是一种算法，而是三条分流路径</h2>
+    <p class="lede">学完这一节，你能根据 feature 与 provider capability 判断手动或自动压缩会走 token-budget、remote v2 还是 local summarization。</p>
+    <p>想象搬家：一种直接换到空房间，一种请远端仓库重组，一种在本地整理旧物。三者都叫“搬家”，留下的东西却不相同。</p>
+    <div class="callout"><strong>阅读顺序：</strong>先判 <dfn data-definition="Strategy router 根据 feature flag 与 provider capability 选择真正的压缩实现。">策略路由</dfn>，再研究该路径的历史形状；不能拿 local 规则解释所有 compact。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Manual router</p>
+    <h3>手动任务先看 TokenBudget，再问 provider 是否支持 remote v2</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/tasks/compact.rs" data-lines="35-68">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        let _profile_guard = ctx.turn_timing_state.begin_compaction();
+        if ctx.config.features.enabled(Feature::TokenBudget) {
+            crate::compact_token_budget::run_manual_compact_task(session, ctx).await?;
+            return Ok(None);
+        }
+
+        let result = match ctx.provider.capabilities().remote_compaction {
+            RemoteCompactionSupport::V2 =&gt; {
+                emit_compact_metric(
+                    &amp;session.services.session_telemetry,
+                    "remote_v2",
+                    /*manual*/ true,
+                );
+                crate::compact_remote_v2::run_remote_compact_task(session.clone(), ctx).await
+            }
+            RemoteCompactionSupport::Unsupported =&gt; {
+                emit_compact_metric(
+                    &amp;session.services.session_telemetry,
+                    "local",
+                    /*manual*/ true,
+                );
+                let input = vec![UserInput::Text {
+                    text: ctx
+                        .config
+                        .compact_prompt
+                        .as_deref()
+                        .unwrap_or(crate::compact::SUMMARIZATION_PROMPT)
+                        .to_string(),
+                    // Compaction prompt is synthesized; no UI element ranges to preserve.
+                    text_elements: Vec::new(),
+                }];
+                crate::compact::run_compact_task(session.clone(), ctx, input).await
+            }
+        };</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">TokenBudget</span> 优先并提前返回；否则 capability 为 V2 就交给远端；不支持远端才合成 compact prompt，进入本地摘要实现。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Three movers</p>
+    <h3>同一个任务名，三种“谁来整理”</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Token budget</h4><p>不请求模型或服务器生成摘要，而是开启新的 context window。</p></article>
+      <article class="actor-card"><h4>Remote v2</h4><p>provider 声明支持后，由远端 compaction API 返回压缩输出，再由本地安装。</p></article>
+      <article class="actor-card"><h4>Local summary</h4><p>把当前 history 与合成提示交给普通 model stream，等待摘要完成，再构造替代历史。</p></article>
+    </div>
+    <div class="component-chat" aria-label="CompactTask 与三个实现的分流对话">
+      <div class="chat-message" data-speaker="CompactTask">TokenBudget feature 开着吗？</div>
+      <div class="chat-message" data-speaker="Feature gate">开着：直接 start_new_context_window。</div>
+      <div class="chat-message" data-speaker="CompactTask">否则，provider 支持 remote v2 吗？</div>
+      <div class="chat-message" data-speaker="Provider capability">支持：远端压缩；不支持：本地摘要。</div>
+      <button type="button" class="replay-chat">重放分流</button>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Fresh window</p>
+    <h3>Token-budget 路径明确跳过 model/server summarization</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact_token_budget.rs" data-lines="19-36">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>/// Runs token-budget manual compaction as a normal compaction lifecycle.
+///
+/// Token-budget compaction skips model/server summarization and installs a fresh context window
+/// instead. It is still modeled as compaction so compact hooks and `ContextCompaction` turn items
+/// observe the same lifecycle as local or remote compaction.
+pub(crate) async fn run_manual_compact_task(
+    sess: Arc&lt;Session&gt;,
+    turn_context: Arc&lt;TurnContext&gt;,
+) -&gt; CodexResult&lt;()&gt; {
+    sess.emit_turn_started(&amp;turn_context).await;
+
+    // Manual compaction runs outside run_turn, so it captures its own current step.
+    let step_context = sess
+        .capture_step_context(Arc::clone(&amp;turn_context), &amp;CancellationToken::new())
+        .await?;
+    let world_state = Arc::new(sess.build_world_state_for_step(&amp;step_context).await?);
+    run_compact_task_inner(&amp;sess, &amp;step_context, world_state, CompactionTrigger::Manual).await
+}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>它仍发出共同的 compaction lifecycle 与 turn item，方便 hooks 和观察层保持一致；但“同生命周期”不代表“同摘要语义”。这里根本没有生成 summary。</p>
+      </figcaption>
+    </figure>
+    <div class="callout warning"><strong>常见误判：</strong>看见 <code>ContextCompaction</code> 事件，不能反推一定发生了模型摘要。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Automatic route</p>
+    <h3>自动压缩复用同一优先级，但发生在 turn 流程内部</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/turn.rs" data-lines="1457-1503">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    if turn_context.config.features.enabled(Feature::TokenBudget) {
+        // Compaction is the reset request, so force a new context window
+        // instead of consuming a pending `new_context` tool request.
+        crate::compact_token_budget::run_inline_auto_compact_task(
+            Arc::clone(sess),
+            step_context,
+            initial_context_injection,
+        )
+        .await?;
+        return Ok(());
+    }
+
+    match turn_context.provider.capabilities().remote_compaction {
+        RemoteCompactionSupport::V2 =&gt; {
+            emit_compact_metric(
+                &amp;sess.services.session_telemetry,
+                "remote_v2",
+                /*manual*/ false,
+            );
+            run_inline_remote_auto_compact_task_v2(
+                Arc::clone(sess),
+                step_context,
+                fallback_step_context,
+                client_session,
+                initial_context_injection,
+                reason,
+                phase,
+            )
+            .await?;
+        }
+        RemoteCompactionSupport::Unsupported =&gt; {
+            emit_compact_metric(
+                &amp;sess.services.session_telemetry,
+                "local",
+                /*manual*/ false,
+            );
+            run_inline_auto_compact_task(
+                Arc::clone(sess),
+                Arc::clone(turn_context),
+                initial_context_injection,
+                reason,
+                phase,
+            )
+            .await?;
+        }
+    }
+    Ok(())</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>自动路径的优先级仍是 token-budget → remote v2 / local，但它还携带 reason、phase、fallback context 与 initial-context 注入策略。触发方式和实现方式是两个维度。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>先判断路径，再判断结果</h3>
+    <div class="quiz" data-explanation="TokenBudget feature 的判断先于 provider capability；启用时会直接走 fresh context window，而不是 remote v2 或 local summary。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>provider 支持 remote v2，但 TokenBudget feature 已启用。手动 <code>/compact</code> 走哪条路？</h3>
+      <div class="quiz-options">
+        <button type="button">remote v2，因为 provider capability 优先</button>
+        <button type="button" data-correct="true">token-budget fresh window，因为 feature 检查先返回</button>
+        <button type="button">local summary，因为手动压缩只能在本地完成</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-03" data-title="本地摘要怎样等到真正完成">
+  <div class="screen hero-screen" data-number="03">
+    <p class="eyebrow">Module 3 · Local summarization</p>
+    <h2>收到几段输出，不等于摘要已经完成</h2>
+    <p class="lede">学完这一节，你能解释 local summarization 如何构造 prompt、怎样区分可重试错误，以及为什么只有 <code>response.completed</code> 才能进入历史替换。</p>
+    <p>它像编辑部签样：零散稿件可以陆续到达，但只有主编盖下“完成”章，成稿才允许送去排版。</p>
+    <div class="callout"><strong>本章范围：</strong>只追上一章的 local 分支。remote v2 与 token-budget 的完成协议不同，不能套用这里的 stream 细节。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Manual semantics</p>
+    <h3>手动 local compact 是一个独立 turn，并明确“不注入初始上下文”</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact.rs" data-lines="146-163">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>pub(crate) async fn run_compact_task(
+    sess: Arc&lt;Session&gt;,
+    turn_context: Arc&lt;TurnContext&gt;,
+    input: Vec&lt;UserInput&gt;,
+) -&gt; CodexResult&lt;()&gt; {
+    sess.emit_turn_started(&amp;turn_context).await;
+    run_compact_task_inner(
+        sess.clone(),
+        turn_context,
+        input,
+        InitialContextInjection::DoNotInject,
+        CompactionTrigger::Manual,
+        CompactionReason::UserRequested,
+        CompactionPhase::StandaloneTurn,
+    )
+    .await?;
+    Ok(())
+}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>这条入口把三个维度钉死：触发器是 Manual，原因是 UserRequested，阶段是 StandaloneTurn。<span class="path-chip">DoNotInject</span> 表示压缩 turn 不先把 canonical initial context 塞进替代历史。</p>
+      </figcaption>
+    </figure>
+    <p><dfn data-definition="Compaction phase 描述压缩发生在正常 turn 之前、之中、之后，或作为独立 turn；它影响上下文注入与提交时机。">phase</dfn> 不是日志装饰，而会改变安装语义。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Prepare request</p>
+    <h3>旧历史的克隆副本加上合成提示，才组成压缩请求</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact.rs" data-lines="257-300">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    let compaction_item = TurnItem::ContextCompaction(ContextCompactionItem::new());
+    sess.emit_turn_item_started(&amp;turn_context, &amp;compaction_item)
+        .await;
+    let initial_input_for_turn: ResponseInputItem = ResponseInputItem::from(input);
+
+    let mut history = sess.clone_history().await;
+    history.record_items(
+        &amp;[initial_input_for_turn.into()],
+        turn_context.model_info().truncation_policy.into(),
+    );
+
+    let max_retries = turn_context.provider.info().stream_max_retries();
+    let mut retries = 0;
+    let mut client_session = sess.services.model_client.new_session();
+    // Reuse one client session so turn-scoped state (sticky routing, websocket incremental
+    // request tracking)
+    // survives retries within this compact turn.
+    let responses_metadata = sess
+        .compaction_responses_metadata(turn_context.as_ref(), compaction_metadata)
+        .await;
+
+    let compaction_response = loop {
+        // Clone is required because of the loop
+        let mut turn_input = history
+            .clone()
+            .for_prompt(&amp;turn_context.model_info().input_modalities);
+        sess.services
+            .executed_tool_calls
+            .attach_to_compaction_prompt(&amp;mut turn_input);
+        let turn_input_len = turn_input.len();
+        let prompt = Prompt {
+            input: turn_input,
+            base_instructions: sess.get_prompt_base_instructions().await,
+            ..Default::default()
+        };
+        let attempt_result = drain_to_completed(
+            &amp;sess,
+            turn_context.as_ref(),
+            &amp;mut client_session,
+            &amp;responses_metadata,
+            &amp;prompt,
+            compaction_metadata.phase(),
+        )
+        .await;</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>live history 先克隆，再追加合成的 compact 输入；真正送模前还会按模型输入模态裁剪，并附上已执行工具调用。重试复用同一个 client session，以保住 turn-scoped 状态。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Retry policy</p>
+    <h3>上下文过长与普通 stream 故障，是两条不同恢复路线</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact.rs" data-lines="302-346">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        match attempt_result {
+            Ok(response) =&gt; {
+                break response;
+            }
+            Err(err)
+                if matches!(
+                    err.details(),
+                    CodexErrorDetails::Interrupted | CodexErrorDetails::TurnAborted
+                ) =&gt;
+            {
+                return Err(err);
+            }
+            Err(e) if matches!(e.details(), CodexErrorDetails::SessionBudgetExceeded) =&gt; {
+                return Err(e);
+            }
+            Err(e) if matches!(e.details(), CodexErrorDetails::ContextWindowExceeded) =&gt; {
+                if turn_input_len &gt; 1 {
+                    // Trim from the beginning to preserve cache (prefix-based) and keep recent messages intact.
+                    error!(
+                        "Context window exceeded while compacting; removing oldest history item. Error: {e}"
+                    );
+                    history.remove_first_item();
+                    retries = 0;
+                    continue;
+                }
+                sess.set_total_tokens_full(turn_context.as_ref()).await;
+                return Err(e);
+            }
+            Err(e) =&gt; {
+                if retries &lt; max_retries {
+                    retries += 1;
+                    let delay = backoff(retries);
+                    sess.notify_stream_error(
+                        turn_context.as_ref(),
+                        format!("Reconnecting... {retries}/{max_retries}"),
+                        e,
+                    )
+                    .await;
+                    tokio::time::sleep(delay).await;
+                    continue;
+                } else {
+                    return Err(e);
+                }
+            }
+        }</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>中断、turn 被替换、预算耗尽都直接失败。只有 context window 超限时会逐个删最老 history item；普通 stream 错误则按 provider 的次数与退避策略重连。</p>
+      </figcaption>
+    </figure>
+    <div class="callout warning"><strong>失败诊断：</strong>“Reconnecting…” 对应普通 stream 重试；反复出现 context-window 错误则意味着输入在从最旧项开始收缩。两者不要混成一个故障链。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Completion barrier</p>
+    <h3>stream 关闭不算成功，必须等到 Completed event</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact.rs" data-lines="797-845">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    let mut output = Vec::new();
+    loop {
+        let maybe_event = stream.next().await;
+        let Some(event) = maybe_event else {
+            return Err(CodexErr::Stream(
+                "stream closed before response.completed".into(),
+            ));
+        };
+        match event {
+            Ok(ResponseEvent::OutputItemDone(item)) =&gt; {
+                if matches!(phase, CompactionPhase::PostTurn) {
+                    // Commit post-turn summaries only after success; failures must leave both
+                    // the live history and persisted rollout intact.
+                    output.push(item);
+                } else {
+                    sess.record_conversation_items(
+                        turn_context,
+                        turn_context.model_info(),
+                        std::slice::from_ref(&amp;item),
+                    )
+                    .await;
+                }
+            }
+            Ok(ResponseEvent::ServerReasoningIncluded(included)) =&gt; {
+                sess.set_server_reasoning_included(included).await;
+            }
+            Ok(ResponseEvent::RateLimits(snapshot)) =&gt; {
+                sess.update_rate_limits(turn_context, snapshot).await;
+            }
+            Ok(ResponseEvent::Completed {
+                response_id,
+                token_usage,
+                usage_metadata,
+                ..
+            }) =&gt; {
+                sess.record_observed_response_completed(
+                    turn_context,
+                    &amp;response_id,
+                    token_usage.as_ref(),
+                    usage_metadata.as_ref(),
+                )
+                .await;
+                sess.update_token_usage_info(turn_context, token_usage.as_ref())
+                    .await?;
+                return Ok(CompactionResponse {
+                    response_id,
+                    output,
+                });
+            }</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>如果流先断，函数明确报错。OutputItemDone 只是中间产物；看到 Completed 后，代码记录 response ID 和用量，才返回可供下一阶段安装的 <span class="path-chip">CompactionResponse</span>。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>别把半成品当成新事实</h3>
+    <div class="quiz" data-explanation="drain_to_completed 在 stream 先关闭时直接返回错误；只有 ResponseEvent::Completed 才返回 CompactionResponse。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>已经收到一个 <code>OutputItemDone</code>，随后 stream 关闭且没有 <code>Completed</code>。结果是什么？</h3>
+      <div class="quiz-options">
+        <button type="button">使用最后一个 output item 作为摘要并安装</button>
+        <button type="button" data-correct="true">本次尝试报 stream 错误，不能视为完成</button>
+        <button type="button">自动切换到 token-budget 路径</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-04" data-title="替代历史究竟保留什么">
+  <div class="screen hero-screen" data-number="04">
+    <p class="eyebrow">Module 4 · Replacement shape</p>
+    <h2>压缩不是缩小每条消息，而是重建一份替代历史</h2>
+    <p class="lede">学完这一节，你能说清 local replacement history 的成员、顺序与预算，并解释它为什么不等于原始对话的无损副本。</p>
+    <p>把原历史当成托运行李，模型上下文只允许一个登机箱：最近的真实用户消息优先装入，旧过程由摘要代表，某些原件不再逐条随身携带。</p>
+    <div class="callout"><strong>关键术语：</strong><dfn data-definition="Replacement history 是压缩后直接替换 live model-visible history 的新序列；完整 rollout 仍承担持久化与恢复证据。">替代历史</dfn> 是“接下来给模型看的序列”，不是删除所有旧档案。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Eligible originals</p>
+    <h3>local 路径只从可解析的真实用户消息中挑原文</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact.rs" data-lines="578-600">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>fn compacted_user_message(
+    item: &amp;ResponseItem,
+    harness_metadata: Option&lt;CodexHarnessMetadata&gt;,
+) -&gt; Option&lt;CompactedUserMessage&gt; {
+    let Some(TurnItem::UserMessage(user)) = crate::event_mapping::parse_turn_item(item) else {
+        return None;
+    };
+    if is_summary_message(&amp;user.message()) {
+        return None;
+    }
+    Some(CompactedUserMessage {
+        id: item.id().cloned(),
+        message: user.message(),
+        internal_chat_message_metadata_passthrough: match item {
+            ResponseItem::Message {
+                internal_chat_message_metadata_passthrough,
+                ..
+            } =&gt; internal_chat_message_metadata_passthrough.clone(),
+            _ =&gt; None,
+        },
+        harness_metadata,
+    })
+}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>解析不成 UserMessage 的 item 被跳过；此前的 compaction summary 也明确排除，避免把旧摘要伪装成用户原话再重复装入。被选中的消息可携带 identity 与 metadata。</p>
+      </figcaption>
+    </figure>
+    <div class="callout warning"><strong>含义：</strong>assistant 回答与工具调用不会在这一步作为逐条原件进入 local replacement；它们的重要信息只能依赖新摘要等机制承接。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Carry-on budget</p>
+    <h3>从最近用户消息倒着选，装满 20k token 预算为止</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact.rs" data-lines="674-719">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>pub(crate) fn build_compacted_history(
+    initial_context: Vec&lt;ResponseItemEnvelope&gt;,
+    user_messages: &amp;[CompactedUserMessage],
+    summary_text: &amp;str,
+) -&gt; Vec&lt;ResponseItemEnvelope&gt; {
+    build_compacted_history_with_limit(
+        initial_context,
+        user_messages,
+        summary_text,
+        COMPACT_USER_MESSAGE_MAX_TOKENS,
+    )
+}
+
+fn build_compacted_history_with_limit(
+    mut history: Vec&lt;ResponseItemEnvelope&gt;,
+    user_messages: &amp;[CompactedUserMessage],
+    summary_text: &amp;str,
+    max_tokens: usize,
+) -&gt; Vec&lt;ResponseItemEnvelope&gt; {
+    let mut selected_messages: Vec&lt;CompactedUserMessage&gt; = Vec::new();
+    if max_tokens &gt; 0 {
+        let mut remaining = max_tokens;
+        for message in user_messages.iter().rev() {
+            if remaining == 0 {
+                break;
+            }
+            let tokens = approx_token_count(&amp;message.message);
+            if tokens &lt;= remaining {
+                selected_messages.push(message.clone());
+                remaining = remaining.saturating_sub(tokens);
+            } else {
+                let truncated =
+                    truncate_text(&amp;message.message, TruncationPolicy::Tokens(remaining));
+                selected_messages.push(CompactedUserMessage {
+                    id: message.id.clone(),
+                    message: truncated,
+                    internal_chat_message_metadata_passthrough: message
+                        .internal_chat_message_metadata_passthrough
+                        .clone(),
+                    harness_metadata: message.harness_metadata.clone(),
+                });
+                break;
+            }
+        }
+        selected_messages.reverse();
+    }</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>默认上限来自 <span class="path-chip">COMPACT_USER_MESSAGE_MAX_TOKENS = 20_000</span>。算法从最新消息倒序装箱；最后一条若放不下会按剩余额度截断，之后再反转回时间顺序。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact.rs" data-lines="753-763">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    let summary_text = if summary_text.is_empty() {
+        "(no summary available)".to_string()
+    } else {
+        summary_text.to_string()
+    };
+
+    history.push(ResponseItemEnvelope::new(ContextualUserFragment::into(
+        CompactionSummary::new(summary_text),
+    )));
+
+    history</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>无论摘要是否为空，函数最后都会追加一个 CompactionSummary；因此 local 形状可以简记为“初始上下文（若有）＋保留的用户消息＋摘要”。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Assemble local history</p>
+    <h3>完成响应只是原料；还要收集消息、构造序列并安装</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact.rs" data-lines="349-370">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    let history_snapshot = sess.clone_history().await;
+    let history_items = history_snapshot.annotated_items();
+    let summary_suffix = if matches!(compaction_metadata.phase(), CompactionPhase::PostTurn) {
+        get_last_assistant_message_from_turn(compaction_response.output.iter())
+            .filter(|summary| !summary.trim().is_empty())
+            .ok_or_else(|| {
+                CodexErr::Stream(
+                    "Post-turn compaction completed without an assistant summary".to_string(),
+                )
+            })?
+    } else {
+        get_last_assistant_message_from_turn(history_snapshot.raw_items()).unwrap_or_default()
+    };
+    let summary_text = format!("{SUMMARY_PREFIX}\n{summary_suffix}");
+    let identity = if sess.guardian_context_mode == GuardianContextMode::ThreadOwned {
+        CompactedMessageIdentity::Preserve
+    } else {
+        CompactedMessageIdentity::Regenerate
+    };
+    let user_messages = collect_annotated_user_messages(history_items, identity);
+
+    let mut new_history = build_compacted_history(Vec::new(), &amp;user_messages, &amp;summary_text);</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>代码先从对应位置抽出 assistant summary，添加统一前缀，再按 guardian mode 决定保留或重建用户消息 identity，最后才得到 <span class="path-chip">new_history</span>。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="本地替代历史的数据重组过程">
+      <button type="button" class="flow-step is-active" data-detail="从 session 克隆带注解的历史快照。">1. Snapshot</button>
+      <button type="button" class="flow-step" data-detail="提取已完成响应中的 assistant summary，并加统一前缀。">2. Summary</button>
+      <button type="button" class="flow-step" data-detail="过滤真实用户消息，按最近优先装入预算。">3. Retain users</button>
+      <button type="button" class="flow-step" data-detail="把 summary 放到序列最后，形成 local replacement history。">4. Rebuild</button>
+      <button type="button" class="flow-step" data-detail="下一章才会把它安装到 live state 并写 checkpoint。">5. Install later</button>
+      <p class="flow-detail" aria-live="polite">从 session 克隆带注解的历史快照。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Remote is different</p>
+    <h3>remote v2 也追加压缩输出，但原件保留规则更宽</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact_remote_v2.rs" data-lines="505-532">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>fn build_v2_compacted_history(
+    prompt_input: Vec&lt;ResponseItem&gt;,
+    prompt_input_metadata: Vec&lt;Option&lt;CodexHarnessMetadata&gt;&gt;,
+    compaction_output: ResponseItem,
+    retain_client_developer_messages: bool,
+    image_budget: RetainedImageBudget,
+) -&gt; (Vec&lt;ResponseItemEnvelope&gt;, usize) {
+    debug_assert_eq!(prompt_input.len(), prompt_input_metadata.len());
+    let prompt_input = prompt_input
+        .into_iter()
+        .zip(prompt_input_metadata)
+        .map(|(item, metadata)| ResponseItemEnvelope { item, metadata })
+        .collect::&lt;Vec&lt;_&gt;&gt;();
+    let retained = v2_history_item_groups(prompt_input)
+        .filter(|group| {
+            is_retained_for_remote_compaction_v2(&amp;group.source, retain_client_developer_messages)
+        })
+        .flat_map(HistoryItemGroup::into_items)
+        .collect::&lt;Vec&lt;_&gt;&gt;();
+    let mut retained =
+        truncate_retained_messages(retained, RETAINED_MESSAGE_TOKEN_BUDGET, image_budget);
+    let retained_image_count = retained
+        .iter()
+        .map(|envelope| retained_input_image_count(&amp;envelope.item))
+        .sum::&lt;usize&gt;();
+    retained.push(ResponseItemEnvelope::new(compaction_output));
+    (retained, retained_image_count)
+}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>remote v2 先把 input 与 metadata 重新配对、按 group 过滤，再用独立预算截断，最后追加 server 返回的 compaction output。它甚至单独统计保留图片，因此不能假设等同于 local 的“用户消息＋文字摘要”。</p>
+      </figcaption>
+    </figure>
+    <details>
+      <summary>remote v2 到底保留哪些消息？</summary>
+      <p>当前 revision 的过滤器允许真实 user message 与 hook prompt；也可保留受限大小、非子任务进度、非 FINAL_ANSWER 的 AgentMessage，并由 feature 决定是否保留 client-authored developer message。规则见 <span class="path-chip">compact_remote_v2.rs:556–600</span>。</p>
+    </details>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>压缩后的“记得”不等于逐字仍在</h3>
+    <div class="quiz" data-explanation="local replacement history 逐条保留的是受预算约束的真实用户消息，并把新的 CompactionSummary 放在最后；assistant/tool 过程不是逐条原样复制。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>local compact 后，一条很早的工具输出为何可能无法逐字找回？</h3>
+      <div class="quiz-options">
+        <button type="button">因为 compact 会删除整个 rollout 文件</button>
+        <button type="button" data-correct="true">因为 live replacement 主要保留近期用户消息与摘要，工具过程不逐条复制</button>
+        <button type="button">因为 remote v2 强制删掉所有工具结果</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-05" data-title="Checkpoint 何时成为新事实">
+  <div class="screen hero-screen" data-number="05">
+    <p class="eyebrow">Module 5 · Install and persist</p>
+    <h2>摘要生成成功，仍不等于 session 已经采用它</h2>
+    <p class="lede">学完这一节，你能区分生成、安装和持久化三个提交点，并读懂 CompactedItem 如何把 replacement history 变成可恢复的 checkpoint。</p>
+    <p>像财务过账：业务员做出一张新表只是“拟稿”；写进当前总账是“生效”；连同凭证归档才让下次开机可以复原。</p>
+    <div class="callout"><strong>验收边界：</strong><dfn data-definition="Checkpoint 是写入 rollout 的压缩记录，携带替代历史及恢复所需元数据。">checkpoint</dfn> 必须同时服务 live history 和 future resume；只有 summary 文本不足以证明这两个状态一致。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Handoff</p>
+    <h3>local builder 把新历史和元数据一起交给安装函数</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/compact.rs" data-lines="376-403">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    let (window_number, window_ids) = sess.advance_auto_compact_window().await;
+
+    let (initial_context, world_state_baseline) =
+        build_compaction_initial_context(sess.as_ref(), &amp;initial_context_injection).await;
+    if !initial_context.is_empty() {
+        new_history =
+            insert_initial_context_before_last_real_user_or_summary(new_history, initial_context);
+    }
+    let reference_context_item = match initial_context_injection {
+        InitialContextInjection::DoNotInject =&gt; None,
+        InitialContextInjection::BeforeLastUserMessage { step_context, .. } =&gt; {
+            Some(step_context.to_turn_context_item())
+        }
+    };
+    sess.replace_compacted_history(
+        new_history,
+        reference_context_item,
+        world_state_baseline,
+        CompactedHistoryMetadata {
+            message: summary_text,
+            window_number,
+            window_ids,
+            compaction_response_id: Some(compaction_response.response_id),
+            compaction_model_hash: turn_context.model_info().comp_hash.clone(),
+            reviewer_compaction_hash: None,
+        },
+    )
+    .await;</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>builder 先推进窗口编号，按 phase 决定是否放入 initial context，再把 <span class="path-chip">new_history</span>、reference context、world-state baseline 与 response/model/window 元数据一起交给唯一安装入口。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Checkpoint payload</p>
+    <h3>安装入口先补齐 item ID，再复制出持久化快照</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/mod.rs" data-lines="3936-3972">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    pub(crate) async fn replace_compacted_history(
+        &amp;self,
+        mut items: Vec&lt;ResponseItemEnvelope&gt;,
+        reference_context_item: Option&lt;TurnContextItem&gt;,
+        world_state_baseline: Option&lt;Arc&lt;WorldState&gt;&gt;,
+        metadata: CompactedHistoryMetadata,
+    ) {
+        for envelope in &amp;mut items {
+            Self::assign_missing_response_item_id(&amp;mut envelope.item);
+        }
+        if let Some(checkpoint) = items.iter_mut().rev().find(|envelope| {
+            matches!(
+                envelope.item,
+                ResponseItem::Compaction { .. } | ResponseItem::ContextCompaction { .. }
+            )
+        }) {
+            checkpoint
+                .metadata
+                .get_or_insert_default()
+                .compaction_model_hash = metadata.compaction_model_hash;
+        }
+        let mut compacted_item = CompactedItem {
+            message: metadata.message,
+            replacement_history: Some(items.clone()),
+            retained_context: None,
+            guardian_history: None,
+            mcp_resource_origins: self.services.mcp_runtime.resource_origin_checkpoint(),
+            window_number: Some(metadata.window_number),
+            first_window_id: Some(metadata.window_ids.first_window_id.to_string()),
+            previous_window_id: metadata
+                .window_ids
+                .previous_window_id
+                .map(|id| id.to_string()),
+            window_id: Some(metadata.window_ids.window_id.to_string()),
+            compaction_response_id: metadata.compaction_response_id,
+            latest_token_usage_record: self.state.lock().await.latest_token_usage_record.clone(),
+        };</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>missing ID 在 clone 之前补齐，所以 live 与 persisted 两份 history 共享同一 identity。CompactedItem 不只存 message，还内嵌完整 replacement、窗口链、远端 response ID、MCP 来源和最近 token record。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Install live state</p>
+    <h3>真正生效发生在 state lock 内的历史替换</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/mod.rs" data-lines="3973-3995">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        // Wait for accepted updates to finish persisting, then keep later updates from
+        // overtaking the current settings snapshot while its checkpoint is written.
+        let _settings_guard = thread_settings::acquire_persistence_lock(self).await;
+        // Compaction starts a new history window, so its WorldState baseline must be full.
+        let mut world_state_item = None;
+        {
+            let mut state = self.state.lock().await;
+            state.replace_annotated_history(
+                items,
+                reference_context_item.clone(),
+                HistoryReplacement::Compaction {
+                    reviewer_compaction_hash: metadata.reviewer_compaction_hash,
+                },
+            );
+            compacted_item.guardian_history = state.history.guardian_history_checkpoint();
+            compacted_item.retained_context = Some(state.history.retained_context().clone());
+            state.reasoning_effort_pin = ReasoningEffortPin::Compacted;
+            if let Some(world_state) = world_state_baseline {
+                let snapshot = world_state.snapshot();
+                world_state_item = Some(WorldStateItem::full(snapshot.clone().into_object()));
+                state.history.set_world_state_baseline(snapshot);
+            }
+        }</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>persistence lock 防止设置快照乱序；state lock 内才用 compaction 原因替换 live annotated history，并补上 guardian/retained context 与完整 world-state baseline。</p>
+      </figcaption>
+    </figure>
+    <div class="callout"><strong>语义边界：</strong><code>replace_annotated_history</code> 之后，新历史才成为后续模型请求的当前事实。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Persist the receipt</p>
+    <h3>同一临界区继续写 Compacted、WorldState、TurnContext 与 settings</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/mod.rs" data-lines="3997-4013">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        let mut rollout_items = vec![RolloutItem::Compacted(compacted_item)];
+        // Persist the baseline after the replacement history that established it.
+        if let Some(world_state_item) = world_state_item {
+            rollout_items.push(RolloutItem::WorldState(world_state_item));
+        }
+        if let Some(turn_context_item) = reference_context_item {
+            rollout_items.push(RolloutItem::TurnContext(turn_context_item));
+        }
+        // The frozen turn context must not override current settings in persisted metadata.
+        rollout_items.push(RolloutItem::EventMsg(
+            thread_settings::applied_event(self).await,
+        ));
+        self.persist_rollout_items(&amp;rollout_items).await;
+        {
+            let mut state = self.state.lock().await;
+            state.queue_pending_session_start_source(codex_hooks::SessionStartSource::Compact);
+        }</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>rollout 先记 Compacted checkpoint，再依次附带 baseline、reference context 与当前 settings 事件。持久化返回后，还排队一次来源为 Compact 的 session-start hook。</p>
+      </figcaption>
+    </figure>
+    <div class="component-chat" aria-label="生成、安装与持久化三个阶段的组件对话">
+      <div class="chat-message" data-speaker="Compactor">我已经产出 replacement history 和元数据。</div>
+      <div class="chat-message" data-speaker="Session state">我补齐 ID，并把它安装成当前 model-visible history。</div>
+      <div class="chat-message" data-speaker="Rollout">我记录 checkpoint 与恢复元数据，让未来 resume 有锚点。</div>
+      <div class="chat-message" data-speaker="Reviewer">三步都要查；“有 summary 文本”不是完整交付证据。</div>
+      <button type="button" class="replay-chat">重放提交链</button>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>判断故障发生在哪个提交点</h3>
+    <div class="quiz" data-explanation="摘要完成只是生成阶段；replace_compacted_history 才补齐 identity、替换 live state 并持久化带 replacement_history 的 CompactedItem。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>日志显示模型已经返回摘要，但恢复会话后看不到压缩后的状态。优先查什么？</h3>
+      <div class="quiz-options">
+        <button type="button">只检查摘要提示词是否足够长</button>
+        <button type="button" data-correct="true">检查 replace_compacted_history 是否安装并持久化 CompactedItem</button>
+        <button type="button">断定 TUI 没有发出 slash command</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-06" data-title="Resume 如何接上压缩后的历史">
+  <div class="screen hero-screen" data-number="06">
+    <p class="eyebrow">Module 6 · Rollout reconstruction</p>
+    <h2>恢复不是从头重放，而是“checkpoint 快照＋存活后缀”</h2>
+    <p class="lede">学完这一节，你能解释 resume 如何反向寻找最新可用 checkpoint、何时停止扫描、怎样前向重放后缀，以及旧格式为何需要降级重建。</p>
+    <p>它像数据库恢复：先找到最近一次完整快照，再只重放快照之后的事务日志；若老快照缺字段，才启用兼容修复。</p>
+    <div class="callout"><strong>最终心智模型：</strong><dfn data-definition="Rollout reconstruction 从持久化条目重建 live history、上下文与窗口元数据。">rollout reconstruction</dfn> 的目标不是复刻 UI transcript，而是恢复下一次模型调用所需的语义状态。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Resume entry</p>
+    <h3>InitialHistory::Resumed 会把 rollout 交给统一重建器</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/mod.rs" data-lines="1564-1578">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>            InitialHistory::Resumed(resumed_history) =&gt; {
+                let turn_context = self.new_default_turn().await;
+                let rollout_items = resumed_history.history;
+                if matches!(
+                    rollout_items.iter().rev().find_map(|item| match item {
+                        RolloutItem::EventMsg(event) =&gt; agent_status_from_event(event),
+                        _ =&gt; None,
+                    }),
+                    Some(AgentStatus::Interrupted)
+                ) {
+                    self.agent_status.send_replace(AgentStatus::Interrupted);
+                }
+                let previous_turn_settings = self
+                    .apply_rollout_reconstruction(&amp;turn_context, &amp;rollout_items)
+                    .await;</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>resume 先创建当前默认 turn、取出持久化条目，并恢复最近的 Interrupted 状态；真正的历史、settings 与上下文组装集中在 <span class="path-chip">apply_rollout_reconstruction</span>。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/rollout_reconstruction.rs" data-lines="9-23">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>// Return value of `Session::reconstruct_history_from_rollout`, bundling the rebuilt history with
+// the resume/fork hydration metadata derived from the same replay.
+#[derive(Debug)]
+pub(super) struct RolloutReconstruction {
+    pub(super) history: Vec&lt;ResponseItemEnvelope&gt;,
+    pub(super) retained_context: codex_history::RetainedContext,
+    pub(super) guardian_history: Option&lt;codex_history::GuardianHistoryCheckpoint&gt;,
+    pub(super) previous_turn_settings: Option&lt;PreviousTurnSettings&gt;,
+    pub(super) reference_context_item: Option&lt;TurnContextItem&gt;,
+    pub(super) world_state_baseline: Option&lt;WorldStateSnapshot&gt;,
+    pub(super) window_number: u64,
+    pub(super) first_window_id: Option&lt;Uuid&gt;,
+    pub(super) previous_window_id: Option&lt;Uuid&gt;,
+    pub(super) window_id: Option&lt;Uuid&gt;,
+}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>返回值不只是 message list：retained/guardian context、previous settings、reference context、world-state baseline 和窗口链必须从同一次 replay 一起推导，避免各自指向不同时间点。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Reverse search</p>
+    <h3>先从新到旧，锁定仍然存活的 replacement checkpoint</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/rollout_reconstruction.rs" data-lines="133-143">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>impl Session {
+    pub(super) async fn reconstruct_history_from_rollout(
+        &amp;self,
+        turn_context: &amp;TurnContext,
+        rollout_items: &amp;[RolloutItem],
+    ) -&gt; RolloutReconstruction {
+        // Replay metadata should already match the shape of the future lazy reverse loader, even
+        // while history materialization still uses an eager bridge. Scan newest-to-oldest,
+        // stopping once a surviving replacement-history checkpoint and the required resume metadata
+        // are both known; then replay only the buffered surviving tail forward to preserve exact
+        // history semantics.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>算法方向先反向，是为了尽快找到最新可用基线与恢复元数据；找到后才把仍然有效的尾部按正向语义回放。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/rollout_reconstruction.rs" data-lines="172-207">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        for (index, item) in rollout_items.iter().enumerate().rev() {
+            match item {
+                RolloutItem::Compacted(compacted) =&gt; {
+                    let active_segment =
+                        active_segment.get_or_insert_with(ActiveReplaySegment::default);
+                    active_segment.world_state_replay.push(item);
+                    if active_segment.window.is_none()
+                        &amp;&amp; let Some(window_number) = compacted.window_number
+                    {
+                        active_segment.window = Some(ReconstructedWindow {
+                            number: window_number,
+                            first_id: compacted.first_window_id.as_deref().and_then(parse_uuid_v7),
+                            previous_id: compacted
+                                .previous_window_id
+                                .as_deref()
+                                .and_then(parse_uuid_v7),
+                            id: compacted.window_id.as_deref().and_then(parse_uuid_v7),
+                        });
+                    }
+                    // Looking backward, compaction clears any older baseline unless a newer
+                    // `TurnContextItem` in this same segment has already re-established it.
+                    if matches!(
+                        active_segment.reference_context_item,
+                        TurnReferenceContextItem::NeverSet
+                    ) {
+                        active_segment.reference_context_item = TurnReferenceContextItem::Cleared;
+                    }
+                    if active_segment.base_compaction.is_none()
+                        &amp;&amp; compacted.replacement_history.is_some()
+                    {
+                        active_segment.base_compaction = Some(ReplayCheckpoint {
+                            compacted,
+                            suffix: &amp;rollout_items[index + 1..],
+                        });
+                    }
+                }</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>遇到 CompactedItem 时恢复窗口链，并把“带 replacement_history 的第一个新 checkpoint”记作 base，同时保存它之后的 suffix。回滚语义还会决定哪些 segment 真正存活。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Snapshot plus suffix</p>
+    <h3>元数据齐全就停止向旧处扫描，再从基线前向重放</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/rollout_reconstruction.rs" data-lines="311-363">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>            if base_compaction.is_some()
+                &amp;&amp; previous_turn_settings.is_some()
+                &amp;&amp; !matches!(reference_context_item, TurnReferenceContextItem::NeverSet)
+            {
+                // At this point we have both eager resume metadata values and the replacement-
+                // history base for the surviving tail, so older rollout items cannot affect this
+                // result.
+                break;
+            }
+        }
+
+        if let Some(active_segment) = active_segment.take() {
+            finalize_active_segment(
+                active_segment,
+                &amp;mut base_compaction,
+                &amp;mut previous_turn_settings,
+                &amp;mut reference_context_item,
+                &amp;mut world_state_replay,
+                &amp;mut window,
+                &amp;mut pending_rollback_turns,
+            );
+        }
+
+        let fallback_window_number = u64::try_from(
+            rollout_items
+                .iter()
+                .filter(|item| matches!(item, RolloutItem::Compacted(_)))
+                .count(),
+        )
+        .unwrap_or(u64::MAX);
+
+        let mut history = ContextManager::with_guardian_context_mode(
+            self.guardian_context_mode,
+            &amp;turn_context.session_source,
+        );
+        let mut saw_legacy_compaction_without_replacement_history = false;
+        if let Some(checkpoint) = base_compaction
+            &amp;&amp; let Some(items) = &amp;checkpoint.compacted.replacement_history
+        {
+            history.replace_annotated(items.clone());
+            history.restore_review_context(
+                checkpoint.compacted.retained_context.as_ref(),
+                checkpoint.compacted.guardian_history.as_ref(),
+                // Keep the backup during replay; the installing session resolves its reviewer.
+                /*reviewer_compaction_hash*/
+                None,
+            );
+        }
+        // Materialize exact history semantics from the replay-derived suffix. The eventual lazy
+        // design should keep this same replay shape, but drive it from a resumable reverse source
+        // instead of an eagerly loaded `&amp;[RolloutItem]`.
+        let rollout_suffix = base_compaction.map_or(rollout_items, |checkpoint| checkpoint.suffix);
+        for item in rollout_suffix {</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>base、previous settings 与 reference context 都已知后，旧条目不能再改变结果，所以反向扫描停止。随后 history 先装 checkpoint snapshot，再只遍历 suffix。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="恢复压缩历史的数据流">
+      <button type="button" class="flow-step is-active" data-detail="从 rollout 尾部向前扫描，按 turn segment 处理回滚。">1. Reverse scan</button>
+      <button type="button" class="flow-step" data-detail="锁定最新仍存活且含 replacement_history 的 checkpoint。">2. Choose base</button>
+      <button type="button" class="flow-step" data-detail="恢复 snapshot 内的 history、retained context 与 guardian context。">3. Restore snapshot</button>
+      <button type="button" class="flow-step" data-detail="从 checkpoint 后方按原顺序回放 surviving suffix。">4. Replay suffix</button>
+      <button type="button" class="flow-step" data-detail="把同一次 replay 得出的 settings、world state 与窗口链装回 session。">5. Hydrate session</button>
+      <p class="flow-detail" aria-live="polite">从 rollout 尾部向前扫描，按 turn segment 处理回滚。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Legacy fallback</p>
+    <h3>旧 checkpoint 没有 replacement history，只能重新近似构造</h3>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/rollout_reconstruction.rs" data-lines="382-393">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>                RolloutItem::Compacted(compacted) =&gt; {
+                    // Reverse replay already chose the newest surviving checkpoint. Any newer
+                    // replacement checkpoint belongs to a rolled-back turn; replay its original
+                    // items so the rollback can still find the removed user boundary.
+                    if compacted.replacement_history.is_none() {
+                        saw_legacy_compaction_without_replacement_history = true;
+                        // Legacy rollouts without `replacement_history` should rebuild the
+                        // historical TurnContext at the correct insertion point from persisted
+                        // `TurnContextItem`s. These are rare enough that we currently just clear
+                        // `reference_context_item`, reinject canonical context at the end of the
+                        // resumed conversation, and accept the temporary out-of-distribution
+                        // prompt shape.</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>旧 rollout 只有 summary message 时，源码明确承认 canonical context 的临时插入形状可能偏离分布。这是兼容路径，不是理想主路径。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="codex-rs/core/src/session/rollout_reconstruction.rs" data-lines="396-414">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>                        let identity =
+                            if self.guardian_context_mode == GuardianContextMode::ThreadOwned {
+                                compact::CompactedMessageIdentity::Preserve
+                            } else {
+                                compact::CompactedMessageIdentity::Regenerate
+                            };
+                        let user_messages = compact::collect_annotated_user_messages(
+                            history.annotated_items(),
+                            identity,
+                        );
+                        let rebuilt = compact::build_compacted_history(
+                            Vec::new(),
+                            &amp;user_messages,
+                            &amp;compacted.message,
+                        );
+                        let retained_context = history.retained_context().clone();
+                        history.replace_annotated(rebuilt);
+                        history.restore_retained_context(Some(&amp;retained_context));
+                    }</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>兼容分支重新收集用户消息、按旧 summary 重建 compacted history，并在替换前后保住 retained context。</p>
+      </figcaption>
+    </figure>
+    <div class="callout warning"><strong>调试提示：</strong>resume 后上下文位置异常时，先检查 checkpoint 是否缺 <code>replacement_history</code>；不要先把问题归因于“摘要模型忘了”。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied check</p>
+    <h3>把静态理解变成下一轮可运行实验</h3>
+    <p>最小 runtime 实验应固定一组早期工具输出、近期用户约束与压缩后新增消息：执行 compact，保存 rollout，关闭并 resume，再分别核对 live history、checkpoint replacement 与 suffix。这样才能测出“生成成功但未持久化”或“恢复选错基线”等差异。</p>
+    <div class="quiz" data-explanation="当前格式的恢复以 replacement_history 为基线，只重放 checkpoint 之后仍存活的 rollout suffix；完整旧前缀无需再次物化。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>最新存活 checkpoint 已含 replacement history。resume 应怎样重建？</h3>
+      <div class="quiz-options">
+        <button type="button">从 SessionMeta 开始重放所有历史，并忽略 checkpoint</button>
+        <button type="button" data-correct="true">先恢复 checkpoint snapshot，再前向重放它之后的存活 suffix</button>
+        <button type="button">只读取 summary message，不恢复窗口与上下文元数据</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout"><strong>课程边界：</strong>本课验证的是锁定 revision 的静态源码、精确引用和离线交互；上述 Codex runtime resume 实验尚未执行。</div>
+  </div>
+</section></main>
+
+  <footer class="course-footer">
+    <p>源码摘录授权见 <a href="source-license.txt">上游许可</a>；课程工具许可见 <a href="tooling-license.txt">MIT</a>。</p>
+    <p>基于已检查的源码。摘录保留原文件与连续行号，学习结论可回到证据。</p>
+    <a href="#course-start">返回顶部 ↑</a>
+  </footer>
+  <script>(() => {
+  const modules = [...document.querySelectorAll('.course-module')];
+  const dots = [...document.querySelectorAll('.nav-dot')];
+  const progress = document.querySelector('#progress-bar');
+  const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let userReducedMotion = false;
+  try { userReducedMotion = localStorage.getItem('code-learning:reduce-motion') === 'true'; } catch (_) {}
+  let reduceMotion = systemReducedMotion || userReducedMotion;
+  const motionToggle = document.querySelector('#motion-toggle');
+  const applyMotion = () => {
+    reduceMotion = systemReducedMotion || userReducedMotion;
+    document.documentElement.dataset.reducedMotion = String(reduceMotion);
+    if (motionToggle) {
+      motionToggle.setAttribute('aria-pressed', String(reduceMotion));
+      motionToggle.disabled = systemReducedMotion;
+    }
+  };
+  applyMotion();
+  motionToggle?.addEventListener('click', () => {
+    userReducedMotion = !userReducedMotion;
+    try { localStorage.setItem('code-learning:reduce-motion', String(userReducedMotion)); } catch (_) {}
+    applyMotion();
+  });
+
+  let activeModuleId;
+  const setActiveModule = (id) => {
+    if (activeModuleId === id) return;
+    activeModuleId = id;
+    dots.forEach((dot) => {
+      const active = dot.dataset.target === id;
+      dot.classList.toggle('is-active', active);
+      if (active) dot.setAttribute('aria-current', 'step');
+      else dot.removeAttribute('aria-current');
+      const nav = dot.parentElement;
+      if (active && nav.scrollWidth > nav.clientWidth) {
+        nav.scrollTo({ left: dot.offsetLeft - nav.offsetLeft - (nav.clientWidth - dot.offsetWidth) / 2,
+          behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    });
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      document.getElementById(dot.dataset.target)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  });
+
+  const updateProgress = () => {
+    const available = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = available > 0 ? Math.min(1, Math.max(0, window.scrollY / available)) : 0;
+    if (progress) progress.style.width = `${ratio * 100}%`;
+    const current = currentModuleIndex();
+    if (modules.length) setActiveModule(current >= 0 ? modules[current].id : null);
+  };
+  document.addEventListener('scroll', updateProgress, { passive: true });
+
+  const currentModuleIndex = () => {
+    const center = window.scrollY + window.innerHeight * 0.45;
+    let best = -1;
+    modules.forEach((module, index) => {
+      if (module.offsetTop <= center) best = index;
+    });
+    return best;
+  };
+  updateProgress();
+
+  document.addEventListener('keydown', (event) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) return;
+    if (document.activeElement?.closest('[data-code-scroll], .table-scroll')) return;
+    const forward = event.key === 'j' || event.key === 'J' || event.key === 'ArrowDown';
+    const backward = event.key === 'k' || event.key === 'K' || event.key === 'ArrowUp';
+    if (!forward && !backward) return;
+    const offset = forward ? 1 : -1;
+    const target = modules[Math.min(modules.length - 1, Math.max(0, currentModuleIndex() + offset))];
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+  });
+
+  document.querySelectorAll('dfn[data-definition]').forEach((term) => {
+    term.tabIndex = 0;
+    term.setAttribute('aria-label', `${term.textContent}: ${term.dataset.definition}`);
+  });
+
+  document.querySelectorAll('.code-translation').forEach((translation) => {
+    const label = translation.querySelector('.source-label');
+    if (label) {
+      const range = (translation.dataset.lines || '').replace('-', '–');
+      label.textContent = `源码 · ${translation.dataset.source || 'unknown source'}:${range}`;
+    }
+    const code = translation.querySelector('pre');
+    if (code) {
+      code.tabIndex = 0;
+      code.setAttribute('data-code-scroll', '');
+      code.setAttribute('aria-label', '源码摘录，可用方向键滚动');
+    }
+  });
+
+  document.querySelectorAll('.table-scroll').forEach((table) => {
+    table.tabIndex = 0;
+    table.setAttribute('aria-label', '对照表，可用方向键横向滚动');
+  });
+
+  document.querySelectorAll('.quiz').forEach((quiz) => {
+    const choices = [...quiz.querySelectorAll('.quiz-options button')];
+    const feedback = quiz.querySelector('.quiz-feedback');
+    choices.forEach((choice) => {
+      choice.addEventListener('click', () => {
+        choices.forEach((item) => item.classList.remove('is-correct', 'is-wrong'));
+        const correct = choice.dataset.correct === 'true';
+        choice.classList.add(correct ? 'is-correct' : 'is-wrong');
+        feedback.textContent = `${correct ? '正确。' : '再想一想。'}${quiz.dataset.explanation || ''}`;
+      });
+    });
+  });
+
+  const playChat = (chat) => {
+    const messages = [...chat.querySelectorAll('.chat-message')];
+    messages.forEach((message) => message.classList.remove('is-visible'));
+    messages.forEach((message, index) => {
+      if (reduceMotion) message.classList.add('is-visible');
+      else window.setTimeout(() => message.classList.add('is-visible'), 180 + index * 520);
+    });
+  };
+
+  document.querySelectorAll('.component-chat').forEach((chat) => {
+    playChat(chat);
+    chat.querySelector('.replay-chat')?.addEventListener('click', () => playChat(chat));
+  });
+
+  document.querySelectorAll('.data-flow').forEach((flow) => {
+    const steps = [...flow.querySelectorAll('.flow-step')];
+    const detail = flow.querySelector('.flow-detail');
+    steps.forEach((step) => {
+      step.addEventListener('click', () => {
+        steps.forEach((item) => item.classList.remove('is-active'));
+        step.classList.add('is-active');
+        if (detail) detail.textContent = step.dataset.detail || '';
+      });
+    });
+  });
+
+  const panel = document.querySelector('.learning-panel');
+  if (panel) {
+    const conceptCards = [...panel.querySelectorAll('.concept-card')];
+    const conceptNames = new Map(conceptCards.map(card => [card.id.replace('concept-', ''), card.querySelector('summary')?.textContent]));
+    conceptCards.forEach(card => {
+      const prerequisites = [...card.children].find(el => el.tagName === 'P' && el.textContent.startsWith('前置概念:'));
+      if (!prerequisites) return;
+      const ids = prerequisites.textContent.replace('前置概念:', '').trim().split(',').map(id => id.trim());
+      if (!ids.every(id => conceptNames.has(id))) return;
+      prerequisites.replaceChildren(document.createTextNode('前置概念：'));
+      ids.forEach((id, index) => {
+        if (index) prerequisites.append(document.createTextNode('、'));
+        const link = document.createElement('a');
+        link.href = `#concept-${id}`;
+        link.textContent = conceptNames.get(id);
+        link.className = 'concept-prerequisite';
+        link.addEventListener('click', () => { document.getElementById(`concept-${id}`).open = true; });
+        prerequisites.append(link);
+      });
+    });
+    const storageKey = `code-learning:${panel.dataset.kitId}`;
+    const sourceRevision = document.querySelectorAll('.course-meta dd')[1]?.textContent || 'unknown';
+    const feedback = panel.querySelector('.notes-feedback');
+    const zh = document.documentElement.lang.startsWith('zh');
+    let notes = {};
+    try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) { notes = {}; }
+    if (!notes || typeof notes !== 'object' || Array.isArray(notes)) notes = {};
+    panel.querySelectorAll('.recall').forEach((recall) => {
+      const field = recall.querySelector('textarea');
+      const key = recall.dataset.recallId;
+      field.value = typeof notes[key]?.response === 'string' ? notes[key].response : '';
+      field.addEventListener('input', () => {
+        notes[key] = { response: field.value, sourceRevision, recordedAt: new Date().toISOString(), kind: 'provisional-recall' };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(notes));
+          if (feedback) feedback.textContent = zh ? '回忆已保存到本机浏览器；尚未评价掌握程度。' : 'Recall saved in this browser; mastery has not been assessed.';
+        } catch (_) {
+          if (feedback) feedback.textContent = zh ? '浏览器未允许保存；可导出本次记录。' : 'Browser storage is unavailable; export this session to keep it.';
+        }
+      });
+    });
+    let exportURL;
+    panel.querySelector('.export-learning-notes')?.addEventListener('click', () => {
+      const content = { kitId: panel.dataset.kitId, sourceRevision, assessment: 'unassessed', notes };
+      const text = JSON.stringify(content, null, 2);
+      const preview = panel.querySelector('.export-preview');
+      if (preview) {
+        preview.hidden = false;
+        preview.open = true;
+        preview.querySelector('textarea').value = text;
+        if (exportURL) URL.revokeObjectURL(exportURL);
+        exportURL = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+        preview.querySelector('.export-download').href = exportURL;
+        if (feedback) feedback.textContent = zh ? '记录已准备好：可以下载 JSON，或从下方文本框复制。' : 'Records are ready: download JSON or copy the text below.';
+      }
+    });
+    window.addEventListener('pagehide', () => { if (exportURL) URL.revokeObjectURL(exportURL); });
+  }
+})();
+</script>
+</body>
+</html>
+

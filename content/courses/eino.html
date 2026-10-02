@@ -1,0 +1,1367 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="generator" content="codebase-to-mastery">
+  <title>Eino 源码详解</title>
+  <style>:root {
+  --paper: #eef3f6; --paper-deep: #e3ecef; --ink: #172d3a; --muted: #536b79;
+  --line: #d4e0e6; --card: #fff; --code: #112630; --code-ink: #e6f4f7;
+  --accent: #147d92; --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
+  --good: #16745a; --bad: #ae394b; --shadow: 0 6px 22px rgba(23,45,58,.04);
+  --radius: 12px; --measure: 72rem; --rail-width: 228px;
+  --rail: #122936; --rail-ink: #edf7f8; --lime: #b8e3a4;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scroll-behavior: smooth; }
+html, body { overflow-x: clip; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: .2em; }
+button, textarea { font: inherit; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -.025em; }
+h1 { margin: 0; max-width: 22ch; font-size: clamp(2.4rem,5vw,4.6rem); font-weight: 750; }
+h2 { margin: 0; font-size: clamp(2rem,3.6vw,3.3rem); }
+h3 { margin: 0 0 1rem; font-size: clamp(1.35rem,2.5vw,2rem); }
+p { overflow-wrap: anywhere; }
+.progress { position: fixed; inset: 0 0 auto var(--rail-width); height: 3px; z-index: 50; background: var(--paper-deep); }
+.progress span { display: block; width: 0; height: 100%; background: var(--accent); transition: width 120ms linear; }
+.course-rail { position: fixed; inset: 0 auto 0 0; z-index: 30; width: var(--rail-width); display: flex; flex-direction: column; padding: 32px 18px 22px; color: var(--rail-ink); background: var(--rail); overflow-y: auto; }
+.course-mark { display: flex; align-items: center; gap: 12px; padding: 0 8px 26px; text-decoration: none; flex-shrink: 0; }
+.brand-emblem { display: flex; align-items: flex-end; gap: 3px; width: 34px; height: 34px; padding: 8px 6px; border-radius: 9px; background: var(--lime); }
+.brand-emblem i { display: block; width: 5px; background: var(--rail); border-radius: 1px; }
+.brand-emblem i:nth-child(1) { height: 7px; }
+.brand-emblem i:nth-child(2) { height: 12px; }
+.brand-emblem i:nth-child(3) { height: 18px; }
+.brand-name { font-size: 15px; font-weight: 700; line-height: 1.35; letter-spacing: -.01em; }
+.brand-name > span { display: block; color: var(--lime); }
+.overview-link { display: flex; justify-content: space-between; align-items: center; padding: 12px; font-size: 13px; text-decoration: none; border: 1px solid #35505e; border-radius: 8px; }
+.overview-link:hover { background: #203c4b; }
+.nav-label { margin: 28px 12px 10px; color: #a5bdc9; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.module-nav { display: grid; gap: 6px; }
+.nav-dot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #c7d9e1; text-align: left; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.nav-title { min-width: 0; overflow-wrap: anywhere; }
+.nav-arrow { opacity: 0; color: var(--lime); }
+.nav-dot:hover { background: #203c4b; color: white; }
+.nav-dot.is-active { color: white; background: #244b5b; border-color: #416a7a; }
+.nav-dot.is-active .nav-arrow { opacity: 1; }
+.rail-source { display: grid; gap: 5px; margin: auto 8px 0; padding-top: 36px; font-size: 12px; overflow-wrap: anywhere; }
+.rail-source-label { color: #a5bdc9; font-size: 10px; letter-spacing: .08em; }
+.rail-source strong { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-weight: 500; }
+.key-hint { display: flex; align-items: center; gap: 5px; margin: 18px 8px 0; color: #a5bdc9; font-size: 10px; }
+.key-hint > span { margin-left: 5px; }
+kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px solid #4c6977; border-radius: 4px; text-align: center; font: 10px/1.5 ui-monospace,monospace; }
+.course-cover, .learning-panel, .course-module, .course-footer { margin-left: var(--rail-width); min-width: 0; }
+.course-cover { position: relative; display: grid; align-content: center; padding: 64px clamp(28px,4vw,64px) 46px; min-height: 520px; border-bottom: 1px solid var(--line); background: var(--card); }
+.cover-topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 32px; }
+.cover-kicker, .eyebrow, .pane-label, .quiz-kicker { margin: 0 0 10px; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.cover-topline .cover-kicker { margin: 0; }
+.format-tag, .stage-count { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.cover-subtitle, .lede { max-width: 48rem; margin: 20px 0; color: var(--muted); font-size: clamp(1rem,1.6vw,1.2rem); }
+.course-meta { display: flex; flex-wrap: wrap; gap: 16px 32px; margin: 16px 0 28px; }
+.course-meta div { min-width: 70px; }
+.course-meta dt { color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+.course-meta dd { margin: 5px 0 0; font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.cover-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.start-link { display: inline-flex; align-items: center; gap: 30px; width: fit-content; padding: 11px 16px; border-radius: 8px; background: var(--accent); color: white; text-decoration: none; font-size: 13px; font-weight: 700; }
+.motion-toggle { padding: 9px 13px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.motion-toggle[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.cover-route { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 38px; padding-top: 22px; border-top: 1px solid var(--line); font: 10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing: .12em; color: var(--muted); }
+.cover-route b { font-weight: 400; color: var(--accent); }
+.learning-panel { padding: 28px clamp(28px,4vw,64px) 56px; border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.panel-heading .eyebrow { margin: 0; }
+.learning-panel h2 { max-width: none; font-size: clamp(1.65rem,3vw,2.3rem); }
+.panel-scope { margin: 10px 0 18px; max-width: 66rem; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.learning-stages { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }
+.learning-stage { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.stage-topline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.stage-number { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; color: var(--accent); background: var(--accent-soft); font: 700 12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+.stage-kind { color: var(--muted); font: 9px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform: uppercase; letter-spacing: .08em; }
+.learning-stage h3 { margin: 0; font-size: 17px; line-height: 1.4; letter-spacing: -.02em; }
+.stage-outcome { margin: 8px 0 10px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.gate { margin: auto 0 0; padding: 8px 0 10px; border-top: 1px solid var(--line); }
+.gate > span { color: var(--accent); font-size: 10px; font-weight: 700; }
+.gate p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.stage-links { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 650; }
+.stage-links a { overflow-wrap: anywhere; text-decoration: none; }
+.stage-links a:hover { text-decoration: underline; }
+.scope-note { margin: 18px 0 0; padding: 12px 16px; box-shadow: none; font-size: 12px; }
+.scope-note p { margin-bottom: 0; color: var(--muted); }
+.recall-heading { margin: 46px 0 24px; }
+.recall-heading h3 { font-size: 24px; margin-bottom: 8px; }
+.recall-heading > p:last-child { margin: 0; color: var(--muted); font-size: 12px; }
+.concept-card { padding: 18px; margin: 10px 0; min-width: 0; box-shadow: none; }
+.concept-card > summary { font-size: 14px; }
+.concept-card > p { color: var(--muted); font-size: 13px; }
+.concept-card details { min-width: 0; }
+.recall { margin: 22px 0; }
+.recall label { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 650; }
+.recall textarea { display: block; width: 100%; resize: vertical; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); font-size: 13px; }
+.recall-answer { margin: 12px 0; padding: 14px; background: var(--accent-soft); border: 0; box-shadow: none; font-size: 13px; }
+.export-learning-notes { margin-top: 16px; padding: 11px 16px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 12px; cursor: pointer; }
+.notes-feedback { font-size: 12px; color: var(--muted); }
+.export-preview { margin: 16px 0; padding: 16px; }
+.export-preview label { display: block; margin: 12px 0; font-size: 12px; }
+.export-preview textarea { width: 100%; color: var(--ink); background: #f7fafb; font: 12px/1.6 ui-monospace,monospace; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.course-module { border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.course-module:nth-child(odd) { background: #f8fafb; }
+.screen { display: grid; grid-template-columns: minmax(0,1fr); align-content: center; min-height: 550px; max-width: var(--measure); margin: 0 auto; padding: 64px clamp(28px,4vw,64px); }
+.hero-screen { position: relative; }
+.hero-screen > p:not(.eyebrow):not(.lede) { max-width: 58rem; font-size: 15px; color: var(--muted); }
+.actor-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(14rem,100%),1fr)); gap: 14px; }
+.actor-card, .callout, .quiz, .data-flow, .component-chat, details { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.actor-card, .callout, details { padding: 20px; }
+.actor-card h4 { margin: 0 0 8px; font-size: 16px; }
+.actor-card p { margin: 0; color: var(--muted); font-size: 14px; }
+.callout { border-left: 3px solid var(--accent); font-size: 14px; }
+.callout.warning { border-left-color: var(--bad); }
+.path-chip { display: inline-flex; max-width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--accent); font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.code-translation { min-width: 0; contain: inline-size; display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); margin: 24px 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.code-pane { min-width: 0; padding: 22px; color: var(--code-ink); background: var(--code); }
+.code-pane .pane-label { color: #8cd4d9; font-family: ui-monospace,monospace; text-transform: none; letter-spacing: 0; }
+pre { margin: 0; max-width: 100%; overflow: auto; tab-size: 2; }
+pre > code { display: block; min-width: 100%; }
+code { font: 12px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.code-translation figcaption { min-width: 0; padding: 22px; background: white; font-size: 14px; }
+.quiz, .data-flow, .component-chat { padding: 24px; }
+.quiz h3 { font-size: 24px; line-height: 1.45; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-options button, .flow-step, .replay-chat { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); text-align: left; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+.quiz-options button:hover, .quiz-options button:focus-visible, .flow-step:hover, .flow-step:focus-visible { border-color: var(--accent); }
+.quiz-options button.is-correct { border-color: var(--good); background: color-mix(in srgb,var(--good) 8%,white); }
+.quiz-options button.is-wrong { border-color: var(--bad); background: color-mix(in srgb,var(--bad) 7%,white); }
+.quiz-feedback { min-height: 1.6em; margin-bottom: 0; font-size: 13px; font-weight: 600; }
+.component-chat { display: grid; gap: 12px; }
+.chat-message { width: min(34rem,85%); padding: 14px; border-radius: 10px 10px 10px 2px; background: var(--paper); font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 260ms ease, transform 260ms ease; }
+.chat-message::before { content: attr(data-speaker); display: block; margin-bottom: 4px; color: var(--muted); font: 700 10px ui-monospace,monospace; text-transform: uppercase; }
+.chat-message:nth-child(even) { justify-self: end; border-radius: 10px 10px 2px 10px; background: var(--accent-soft); }
+.chat-message.is-visible { opacity: 1; transform: none; }
+.replay-chat { width: fit-content; justify-self: center; margin-top: 6px; }
+.data-flow { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(10rem,100%),1fr)); gap: 10px; }
+.flow-step { text-align: center; }
+.flow-step.is-active { background: var(--accent); border-color: var(--accent); color: white; }
+.flow-detail { grid-column: 1 / -1; margin: 6px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+dfn { position: relative; border-bottom: 2px dotted var(--accent); font-style: normal; cursor: help; }
+dfn::after { content: attr(data-definition); position: absolute; left: 0; bottom: calc(100% + 10px); z-index: 40; width: min(18rem,70vw); padding: 12px; border-radius: 8px; color: white; background: var(--rail); box-shadow: var(--shadow); font-size: 12px; font-weight: 400; opacity: 0; pointer-events: none; transform: translateY(5px); transition: opacity 140ms ease, transform 140ms ease; }
+dfn:hover::after, dfn:focus::after { opacity: 1; transform: none; }
+details { margin-top: 16px; }
+summary { cursor: pointer; font-weight: 650; }
+.course-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 28px clamp(28px,4vw,64px); color: var(--muted); background: white; font-size: 12px; }
+.course-footer p { max-width: 40rem; margin: 0; }
+.course-footer a { color: var(--accent); }
+:focus-visible { outline: 3px solid #57b6c5; outline-offset: 4px; }
+html[data-reduced-motion="true"] *, html[data-reduced-motion="true"] *::before, html[data-reduced-motion="true"] *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+html[data-reduced-motion="true"] { scroll-behavior: auto !important; }
+html[data-reduced-motion="true"] .chat-message { opacity: 1; transform: none; }
+@media (max-width:1050px) {
+  :root { --rail-width: 204px; }
+  .learning-stages { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  :root { --rail-width: 0px; }
+  .progress { inset: 0 0 auto; }
+  .course-rail { inset: 0 0 auto; width: auto; height: 116px; padding: 12px 16px 10px; overflow: hidden; }
+  .course-mark { padding: 0; gap: 8px; width: fit-content; }
+  .brand-emblem { width: 28px; height: 28px; padding: 5px 3px; }
+  .brand-name { display: flex; gap: 4px; font-size: 13px; }
+  .brand-name > span { display: inline; }
+  .overview-link { position: absolute; right: 16px; top: 12px; padding: 5px 8px; gap: 10px; font-size: 10px; }
+  .nav-label, .key-hint, .rail-source { display: none; }
+  .module-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 13px; padding: 3px; }
+  .nav-dot { flex: 0 0 auto; width: auto; max-width: 220px; min-height: 35px; padding: 7px 10px; font-size: 11px; white-space: nowrap; border-color: #35505e; }
+  .nav-arrow { display: none; }
+  .course-cover { margin-top: 116px; min-height: auto; padding: 30px 20px; scroll-margin-top: 116px; }
+  .cover-topline { margin-bottom: 24px; }
+  .cover-kicker { font-size: 10px; }
+  .format-tag { font-size: 10px; padding: 4px 7px; }
+  h1 { font-size: 36px; }
+  h2 { font-size: 32px; }
+  .cover-subtitle { font-size: 14px; }
+  .course-meta { gap: 16px 22px; }
+  .cover-route { gap: 12px; font-size: 9px; }
+  .learning-panel { padding: 28px 20px 40px; scroll-margin-top: 132px; }
+  .learning-panel h2 { font-size: 27px; }
+  .panel-heading { align-items: flex-start; }
+  .stage-count { font-size: 10px; padding: 4px 7px; }
+  .learning-stages { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .learning-stage { padding: 18px; }
+  .learning-stage h3 { font-size: 18px; }
+  .stage-outcome { font-size: 13px; }
+  .course-module { scroll-margin-top: 132px; }
+  .concept-card { scroll-margin-top: 132px; }
+  .screen { min-height: auto; padding: 44px 20px; }
+  .hero-screen { min-height: 420px; }
+  .code-translation { grid-template-columns: minmax(0,1fr); }
+  .code-pane, .code-translation figcaption { padding: 18px; }
+  .quiz, .data-flow, .component-chat { padding: 18px; }
+  .quiz h3 { font-size: 20px; }
+  .course-footer { padding: 26px 20px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+  .chat-message { opacity: 1; transform: none; }
+}
+@media print {
+  :root { --rail-width: 0px; }
+  .course-rail, .progress, .start-link, .replay-chat, .motion-toggle, .cover-route { display: none !important; }
+  .course-cover { margin-top: 0; }
+  .course-cover, .screen { min-height: auto; page-break-after: always; }
+  .chat-message { opacity: 1; transform: none; }
+  body { background: white; }
+}
+
+/* Source tables scroll inside the lesson, so narrow screens retain every cell. */
+.table-scroll { max-width: 100%; overflow-x: auto; margin: 22px 0; border: 1px solid #d3dce5; border-radius: 8px; }
+.table-scroll table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.table-scroll th, .table-scroll td { padding: 13px 16px; border-bottom: 1px solid #dbe3ea; text-align: left; vertical-align: top; line-height: 1.7; overflow-wrap: anywhere; }
+.table-scroll th { color: #153747; background: #edf5f7; font-weight: 700; }
+.table-scroll tr:last-child td { border-bottom: 0; }
+.table-scroll:focus-visible, .code-pane pre:focus-visible { outline: 3px solid #069db0; outline-offset: 3px; }
+</style>
+</head>
+<body style="--accent: #147D92">
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+  <aside class="course-rail" aria-label="Course navigation">
+    <a class="course-mark" href="#course-start" aria-label="Codebase to Mastery">
+      <span class="brand-emblem" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-name">Codebase<span>to Mastery</span></span>
+    </a>
+    <a class="overview-link" href="#course-start">学习总览 <span aria-hidden="true">↗</span></a>
+    <p class="nav-label">课程目录</p>
+    <nav class="module-nav" aria-label="课程目录"><button class="nav-dot" type="button" data-target="module-01" aria-label="进入 01 · Eino 的地图：先看输入输出契约" title="01 · Eino 的地图：先看输入输出契约"><span class="nav-title">01 · Eino 的地图：先看输入输出契约</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-02" aria-label="进入 02 · 消息与流：内容、身份、消费权" title="02 · 消息与流：内容、身份、消费权"><span class="nav-title">02 · 消息与流：内容、身份、消费权</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-03" aria-label="进入 03 · 编排与编译：把关系变成可执行契约" title="03 · 编排与编译：把关系变成可执行契约"><span class="nav-title">03 · 编排与编译：把关系变成可执行契约</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-04" aria-label="进入 04 · 运行时：分支、触发与局部状态" title="04 · 运行时：分支、触发与局部状态"><span class="nav-title">04 · 运行时：分支、触发与局部状态</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-05" aria-label="进入 05 · 工具调用：从能力描述到关联结果" title="05 · 工具调用：从能力描述到关联结果"><span class="nav-title">05 · 工具调用：从能力描述到关联结果</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-06" aria-label="进入 06 · ADK：模型与工具怎样形成循环" title="06 · ADK：模型与工具怎样形成循环"><span class="nav-title">06 · ADK：模型与工具怎样形成循环</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-07" aria-label="进入 07 · 中断与恢复：地址、状态、存储各管什么" title="07 · 中断与恢复：地址、状态、存储各管什么"><span class="nav-title">07 · 中断与恢复：地址、状态、存储各管什么</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-08" aria-label="进入 08 · 调试、复述与受控扩展" title="08 · 调试、复述与受控扩展"><span class="nav-title">08 · 调试、复述与受控扩展</span><span class="nav-arrow" aria-hidden="true">↗</span></button></nav>
+    <div class="rail-source"><span class="rail-source-label">学习源码</span><strong>stormpro-eino-source-2026-10-02</strong></div>
+    <p class="key-hint"><kbd>J</kbd><kbd>K</kbd><span>切换章节</span></p>
+  </aside>
+
+  <header class="course-cover" id="course-start">
+    <div class="cover-topline"><p class="cover-kicker">源码掌握工坊</p><span class="format-tag">离线交互课</span></div>
+    <h1>Eino 源码详解</h1>
+    <p class="cover-subtitle">八章 · 24 个概念 · 32 段精确源码 · 六个真实框架示例</p>
+    <dl class="course-meta">
+      <div><dt>学习源码</dt><dd>stormpro-eino-source-2026-10-02</dd></div>
+      <div><dt>源码版本</dt><dd>58d184303f4e</dd></div>
+      <div><dt>章节</dt><dd>8</dd></div>
+    </dl>
+    <div class="cover-actions"><a class="start-link" href="#learning-path">开始学习 <span aria-hidden="true">→</span></a>
+    <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">减少动效</button></div>
+    <div class="cover-route" aria-hidden="true"><span>READ</span><b>→</b><span>TRACE</span><b>→</b><span>REASON</span><b>→</b><span>TEACH BACK</span></div>
+  </header>
+
+  <section id="learning-path" class="learning-panel" data-kit-id="d2d0f84d-8fe2-4670-98b4-348468b94685"><div class="panel-heading"><p class="eyebrow">The mastery path</p><span class="stage-count">4 个学习阶段</span></div><h2>由浅入深的学习路径</h2><p class="panel-scope">固定官方提交的文本订单主线：Go 组件→消息/流→类型图→分支/状态→ToolsNode→ADK→恢复契约与调试。</p><div class="learning-stages"><article class="learning-stage"><div class="stage-topline"><span class="stage-number">01</span><span class="stage-kind">orient</span></div><h3>建立地图</h3><p class="stage-outcome">解释组件、编排与应用边界。</p><div class="gate"><span>先想一想</span><p>画出订单主线并标出框架之外的能力。</p></div><div class="stage-links"><a href="#module-01">进入课程</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">02</span><span class="stage-kind">trace</span></div><h3>沿源码追踪</h3><p class="stage-outcome">追踪消息身份、Reader 消费和类型图构建。</p><div class="gate"><span>先想一想</span><p>给出一张消息往返和图边类型的追踪表。</p></div><div class="stage-links"><a href="#module-02">02 · 消息与流：内容、身份、消费权</a> <a href="#module-03">03 · 编排与编译：把关系变成可执行契约</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">03</span><span class="stage-kind">reason</span></div><h3>解释契约与失败</h3><p class="stage-outcome">定位路由、局部状态、工具循环及恢复层失败。</p><div class="gate"><span>先想一想</span><p>解释三个不同层的故障并提出有范围的验证。</p></div><div class="stage-links"><a href="#module-04">04 · 运行时：分支、触发与局部状态</a> <a href="#module-05">05 · 工具调用：从能力描述到关联结果</a> <a href="#module-06">06 · ADK：模型与工具怎样形成循环</a> <a href="#module-07">07 · 中断与恢复：地址、状态、存储各管什么</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">04</span><span class="stage-kind">teach-back</span></div><h3>复述与迁移</h3><p class="stage-outcome">用证据解释限制，把主线迁移到报价比较。</p><div class="gate"><span>先想一想</span><p>不看答案写规格与失败案例，然后对照 source map。</p></div><div class="stage-links"><a href="#module-08">进入课程</a><span aria-hidden="true">→</span></div></article></div><details class="scope-note"><summary>实践范围与边界</summary><p>本包交付 Orient/Trace/Reason/Teach-back。局部重建暂缓，候选范围为文本 stream 拼接、EOF 与 ToolCallID 校验；不复刻全框架。</p></details><div class="recall-heading"><p class="eyebrow">Recall &amp; connect</p><h3>概念地图与主动回忆</h3><p>回答保存在本机浏览器；阅读和自评不代表已掌握。</p></div><details class="concept-card" id="concept-typed-component"><summary>类型参数与组件接口</summary><p>先把任务缩小为“输入订单编号，读出金额，生成摘要”。Eino 负责组织这些步骤；订单存储、HTTP 服务、模型供应商和用户权限由应用提供。不要从目录数量推断它已经替你搭好了一个聊天网站。最好的阅读入口是组件的输入输出类型，而不是先读全部内部调度器。
+
+Go 的 interface 描述一组方法；实现这些方法的类型就能被接入，不需要继承框架基类。BaseModel[M] 的 M 是消息类型参数，Generate 收取消息切片并返回一条消息，Stream 则返回消息流。context.Context 用于传播取消、期限和调用范围数据；它不是永久数据库。error 是独立返回值，调用者必须处理。
+
+本课使用默认的 *schema.Message 路线。当前源码还提供 *schema.AgenticMessage 与 Typed API，后者不能通过随意强制转换接入前者。读到类型别名时先找泛型本体；旧文章里的同名接口可能已经废弃。</p><p>前置概念: —</p><a href="#module-01">从一个订单请求出发，区分框架、组件实现和你自己的应用。</a><div class="recall" data-recall-id="typed-component-0"><label for="recall-typed-component-0">一个自定义模型只有 Generate，没有 Stream，能否直接满足 BaseModel？怎样定位接口不匹配？</label><textarea id="recall-typed-component-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先比较方法签名，再考虑适配层。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>不能。BaseModel 要求两种方法及完全匹配的参数、选项和返回类型。编译错误先对照 components/model/interface.go，再决定补适配方法或选用其他组件契约。</p><ul><li>解释接口的方法集合</li><li>区分接口实现与编排层的执行模式适配</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">components/model/interface.go:31-39</p><p>BaseModel 同时定义完整响应与流式响应，并以消息类型 M 参数化。</p><pre><code>// BaseModel is the generic base model interface parameterized by message type M.
+// It exposes two modes of interaction:
+//   - [BaseModel.Generate]: blocks until the model returns a complete response.
+//   - [BaseModel.Stream]: returns a [schema.StreamReader] that yields message
+//     chunks incrementally as the model generates them.
+type BaseModel[M messageType] interface {
+	Generate(ctx context.Context, input []M, opts ...Option) (M, error)
+	Stream(ctx context.Context, input []M, opts ...Option) (*schema.StreamReader[M], error)
+}</code></pre></details></details><details class="concept-card" id="concept-tool-contract"><summary>工具元信息与执行分开</summary><p>“计算订单”函数可以直接写成 Go 函数；让模型使用它时，还需要名称、说明、参数描述和调用约定。Info 是可见能力的目录项，InvokableRun 是实际执行入口。只有名称的元信息并不会执行任何业务；模型返回一个工具请求，也还没有调用本地函数。
+
+标准工具入口接收 JSON 字符串，返回字符串与错误。工具可以自己解析，也可以用 utils.InferTool 从 Go 参数结构生成描述并包裹编解码。这里要分清类型检查与业务检查：金额为负、订单不属于当前用户、同一个退款请求重复提交，都需要应用的明确规则。
+
+我们的订单工具仅做两个整数求和，既无网络也无写入。它是框架接入的最小正对照，不是生产订单服务。将来改成数据库工具，必须另外证明查询权限、单位、溢出、超时和结果脱敏。这些条件不能靠工具描述里的自然语言替代。</p><p>前置概念: typed-component</p><a href="#module-01">从一个订单请求出发，区分框架、组件实现和你自己的应用。</a><div class="recall" data-recall-id="tool-contract-0"><label for="recall-tool-contract-0">模型已返回 sum_order 的名称和参数，在哪一层确认执行过？</label><textarea id="recall-tool-contract-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先区分 Info 与 InvokableRun。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>检查 ToolsNode 是否找到工具、调用执行方法并返回与请求 ID 匹配的 ToolMessage。仅有 ToolInfo 或 assistant.ToolCalls 不能证明执行发生。</p><ul><li>列出描述、请求、执行、结果四个阶段</li><li>提出可观察的调用计数或日志</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">components/tool/interface.go:32-46</p><p>BaseTool 描述工具；InvokableTool 在其上增加 JSON 参数执行方法。</p><pre><code>type BaseTool interface {
+	Info(ctx context.Context) (*schema.ToolInfo, error)
+}
+
+// InvokableTool is a tool that can be executed by ToolsNode.
+//
+// InvokableRun receives the model&#x27;s tool call arguments as a JSON-encoded
+// string and returns a plain string result that is sent back to the model as
+// a tool message. The framework handles JSON decoding automatically when using
+// the [utils.InferTool] or [utils.NewTool] constructors.
+type InvokableTool interface {
+	BaseTool
+
+	// InvokableRun executes the tool with arguments encoded as a JSON string.
+	InvokableRun(ctx context.Context, argumentsInJSON string, opts ...Option) (string, error)</code></pre></details></details><details class="concept-card" id="concept-runnable-map"><summary>统一执行对象</summary><p>Graph、Chain 和 Workflow 表达连接关系；Compile 后得到 Runnable[I,O]，调用者面对统一的执行接口。I/O 是这段编排的外部类型，不要求每个内部节点都用同一种类型。例如字符串订单号可以经过 Document、金额结构，最终返回字符串摘要。
+
+四个方法是一个二乘二表：Invoke 单值进单值出，Stream 单值进流出，Collect 流进单值出，Transform 流进流出。它们表达数据形态，不能自动推导网络协议、实时性或性能。一个内部阶段若必须收齐全部输入，外部使用 Stream 仍可能经历等待。
+
+包地图按职责读：schema 定义跨组件数据；components 定义可替换能力；compose 连接与执行；callbacks 观察执行；adk 建立 Agent 循环与事件。供应商实现通常在 eino-ext，调试平台与完整应用示例另有仓库。这个分层是从目录、接口和调用入口归纳的阅读地图，不是动态调用追踪。</p><p>前置概念: typed-component</p><a href="#module-01">从一个订单请求出发，区分框架、组件实现和你自己的应用。</a><div class="recall" data-recall-id="runnable-map-0"><label for="recall-runnable-map-0">浏览器要逐段显示摘要，应把所有节点都改成 Stream 吗？</label><textarea id="recall-runnable-map-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>沿每个节点的输入输出形态追踪。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>先确认输出是否真实增量、哪一层可能 Collect、哪些类型支持拼接，再选择 Runnable.Stream。前端协议由应用定义；把方法名改为 Stream 不保证每层都不缓冲。</p><ul><li>解释流式输入输出矩阵</li><li>定位收集边界</li><li>把应用协议与库接口分开</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/runnable.go:28-37</p><p>Runnable 提供四种单值与流之间的输入输出组合。</p><pre><code>// Runnable is the interface for an executable object. Graph, Chain can be compiled into Runnable.
+// runnable is the core conception of eino, we do downgrade compatibility for four data flow patterns,
+// and can automatically connect components that only implement one or more methods.
+// eg, if a component only implements Stream() method, you can still call Invoke() to convert stream output to invoke output.
+type Runnable[I, O any] interface {
+	Invoke(ctx context.Context, input I, opts ...Option) (output O, err error)
+	Stream(ctx context.Context, input I, opts ...Option) (output *schema.StreamReader[O], err error)
+	Collect(ctx context.Context, input *schema.StreamReader[I], opts ...Option) (output O, err error)
+	Transform(ctx context.Context, input *schema.StreamReader[I], opts ...Option) (output *schema.StreamReader[O], err error)
+}</code></pre></details></details><details class="concept-card" id="concept-message-identity"><summary>消息不是纯字符串</summary><p>一次工具往返至少有三段消息：user 请求；assistant 发出 ToolCalls；tool 返回结果，随后 assistant 再总结。角色说明消息来源，Content 提供可读内容，工具身份字段保持请求与结果的关联。工具消息即使正文相同，也不能只靠文字找到对应请求。
+
+假设模型一次请求两次 sum_order：一张订单 19+23，另一张 8+9。工具名称都一样，ID 才区分这两次调用。结果的 ToolCallID 应对应各自 assistant.ToolCalls 的 ID。丢失 ID 后，内容仍然看起来合理，但下一次模型输入已经破坏协议。
+
+消息可能携带多模态输入、输出和元信息；本课只覆盖文本加标准工具调用。不要将旧 MultiContent 字段当成当前所有多模态类型的唯一入口。需要扩展时从字段注释、Provider 支持和消息拼接规则逐层验证。</p><p>前置概念: typed-component</p><a href="#module-02">解释消息如何关联工具结果，正确处理流的消费、结束和复制。</a><div class="recall" data-recall-id="message-identity-0"><label for="recall-message-identity-0">两个同名工具调用同时返回 42 和 17，如何正确配对？</label><textarea id="recall-message-identity-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>找 assistant 请求与 tool 结果共享的字段。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>通过每次请求的 ID 与结果 ToolCallID 对应，并保留 ToolName。不能按完成时间、金额或名称唯一配对。</p><ul><li>识别每次调用的身份</li><li>解释并发完成顺序不可靠</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">schema/message.go:515-525</p><p>Message 将工具请求集合与 ToolCallID、ToolName 分开保存。</p><pre><code>	Name string `json:&quot;name,omitempty&quot;`
+
+	// only for AssistantMessage
+	ToolCalls []ToolCall `json:&quot;tool_calls,omitempty&quot;`
+
+	// only for ToolMessage
+	ToolCallID string `json:&quot;tool_call_id,omitempty&quot;`
+	// only for ToolMessage
+	ToolName string `json:&quot;tool_name,omitempty&quot;`
+
+	ResponseMeta *ResponseMeta `json:&quot;response_meta,omitempty&quot;`</code></pre></details></details><details class="concept-card" id="concept-stream-ownership"><summary>流的消费与复制</summary><p>Recv 每次取一个块；io.EOF 表示结束，其他错误表示失败。消费循环要分别处理这两类结果，且在不用时关闭 Reader。Writer 的关闭与 Reader 的关闭责任不同：前者表示不再产生，后者表示下游不再接收。
+
+一个 Reader 不是可以随时重放的数组。若日志回调先读完原流，下游就可能只见 EOF。需要两路消费时使用 Copy(2)，把一个副本交给日志，一个交给下游，并关闭各自持有的副本。原 Reader 在复制后不能继续作为第三路使用。慢消费者可能迫使复制机制保留数据，必须关注内存与取消。
+
+数组 Reader 的验证很轻，但真实 Pipe 会有背压：缓冲满时生产者需要等下游消费。无消费者、忘记关闭、回调读流没有退出，都可能造成卡住。教程实测两个数组副本内容一致；没有把这个结果推广为任意网络流的内存或吞吐保证。</p><p>前置概念: runnable-map</p><a href="#module-02">解释消息如何关联工具结果，正确处理流的消费、结束和复制。</a><div class="recall" data-recall-id="stream-ownership-0"><label for="recall-stream-ownership-0">加了日志之后业务流为空，第一条诊断假设是什么？</label><textarea id="recall-stream-ownership-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先画 Reader 的所有者，不要先怀疑模型。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>日志和业务可能共同消费了同一个 Reader。确认持有者，给两路分配 Copy(2) 的不同副本；检查 Close 与错误路径。</p><ul><li>指出单次消费</li><li>说明副本分配与释放</li><li>保留背压限制</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">schema/stream.go:246-274</p><p>Copy 为多个下游提供独立 Reader；n 小于 2 时返回原 Reader。</p><pre><code>// Copy creates n independent StreamReaders that each receive every element of
+// the original stream. The original StreamReader becomes unusable after Copy.
+//
+// Use Copy when two or more pipeline branches need the same stream —
+// for example, when a stream must be fed to both a callback handler and the
+// next node in a graph:
+//
+//	copies := sr.Copy(2)
+//	sr1, sr2 := copies[0], copies[1]
+//	defer sr1.Close()
+//	defer sr2.Close()
+//
+//	// sr1 and sr2 independently read the same elements
+//
+// n must be at least 1. If n &lt; 2, the original reader is returned unchanged.
+func (sr *StreamReader[T]) Copy(n int) []*StreamReader[T] {
+	if n &lt; 2 {
+		return []*StreamReader[T]{sr}
+	}
+
+	if sr.typ == readerTypeArray {
+		ret := make([]*StreamReader[T], n)
+		for i, ar := range sr.ar.copy(n) {
+			ret[i] = &amp;StreamReader[T]{typ: readerTypeArray, ar: ar}
+		}
+		return ret
+	}
+
+	return copyStreamReaders[T](sr, n)</code></pre></details></details><details class="concept-card" id="concept-message-concat"><summary>拼接也有不变量</summary><p>流块可能只包含半段文本或部分工具参数，例如 {&quot;a&quot;:19, 与 &quot;b&quot;:23}。每块都不一定是合法 JSON；应按消息与工具调用的拼接协议处理后，再进入参数解析阶段。简单地逐块执行工具会把半个参数当成完整请求。
+
+源码会拒绝将不同 ToolCallID 或 ToolName 的块拼成同一消息。这个错误是身份保护，不应为了“继续输出”而吞掉。文本的字符串连接只是拼接规则的一部分；工具调用数组、多模态片段、元信息还各有规则，因此一般不能用 strings.Join 替代框架消息拼接。
+
+诊断时保留：第几个块出错、角色、工具 ID 和类型；不用保存真实个人数据或模型密钥。先构造两个不含敏感内容的冲突块复现，再比较合法块。这样能区分 Provider 输出异常、应用串错两路流和拼接器本身的问题。</p><p>前置概念: message-identity, stream-ownership</p><a href="#module-02">解释消息如何关联工具结果，正确处理流的消费、结束和复制。</a><div class="recall" data-recall-id="message-concat-0"><label for="recall-message-concat-0">两个 ToolCallID 不同的块被送到同一拼接器，正确修复是什么？</label><textarea id="recall-message-concat-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>看错误检查为什么拒绝，而不只是看报错。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>按正确消息/调用边界分组，修复上游串流或分发错误，再拼接各自的块。不要删掉 ID 使检查失效。</p><ul><li>保留身份约束</li><li>定位上游分组</li><li>给出冲突与正常对照</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">schema/message.go:1683-1697</p><p>拼接消息时，非空 ToolCallID 与 ToolName 必须保持一致。</p><pre><code>		if msg.ToolCallID != &quot;&quot; {
+			if ret.ToolCallID == &quot;&quot; {
+				ret.ToolCallID = msg.ToolCallID
+			} else if ret.ToolCallID != msg.ToolCallID {
+				return nil, fmt.Errorf(&quot;cannot concat messages with&quot;+
+					&quot; different toolCallIDs: &#x27;%s&#x27; &#x27;%s&#x27;&quot;, ret.ToolCallID, msg.ToolCallID)
+			}
+		}
+		if msg.ToolName != &quot;&quot; {
+			if ret.ToolName == &quot;&quot; {
+				ret.ToolName = msg.ToolName
+			} else if ret.ToolName != msg.ToolName {
+				return nil, fmt.Errorf(&quot;cannot concat messages with&quot;+
+					&quot; different toolNames: &#x27;%s&#x27; &#x27;%s&#x27;&quot;, ret.ToolCallID, msg.ToolCallID)
+			}</code></pre></details></details><details class="concept-card" id="concept-graph-build"><summary>显式节点与连边</summary><p>订单最小图是 START→normalize→report→END。normalize 去掉输入两端空白，report 输出订单摘要。每个节点只负责一个输入输出变换，AddEdge 表达数据与控制的连接。START/END 是框架哨兵，不是你需要注册的普通节点。
+
+Graph[string,string] 说明图对外收发字符串；Lambda 内部也有自身类型。不要把所有节点包成 any 来逃避类型错误，这会把编排期可发现的问题推迟到运行时断言。若两节点类型不同，增加明确转换节点，或使用受支持的字段映射和合并机制，并说明转换语义。
+
+本课 playground 的 TestTypedPipeline 使用真实 compose.NewGraph、InvokableLambda、AddEdge、Compile、Invoke。输入“  A-17  ”返回“订单:A-17”；空白输入走业务错误。这里的最小正常链是调试正对照，以后加入模型节点时可先确认图本身仍然连通。</p><p>前置概念: runnable-map</p><a href="#module-03">构造一条有类型的图，分清建图错误、编译错误和运行错误。</a><div class="recall" data-recall-id="graph-build-0"><label for="recall-graph-build-0">图对外输出 string，中间节点返回 int 就一定非法吗？</label><textarea id="recall-graph-build-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>分别写出图边界和每个节点签名。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>不一定。若后继明确把 int 转成最终 string，内部异型连接可以成立。非法的是将 int 直接连给要求 string 的节点而没有受支持的转换。</p><ul><li>区分外部类型与每条内部边类型</li><li>给出转换节点</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/generic_graph.go:72-85</p><p>NewGraph 的类型参数描述对外边界。</p><pre><code>func NewGraph[I, O any](opts ...NewGraphOption) *Graph[I, O] {
+	options := &amp;newGraphOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	g := &amp;Graph[I, O]{
+		newGraphFromGeneric[I, O](
+			ComponentOfGraph,
+			options.withState,
+			options.stateType,
+			opts,
+		),
+	}</code></pre></details></details><details class="concept-card" id="concept-compile-contract"><summary>两层编译与三类错误</summary><p>Go 编译器检查你的程序、接口与泛型调用；Eino Compile 检查已经构造的图并返回 Runnable。两层编译解决的问题不同：Go 程序可成功编译，Eino 图仍可能存在不合法的连接、缺失节点或不受支持的结构。
+
+也不能假设所有错误都延迟到 Compile。显式 AddEdge 可立即拒绝 int→string；某些便捷 API 保存 buildError 到后续编译。每次返回 error 的构造方法都要检查，便捷链式方法也要检查最终 Compile。失败之后应重新构造清晰的图，而不是忽略错误继续追加。
+
+执行期错误则来自业务函数、模型、工具、流或上下文取消。TestBadEdgeRejected 实测错误指出 length 输出 int 与 text 输入 string 不匹配；TestTypedPipeline 的 empty order 是运行期业务错误。把它们放在不同日志阶段，能快速判断应该修改图，还是修改输入与业务规则。</p><p>前置概念: graph-build, typed-component</p><a href="#module-03">构造一条有类型的图，分清建图错误、编译错误和运行错误。</a><div class="recall" data-recall-id="compile-contract-0"><label for="recall-compile-contract-0">应用已经构建成功，但 AddEdge 报类型不匹配，能靠重试 Invoke 解决吗？</label><textarea id="recall-compile-contract-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先问是否已经拿到有效 Runnable。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>不能。错误发生在编排构造阶段；需要修正节点签名或加入转换，并重新编译图。重试适合特定暂时性运行故障，不适合确定的结构错误。</p><ul><li>定位编排阶段</li><li>解释确定性错误</li><li>提出合法修改</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/generic_graph.go:123-136</p><p>Compile 构造编译选项，调用内部图编译并传播错误。</p><pre><code>func (g *Graph[I, O]) Compile(ctx context.Context, opts ...GraphCompileOption) (Runnable[I, O], error) {
+	return compileAnyGraph[I, O](ctx, g, opts...)
+}
+
+func compileAnyGraph[I, O any](ctx context.Context, g AnyGraph, opts ...GraphCompileOption) (Runnable[I, O], error) {
+	if len(globalGraphCompileCallbacks) &gt; 0 {
+		opts = append([]GraphCompileOption{WithGraphCompileCallbacks(globalGraphCompileCallbacks...)}, opts...)
+	}
+	option := newGraphCompileOptions(opts...)
+
+	cr, err := g.compile(ctx, option)
+	if err != nil {
+		return nil, err
+	}</code></pre></details></details><details class="concept-card" id="concept-compiled-freeze"><summary>编译后冻结结构</summary><p>图编译后会使用稳定的节点和边关系。源码显式拒绝在已编译的图上继续新增节点；实测也验证新增边返回 ErrGraphCompiled。不要把一个已共享给多个请求的图当成每次请求都能原地增删工具的可变对象。
+
+Chain 适合明显的顺序流程，Compile 会补 END 边再委托底层 Graph；Graph 适合分支、循环与显式结构；Workflow 强调依赖组织与字段映射。三者共享执行抽象，但构造便利性、触发方式和可表达结构需要分别看当前实现。
+
+正确迁移方法是先冻结最小输入输出与失败契约，选择最简构造 API，然后用相同样例检验结果。只有遇到真实需要的路由、循环或字段依赖，再提升为更一般的图。更多节点和更复杂的抽象本身不会提高任务质量。</p><p>前置概念: compile-contract</p><a href="#module-03">构造一条有类型的图，分清建图错误、编译错误和运行错误。</a><div class="recall" data-recall-id="compiled-freeze-0"><label for="recall-compiled-freeze-0">想给已编译图加一个审计节点，应怎么做？</label><textarea id="recall-compiled-freeze-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>看 compiled guard 的保护对象。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>构建一个包含审计节点的新图，检查所有构造错误，重新 Compile 并回归正常、空输入和类型错误样例。不要原地修改已共享 Runnable 的结构。</p><ul><li>解释冻结结构</li><li>新建编排</li><li>回归原有行为</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/graph.go:162-178</p><p>编译后的图拒绝新增节点，START/END 名称保留。</p><pre><code>func (g *graph) addNode(key string, node *graphNode, options *graphAddNodeOpts) (err error) {
+	if g.buildError != nil {
+		return g.buildError
+	}
+
+	if g.compiled {
+		return ErrGraphCompiled
+	}
+
+	defer func() {
+		if err != nil {
+			g.buildError = err
+		}
+	}()
+
+	if key == END || key == START {
+		return fmt.Errorf(&quot;node &#x27;%s&#x27; is reserved, cannot add manually&quot;, key)</code></pre></details></details><details class="concept-card" id="concept-branch-route"><summary>分支返回下一步身份</summary><p>“订单已知就读取，否则进入人工复核”是一个控制选择。我们的 route 节点输出原输入；条件函数根据 known 前缀返回 local 或 review；两个目标再通向 END。分支返回的是节点 key，而不是最终业务结果，也不是用户看到的文字。
+
+构造分支时声明可达目标集合，可以约束运行期的选择。条件函数的输入类型必须匹配分支源的输出。返回未声明或不存在的目标属于编排/路由错误；不要默认未知返回值会自动落入安全的兜底路径。应用应显式设计 review 之类的合法兜底。
+
+实测 known-A→local:known-A，unknown-B→review:unknown-B。这个验证只说明确定性路由与两个目标连接成立；没有运行模型分类，也没有证明业务上“已知订单”的判定正确。将条件换成模型时，应保留这两条冻结样例并增加不合法路由输出案例。</p><p>前置概念: graph-build</p><a href="#module-04">预测分支目的节点，解释触发模式和共享状态的作用范围。</a><div class="recall" data-recall-id="branch-route-0"><label for="recall-branch-route-0">分支函数返回 review，但 END 没收到结果，应检查哪些连接？</label><textarea id="recall-branch-route-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>沿控制选择后的数据路径追踪。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>先检查 review 已声明且注册，源节点类型与条件类型一致，再检查 review→END 边及 review 执行错误。不能只看 condition 返回了字符串。</p><ul><li>查目标注册与声明</li><li>查边</li><li>查目标错误</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/branch.go:145-152</p><p>单目标分支把条件返回的节点名转换为多目标集合。</p><pre><code>func NewGraphBranch[T any](condition GraphBranchCondition[T], endNodes map[string]bool) *GraphBranch {
+	return NewGraphMultiBranch(func(ctx context.Context, in T) (endNode map[string]bool, err error) {
+		ret, err := condition(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]bool{ret: true}, nil
+	}, endNodes)</code></pre></details></details><details class="concept-card" id="concept-trigger-mode"><summary>触发模式与 eager 不混用</summary><p>AnyPredecessor 关注前一已完成 superstep 中任一前驱；AllPredecessor 要等所有前驱完成。不能把二者概括成“所有图都是等待全部上游”。一个有环 Agent 流程和一个静态依赖 DAG，常有不同触发需求。
+
+当前版本 AllPredecessor Graph 与 Workflow 默认 eager：节点就绪即可执行，不必等整轮 superstep 结束。WithEagerExecution 已废弃且为空操作；需要旧的屏障等待行为时看 WithEagerExecutionDisabled。旧教程给出的选项名不一定还代表一次有效配置变更。
+
+触发与数据合并是两件事：节点满足运行条件，不代表多个上游返回同类型数据就自动按业务语义合并。多路金额如何加总、失败是否短路、是否需要所有订单到齐，应在输入映射/合并与错误策略中明确。教程没有跑并发压力或复杂 fan-in；此段是源码观察。</p><p>前置概念: branch-route</p><a href="#module-04">预测分支目的节点，解释触发模式和共享状态的作用范围。</a><div class="recall" data-recall-id="trigger-mode-0"><label for="recall-trigger-mode-0">一个节点已满足所有前驱条件，为何会在同轮另一节点结束前运行？</label><textarea id="recall-trigger-mode-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>比较触发模式与 eager 选项。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>当前 AllPredecessor/Workflow 默认 eager，只需本节点依赖就绪。若业务要求整轮屏障，检查 WithEagerExecutionDisabled，并评估是否真的需要该顺序。</p><ul><li>区分节点依赖就绪与整轮完成</li><li>指出版本默认</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/graph_compile_options.go:84-101</p><p>Graph 默认 AnyPredecessor；AllPredecessor/Workflow 默认 eager，可禁用。</p><pre><code>// WithEagerExecutionDisabled disables the eager execution mode for the graph.
+// By default, eager execution is enabled for Workflow and Graph with the AllPredecessor trigger mode.
+// After using this option, nodes will wait for the completion of a super step instead of execute immediately once they are ready to run.
+// ref: https://www.cloudwego.io/docs/eino/core_modules/chain_and_graph_orchestration/orchestration_design_principles/#runtime-engine
+func WithEagerExecutionDisabled() GraphCompileOption {
+	return func(o *graphCompileOptions) {
+		o.eagerDisabled = true
+	}
+}
+
+// WithNodeTriggerMode sets the trigger mode for nodes in the graph.
+// The trigger mode determines when a node is triggered during graph execution, ref: https://www.cloudwego.io/docs/eino/core_modules/chain_and_graph_orchestration/orchestration_design_principles/#runtime-engine
+// AnyPredecessor by default.
+func WithNodeTriggerMode(triggerMode NodeTriggerMode) GraphCompileOption {
+	return func(o *graphCompileOptions) {
+		o.nodeTriggerMode = triggerMode
+	}
+}</code></pre></details></details><details class="concept-card" id="concept-state-lock"><summary>状态工厂与受锁访问</summary><p>有些信息不适合每条边都传：处理计数、局部缓存、审计标签。WithGenLocalState 接收工厂，为每次运行生成状态；ProcessState 从当前上下文找到相应类型并在锁内处理。若多个运行都返回同一个全局指针，工厂就失去了隔离意义。
+
+锁保护 handler 期间的访问，不能保护你在 handler 外保留的指针，也不自动约束外部 goroutine。不要在锁内调用同一状态的 ProcessState，可能自锁；不要在锁内做很慢的网络请求，让其他节点一直等待。可以先取需要的快照，释放锁，再执行外部操作，最后按明确规则更新。
+
+图局部状态、ADK 一次运行的消息状态、session 值、持久 checkpoint、业务订单记录各有边界。恢复旧状态需要序列化与存储契约，跨用户共享需要应用身份规则。单看 ProcessState 的互斥锁，不能推导这些跨运行与跨用户保证。</p><p>前置概念: graph-build, trigger-mode</p><a href="#module-04">预测分支目的节点，解释触发模式和共享状态的作用范围。</a><div class="recall" data-recall-id="state-lock-0"><label for="recall-state-lock-0">两个用户的图运行意外共享同一计数器，首先查看什么？</label><textarea id="recall-state-lock-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>画出指针在哪次调用创建。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>检查 WithGenLocalState 的工厂是否每次都返回同一个全局指针，然后检查 handler 外的别名访问。每次创建新状态并通过受锁入口更新；持久共享若是业务需求，应另建明确存储层。</p><ul><li>定位工厂隔离</li><li>锁的范围</li><li>区别共享业务状态</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/state.go:165-180</p><p>ProcessState 查找状态，在互斥锁内执行 handler；没有状态则返回错误。</p><pre><code>func ProcessState[S any](ctx context.Context, handler func(context.Context, S) error) error {
+	s, pMu, err := getState[S](ctx)
+	if err != nil {
+		return fmt.Errorf(&quot;get state from context fail: %w&quot;, err)
+	}
+	pMu.Lock()
+	defer pMu.Unlock()
+	return handler(ctx, s)
+}
+
+func getState[S any](ctx context.Context) (S, *sync.Mutex, error) {
+	state := ctx.Value(stateKey{})
+
+	if state == nil {
+		var s S
+		return s, nil, fmt.Errorf(&quot;have not set state&quot;)</code></pre></details></details><details class="concept-card" id="concept-tool-schema"><summary>结构描述与解析的边界</summary><p>工具接口有三层：Info 告诉模型能调用什么；参数 schema 描述输入形状；执行方法把输入变成结果。InferTool 可以根据 Go 结构生成元信息并包装函数，减少重复编解码；它不能替你决定金额单位、退款政策或所有权。
+
+源码默认将 JSON 反序列化为 T。成功反序列化不等于所有业务约束已验证，例如缺少数值字段常得到零值，负金额仍可能是合法整数，无法仅靠 JSON 解码区分“未提供”和“明确为零”。必要时使用指针字段、显式校验和业务错误类型。
+
+本课 sumTool 故意使用手写 Info 和 JSON 解析，让描述与执行的边界可见。脚本模型预先知道参数，不依赖 schema 诱导生成，所以测试没有证明 schema 的模型可用性。真实 Provider 必须再验证参数描述、required、枚举、多模态结果以及 tools 请求选项支持。</p><p>前置概念: tool-contract</p><a href="#module-05">沿工具名称、JSON 参数和调用 ID 定位执行及失败。</a><div class="recall" data-recall-id="tool-schema-0"><label for="recall-tool-schema-0">JSON 解码成功但金额是负数，应该在哪修复？</label><textarea id="recall-tool-schema-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>把合法 JSON 与合法业务请求分别列出来。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>在工具业务入口或专门校验层拒绝不合法金额，并定义单位/范围。schema 可以帮助约束生成，但成功解码不能取代业务校验。</p><ul><li>区分解析与业务约束</li><li>明确可验规则</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">components/tool/utils/invokable_func.go:173-195</p><p>InvokableRun 使用自定义解码或 Sonic JSON 解码得到类型 T。</p><pre><code>// InvokableRun invokes the tool with the given arguments.
+func (i *invokableTool[T, D]) InvokableRun(ctx context.Context, arguments string, opts ...tool.Option) (output string, err error) {
+
+	var inst T
+	if i.um != nil {
+		var val any
+		val, err = i.um(ctx, arguments)
+		if err != nil {
+			return &quot;&quot;, fmt.Errorf(&quot;[LocalFunc] failed to unmarshal arguments, toolName=%s, err=%w&quot;, i.getToolName(), err)
+		}
+		gt, ok := val.(T)
+		if !ok {
+			return &quot;&quot;, fmt.Errorf(&quot;[LocalFunc] invalid type, toolName=%s, expected=%T, given=%T&quot;, i.getToolName(), inst, val)
+		}
+		inst = gt
+	} else {
+		inst = generic.NewInstance[T]()
+
+		err = sonic.UnmarshalString(arguments, &amp;inst)
+		if err != nil {
+			return &quot;&quot;, fmt.Errorf(&quot;[LocalFunc] failed to unmarshal arguments in json, toolName=%s, err=%w&quot;, i.getToolName(), err)
+		}
+	}</code></pre></details></details><details class="concept-card" id="concept-tool-dispatch"><summary>注册与未知工具</summary><p>ToolsNode 建立工具名称到可执行入口的索引，并把 assistant.ToolCalls 转成任务。调用前应确认名称指向当前授权的能力。未知工具在没有 UnknownToolsHandler 时失败；配置自定义处理器会改变这条行为，不能把教程的默认断言推广到所有配置。
+
+默认可以并发运行工具，配置 executeSequentially 时顺序运行。并发的价值是减少互相独立任务的等待；若两个调用修改同一订单，仍需业务事务、锁或显式依赖。结果列表关联请求身份，不等于外部写入天然安全或可回滚。
+
+实测先执行 sum_order 得到 42，再将名称改成 unknown。后一请求被拒绝，工具调用计数保持 1。这验证了默认注册表拒绝路径；没有证明所有恶意参数或越权请求都被拒绝。不要把“在名单里”当成“当前用户可以做任何事情”。</p><p>前置概念: tool-schema, message-identity</p><a href="#module-05">沿工具名称、JSON 参数和调用 ID 定位执行及失败。</a><div class="recall" data-recall-id="tool-dispatch-0"><label for="recall-tool-dispatch-0">未知工具突然不再报错，应该先检查哪项配置？</label><textarea id="recall-tool-dispatch-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>读分发中的 if !ok 分支。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>检查 UnknownToolsHandler 是否设置，以及 ToolList/别名/本次调用选项是否改变了分发集合。先重建有效注册表，不应认定框架忽略了错误。</p><ul><li>检查默认被覆盖</li><li>有效能力集合</li><li>对应回归样例</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/tool_node.go:925-934</p><p>工具按名称索引分发；未注册且无 UnknownToolsHandler 时返回错误。</p><pre><code>		index, ok := tuple.indexes[toolCall.Function.Name]
+		if !ok {
+			if tn.unknownToolHandler == nil {
+				return nil, fmt.Errorf(&quot;tool %s not found in toolsNode indexes&quot;, toolCall.Function.Name)
+			}
+			toolCallTasks[i] = newUnknownToolTask(toolCall.Function.Name, toolCall.Function.Arguments, toolCall.ID, tn.unknownToolHandler)
+		} else {
+			toolCallTasks[i].meta = tuple.meta[index]
+			toolCallTasks[i].name = toolCall.Function.Name
+			toolCallTasks[i].callID = toolCall.ID</code></pre></details></details><details class="concept-card" id="concept-tool-result"><summary>结果身份与重复副作用</summary><p>本地函数返回字符串后，框架才把它封装成 tool 消息，带上任务的调用 ID 和名称。模型下一轮因此能把“42”与自己刚请求的计算对应。标准文本工具和增强多模态工具的结果结构不同，源码在这里分别处理。
+
+ToolCallID 是协议关联身份，不天然是数据库幂等键。工具已经付款成功、响应还没送到模型就进程崩溃，重跑可能再次付款；即使 checkpoint 记录了部分已执行工具，持久化时序和业务系统也需要证明。对写工具，应由应用明确稳定幂等键、事务结果查询和失败恢复策略。
+
+排错顺序：请求 ID→注册工具→参数→执行返回值→ToolMessage→下一轮模型输入。若最终答案错，不要直接归因“模型幻觉”：可能根本没执行，可能金额单位错，可能结果 ID 错配，也可能模型没有正确使用合法工具结果。</p><p>前置概念: tool-dispatch, message-concat</p><a href="#module-05">沿工具名称、JSON 参数和调用 ID 定位执行及失败。</a><div class="recall" data-recall-id="tool-result-0"><label for="recall-tool-result-0">工具已写入成功但最终事件丢失，可以直接重跑整个 Agent 吗？</label><textarea id="recall-tool-result-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>把业务提交与事件送达画成两个时点。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>先查询业务写入结果并使用幂等策略；明确恢复位置与已执行记录，再决定重试范围。仅凭 ToolCallID 或 UI 没显示不能证明工具未执行。</p><ul><li>识别成功写入/响应丢失窗口</li><li>幂等与查询</li><li>限制重试范围</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/tool_node.go:1232-1241</p><p>标准结果用任务的 callID 和名称构造 ToolMessage。</p><pre><code>		if len(errs) == 0 {
+			if tasks[i].useEnhanced {
+				output[i] = schema.ToolMessage(&quot;&quot;, tasks[i].callID, schema.WithToolName(tasks[i].name))
+				output[i].UserInputMultiContent, err = tasks[i].enhancedOutput.ToMessageInputParts()
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				output[i] = schema.ToolMessage(tasks[i].output, tasks[i].callID, schema.WithToolName(tasks[i].name))
+			}</code></pre></details></details><details class="concept-card" id="concept-runner-query"><summary>Runner 管一次执行与事件</summary><p>Runner 接入 Agent，配置流式模式和可选 CheckPointStore；Query 是快捷入口，把一个字符串变成 user 消息后调用 Run。它不是自动把所有过往 Query 加进聊天历史的数据库。要继续普通对话，应用应明确管理消息列表；恢复中断则使用 Resume 系列入口。
+
+Run 返回 AsyncIterator，逐个读取事件。事件可包含输出、Action 或 Err，因此没有正文的工具请求和控制事件也可能有意义。只取最后一个 Content 字段会漏掉工具事件、错误和中断。示例完整迭代到结束，遇到 Err 就失败，并读取 Output.MessageOutput。
+
+若 EnableStreaming 为真，MessageOutput 可能持有流；GetMessage 会消费并拼成完整消息，适合完整展示但失去逐块可见性。要流式 UI，需要正确消费 MessageStream、处理 EOF 与错误，再定义应用传输协议。Runner 自己不提供网页连接、HTTP 认证或浏览器重连。</p><p>前置概念: message-identity</p><a href="#module-06">复述 Runner、ChatModelAgent、事件与 ReAct 的分工。</a><div class="recall" data-recall-id="runner-query-0"><label for="recall-runner-query-0">连续调用两次 Query，第二次一定能看到第一次对话吗？</label><textarea id="recall-runner-query-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>数一下 Query 传给 Run 的消息。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>不能从 Query 的契约得出这一点。它开始只有一条 user 消息的新执行；普通历史需由应用管理后传给 Run，中断恢复则另走 checkpoint。</p><ul><li>解释 Query 新执行</li><li>历史管理</li><li>恢复区别</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">adk/runner.go:102-115</p><p>Query 构造一条 user 消息并调用 Run，开始新执行。</p><pre><code>func (r *TypedRunner[M]) Run(ctx context.Context, messages []M,
+	opts ...AgentRunOption) *AsyncIterator[*TypedAgentEvent[M]] {
+	return typedRunnerRunImpl(r.a, r.enableStreaming, r.store, ctx, messages, opts...)
+}
+
+// Query is a convenience method that starts a new execution with a single user query string.
+func (r *TypedRunner[M]) Query(ctx context.Context,
+	query string, opts ...AgentRunOption) *AsyncIterator[*TypedAgentEvent[M]] {
+	msgs, err := newUserMessage[M](query)
+	if err != nil {
+		return errorIterator[M](err)
+	}
+	return r.Run(ctx, []M{msgs}, opts...)
+}</code></pre></details></details><details class="concept-card" id="concept-react-bound"><summary>ChatModelAgent 的工具分支与迭代上限</summary><p>ChatModelAgent 将指令、消息、工具配置和模型组织成执行行为。有工具时走 ReAct，无工具时走较直接的模型流程。它让“模型请求工具→工具结果追加→模型再次生成”成为可驱动的闭环；选择能力和判断结果仍依赖具体模型与应用。
+
+当前版本通过 model.WithTools 调用选项传递工具信息，配置字段接受 BaseModel。不要机械要求所有接入模型必须实现旧 BindTools。另一个 ToolCallingChatModel.WithTools 接口强调返回新实例的安全绑定，两种同名机制的层次不同。
+
+MaxIterations 是模型生成周期上限，不是工具调用数、token 预算或时间期限。一次模型生成可发多条 ToolCalls；一次工具结果后也可能继续发新调用。因此即使 MaxIterations=3，也不能据此断言最多三次工具执行或固定费用。模型 token 限制、上下文取消、工具超时应分别配置。</p><p>前置概念: runner-query, tool-result</p><a href="#module-06">复述 Runner、ChatModelAgent、事件与 ReAct 的分工。</a><div class="recall" data-recall-id="react-bound-0"><label for="recall-react-bound-0">一次模型生成请求四个工具，MaxIterations=3 是否违反上限？</label><textarea id="recall-react-bound-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>看配置注释写的是 generation cycles。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>仅这一轮不违反模型生成周期上限；工具数不能直接替换为迭代数。但具体配置还可能有其他工具、时间或业务限制。</p><ul><li>识别计量对象</li><li>区分其他预算</li><li>说明下一轮仍消耗生成周期</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">adk/chatmodel.go:277-308</p><p>配置要求模型支持请求级 tools 选项；MaxIterations 限制模型生成周期，默认 20。</p><pre><code>	// Model is the chat model used by the agent.
+	// If your ChatModelAgent uses any tools, this model must support the model.WithTools
+	// call option, as that&#x27;s how ChatModelAgent configures the model with tool information.
+	Model model.BaseModel[M]
+
+	ToolsConfig ToolsConfig
+
+	// GenModelInput transforms instructions and input messages into the model&#x27;s input format.
+	// Optional. Defaults to defaultGenModelInput which combines instruction and messages.
+	GenModelInput TypedGenModelInput[M]
+
+	// Exit defines the tool used to terminate the agent process.
+	// Optional. If nil, no Exit Action will be generated.
+	// You can use the provided &#x27;ExitTool&#x27; implementation directly.
+	//
+	// NOT RECOMMENDED: Agent transfer with full context sharing between agents has not proven
+	// to be more effective empirically. Consider using ChatModelAgent with AgentTool
+	// or DeepAgent instead for most multi-agent scenarios.
+	Exit tool.BaseTool
+
+	// OutputKey stores the agent&#x27;s response in the session.
+	// Optional. When set, stores output via AddSessionValue(ctx, outputKey, msg.Content).
+	//
+	// NOT RECOMMENDED: Agent transfer with full context sharing between agents has not proven
+	// to be more effective empirically. Consider using ChatModelAgent with AgentTool
+	// or DeepAgent instead for most multi-agent scenarios.
+	OutputKey string
+
+	// MaxIterations defines the upper limit of ChatModel generation cycles.
+	// The agent will terminate with an error if this limit is exceeded.
+	// Optional. Defaults to 20.
+	MaxIterations int</code></pre></details></details><details class="concept-card" id="concept-agent-tools"><summary>把 Agent 当工具而不是全量转交</summary><p>当订单 Agent 需要税费专家时，可以把专家 Agent 包成工具：父 Agent 给一个局部 request，拿回结果后继续原任务。默认 request 参数是清晰的输入边界；WithFullChatHistoryAsInput 显式扩大上下文范围。这个选项的存在提醒我们，子能力并不天然需要全部历史。
+
+AgentTool、agent transfer 与预置 DeepAgent 是不同组织方式。当前源码对全上下文 transfer 的有效性有保留注释；这属于源码方观点，不是本课实验结论。教程以最小父 Agent 工具循环为主，不宣称跑过多 Agent、文件系统中间件或真实子任务。
+
+实测脚本模型两次 Generate：第一次给 sum_order 参数，第二次收到 tool 结果后给最终答案；工具只执行一次，收到三个事件。这证明框架闭环、事件和工具关联路径可工作。脚本模型预设了正确路线，所以它不测自然语言理解、工具选择质量和复杂问题解决能力。</p><p>前置概念: react-bound</p><a href="#module-06">复述 Runner、ChatModelAgent、事件与 ReAct 的分工。</a><div class="recall" data-recall-id="agent-tools-0"><label for="recall-agent-tools-0">税费专家只需订单金额，是否应默认给它整个用户聊天历史？</label><textarea id="recall-agent-tools-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>比较 request 与 fullChatHistoryAsInput。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>先给完成子任务所需的最小请求与参数，明确输出契约；只有必要且授权时扩大到全历史。再独立评估信息充足性与数据边界。</p><ul><li>最小任务边界</li><li>输出契约</li><li>不把配置选项视为权限授权</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">adk/agent_tool.go:32-60</p><p>AgentTool 默认输入描述为 request，可显式开启全量历史或自定义 schema。</p><pre><code>var (
+	defaultAgentToolParam = schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
+		&quot;request&quot;: {
+			Desc:     &quot;request to be processed&quot;,
+			Required: true,
+			Type:     schema.String,
+		},
+	})
+)
+
+type AgentToolOptions struct {
+	fullChatHistoryAsInput bool
+	agentInputSchema       *schema.ParamsOneOf
+}
+
+type AgentToolOption func(*AgentToolOptions)
+
+// WithFullChatHistoryAsInput enables using the full chat history as input.
+func WithFullChatHistoryAsInput() AgentToolOption {
+	return func(options *AgentToolOptions) {
+		options.fullChatHistoryAsInput = true
+	}
+}
+
+// WithAgentInputSchema sets a custom input schema for the agent tool.
+func WithAgentInputSchema(schema *schema.ParamsOneOf) AgentToolOption {
+	return func(options *AgentToolOptions) {
+		options.agentInputSchema = schema
+	}</code></pre></details></details><details class="concept-card" id="concept-checkpoint-store"><summary>存储接口不等于持久性保证</summary><p>检查点保存“从哪里继续、哪些中断点、哪些状态”的必要信息。Store 只规定按 ID 读写字节。内存实现可验证接口，却不能在进程退出后保留；文件、数据库、对象存储需要独立验证一致性、容量、加密和生命周期。
+
+ADK Runner 的 CheckPointStore 与 compose 的检查点选项是各自公开入口，内部共享一些核心机制，但调用层不能随意混用。需要给一次执行明确 CheckPointID，并提供可用存储；仅写入一个同名字符串并不自动创建可恢复状态。
+
+Store.Get 返回 bytes、是否存在和 error。找不到不是空白消息；读取失败也不能当不存在。可选 Delete 不保证任何存储都自动清理，注释明确提醒 TTL 或外部清理属于存储拥有者的责任。本课没有运行重启恢复或存储故障注入，后续应针对选定实现另立基准。</p><p>前置概念: state-lock, runner-query</p><a href="#module-07">定位 checkpoint 不存在、解码失败和错误恢复目标，说明持久化边界。</a><div class="recall" data-recall-id="checkpoint-store-0"><label for="recall-checkpoint-store-0">内存 Store 可以 Set/Get，能否证明进程重启后能恢复？</label><textarea id="recall-checkpoint-store-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>问 bytes 在原进程退出后存在哪里。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>不能。需要选定持久实现，在独立进程写入、退出、读取并恢复，同时验证版本、数据完整性与副作用行为。</p><ul><li>区分接口与耐久性</li><li>提出独立进程对照</li><li>限定结论</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">internal/core/interrupt.go:31-44</p><p>CheckPointStore 要求 Get/Set；可选 Deleter 提供显式删除，生命周期由存储拥有者管理。</p><pre><code>type CheckPointStore interface {
+	Get(ctx context.Context, checkPointID string) ([]byte, bool, error)
+	Set(ctx context.Context, checkPointID string, checkPoint []byte) error
+}
+
+// CheckPointDeleter is an optional interface that CheckPointStore implementations
+// can implement to support explicit checkpoint deletion.
+//
+// If the Store does not implement this interface, stale checkpoints will NOT be
+// automatically cleaned up. The store owner is responsible for managing checkpoint
+// lifecycle in that case (e.g., via TTL, external cleanup, or implementing this
+// interface).
+type CheckPointDeleter interface {
+	Delete(ctx context.Context, checkPointID string) error</code></pre></details></details><details class="concept-card" id="concept-resume-address"><summary>恢复目标与恢复数据</summary><p>中断不是把函数睡眠到明天；执行返回中断事件，框架保留继续所需状态，外部收到确认或新信息后再调用恢复。Resume 是隐式全部继续的简化入口；ResumeWithParams 用 Targets 精确指定哪些地址获得什么恢复数据。
+
+地址识别中断层级里的具体组件，ResumeData 是该组件期待的数据。若两个工具分别等“允许查询订单”和“允许退款”，不能把一个 true 自动扩散成所有操作授权。未命中的叶子中断点需要保留状态并再次中断；复合 Agent 负责把信号传给下游。
+
+应用仍需验证批准者、时间、范围和对象，将外部批准映射到合法地址与数据。框架提供中断/恢复结构，不自动决定批准是否足够或是否过期。断网、取消、业务错误与人为中断也不是同义状态，必须按实际事件分类。</p><p>前置概念: checkpoint-store, react-bound</p><a href="#module-07">定位 checkpoint 不存在、解码失败和错误恢复目标，说明持久化边界。</a><div class="recall" data-recall-id="resume-address-0"><label for="recall-resume-address-0">两个工具在等不同确认，只批准其中一个，应调用什么并检查什么？</label><textarea id="recall-resume-address-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>阅读 Targets 与未命中叶子的处理说明。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>使用 ResumeWithParams 给指定中断地址提供合法数据；确认另一个叶子仍中断，且应用已验证批准身份与范围。不能用一个全局布尔值批准全部。</p><ul><li>地址与数据</li><li>未批准叶子</li><li>应用授权边界</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">adk/runner.go:129-148</p><p>ResumeWithParams 使用地址到数据的 Targets，未命中的叶子中断点应再次中断。</p><pre><code>// ResumeWithParams continues an interrupted execution from a checkpoint with specific parameters.
+// This is the most common and powerful way to resume, allowing you to target specific interrupt points
+// (identified by their address/ID) and provide them with data.
+//
+// The params.Targets map should contain the addresses of the components to be resumed as keys. These addresses
+// can point to any interruptible component in the entire execution graph, including ADK agents, compose
+// graph nodes, or tools. The value can be the resume data for that component, or `nil` if no data is needed.
+//
+// When using this method:
+//   - Components whose addresses are in the params.Targets map will receive `isResumeFlow = true` when they
+//     call `GetResumeContext`.
+//   - Interrupted components whose addresses are NOT in the params.Targets map must decide how to proceed:
+//     -- &quot;Leaf&quot; components (the actual root causes of the original interrupt) MUST re-interrupt themselves
+//     to preserve their state.
+//     -- &quot;Composite&quot; agents (like SequentialAgent or ChatModelAgent) should generally proceed with their
+//     execution. They act as conduits, allowing the resume signal to flow to their children. They will
+//     naturally re-interrupt if one of their interrupted children re-interrupts, as they receive the
+//     new `CompositeInterrupt` signal from them.
+func (r *TypedRunner[M]) ResumeWithParams(ctx context.Context, checkPointID string, params *ResumeParams, opts ...AgentRunOption) (*AsyncIterator[*TypedAgentEvent[M]], error) {
+	return r.resumeInternal(ctx, checkPointID, params.Targets, opts...)</code></pre></details></details><details class="concept-card" id="concept-checkpoint-load"><summary>恢复失败的三道门</summary><p>加载路径给出自然排错顺序：Store.Get 是否成功且 existed；checkpoint 字节是否能 gob 解码；框架状态能否恢复；最后才进入继续执行。把“ID 不存在”与“字节版本不兼容”都记成模型失败，会丢掉最关键的定位信息。
+
+当前实现带有旧检查点格式兼容处理，源码中可见 preprocess 与类型注册。兼容代码存在不能证明你的所有自定义状态、Provider 变化或跨版本快照都能恢复。自定义状态中接口字段的实际类型、不可序列化对象和版本变更需要固定样例。
+
+更困难的是副作用窗口：工具已完成而 checkpoint 未落盘，或者 checkpoint 保存后外部结果仍未确定。恢复时应结合业务幂等与结果查询。此章节所有恢复行为来自源码读取，六个已运行测试没有覆盖这里；这条证据边界在课程、讲义和验收里保持一致。</p><p>前置概念: checkpoint-store, resume-address</p><a href="#module-07">定位 checkpoint 不存在、解码失败和错误恢复目标，说明持久化边界。</a><div class="recall" data-recall-id="checkpoint-load-0"><label for="recall-checkpoint-load-0">恢复报 failed to decode checkpoint，先重跑模型能解决吗？</label><textarea id="recall-checkpoint-load-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>沿 Get→existed→Decode→restore 顺序排查。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>先冻结失败字节与元数据，核对 checkpoint schema、版本和注册类型，复现解码；不可把不兼容数据当新任务悄悄重跑，尤其涉及写工具时。</p><ul><li>定位解码层</li><li>保存失败证据</li><li>防止重复副作用</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">adk/interrupt.go:223-248</p><p>加载先检查存储存在，再解码，再恢复 checkpoint 数据与中断状态。</p><pre><code>func runnerLoadCheckPointImpl(store CheckPointStore, ctx context.Context, checkpointID string) (
+	context.Context, *runContext, *ResumeInfo, error) {
+	data, existed, err := store.Get(ctx, checkpointID)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf(&quot;failed to get checkpoint from store: %w&quot;, err)
+	}
+	if !existed {
+		return nil, nil, nil, fmt.Errorf(&quot;checkpoint[%s] not exist&quot;, checkpointID)
+	}
+
+	data = preprocessADKCheckpoint(data)
+
+	s := &amp;serialization{}
+	err = gob.NewDecoder(bytes.NewReader(data)).Decode(s)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf(&quot;failed to decode checkpoint: %w&quot;, err)
+	}
+	if err = restoreRunnerCheckpointInfoData(s); err != nil {
+		return nil, nil, nil, err
+	}
+	ctx = core.PopulateInterruptState(ctx, s.InterruptID2Address, s.InterruptID2State)
+
+	return ctx, s.RunCtx, &amp;ResumeInfo{
+		EnableStreaming: s.EnableStreaming,
+		InterruptInfo:   s.Info,
+	}, nil</code></pre></details></details><details class="concept-card" id="concept-event-observe"><summary>回调观察也有流边界</summary><p>callbacks 的价值是沿执行边界观测，而不是给业务结果盖章。记录节点名称/组件类型、开始结束、错误和必要的身份，可以把“最终没答案”分解为：没有生成、工具找不到、参数失败、流错误、达到上限或用户取消。
+
+流回调与单值回调不同。若为调试而把整段流收集后打印，可能改变延迟和内存行为；若错误地共享 Reader，还会影响业务消费。选择需要的字段，保留身份与阶段，避免日志里存真实密钥、个人数据和完整私有上下文。
+
+本课没有增加全局追踪平台或验证 callback 的所有时序。它提供接口锚点与排错表，让你在本地最小图中先加一层轻量观测，记录是否改变输出、调用数与流消费。观测自身的无干扰性也应有行为对照。</p><p>前置概念: runnable-map, stream-ownership</p><a href="#module-08">根据证据定位故障，并把订单主线迁移到一个有边界的新场景。</a><div class="recall" data-recall-id="event-observe-0"><label for="recall-event-observe-0">加回调后流式延迟显著增加，怎样验证是否是观测导致？</label><textarea id="recall-event-observe-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>观察回调是否消费完整流。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>用相同输入对比关闭与启用回调，检查是否 Collect 完整流或阻塞消费；保留输出一致性、首块时间和结束时间，再优化必要字段与复制策略。</p><ul><li>有/无回调对照</li><li>收集与阻塞诊断</li><li>输出与延迟分开</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">internal/callbacks/interface.go:38-48</p><p>Handler 提供开始、结束、错误以及流输入/输出回调。</p><pre><code>type Handler interface {
+	OnStart(ctx context.Context, info *RunInfo, input CallbackInput) context.Context
+	OnEnd(ctx context.Context, info *RunInfo, output CallbackOutput) context.Context
+
+	OnError(ctx context.Context, info *RunInfo, err error) context.Context
+
+	OnStartWithStreamInput(ctx context.Context, info *RunInfo,
+		input *schema.StreamReader[CallbackInput]) context.Context
+	OnEndWithStreamOutput(ctx context.Context, info *RunInfo,
+		output *schema.StreamReader[CallbackOutput]) context.Context
+}</code></pre></details></details><details class="concept-card" id="concept-runtime-evidence"><summary>生成与消费事件不要混为一谈</summary><p>阅读最终答案之前，先阅读验证日志：六个 PASS 各有明确样例与断言。类型链覆盖正常、空输入与编译后修改拒绝；分支覆盖两条路线；不合法边覆盖类型失败；流覆盖副本与 Stream→Invoke；ToolsNode 覆盖 ID 与 unknown；ADK 覆盖两次模型、一次工具、三个事件。
+
+运行的是固定 revision 的真实 Eino 包，脚本模型和本地工具是替身。因此“真实库执行”与“真实模型推理”可以分别成立或未测。Sonic 在 Go 1.27.1 上报告不支持该快路径并回退标准 JSON；示例结果通过，但不能宣称测得 Sonic 性能或最低 Go 版本兼容。
+
+开始自己的学习记录时，请先写预测再运行。看过答案、网页完成进度、作者参考测试通过，都不能记录为你掌握了概念。课程只保存浏览器草稿；评估必须依据你给出的因果解释、正确定位和新场景迁移。</p><p>前置概念: react-bound, event-observe</p><a href="#module-08">根据证据定位故障，并把订单主线迁移到一个有边界的新场景。</a><div class="recall" data-recall-id="runtime-evidence-0"><label for="recall-runtime-evidence-0">看到六个 PASS，能否把 checkpoint、MCP 和学习掌握都标为通过？</label><textarea id="recall-runtime-evidence-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>把每个测试名对应到它唯一验证的契约。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>不能。逐项对照测试范围；checkpoint/MCP 没有被执行，学习掌握需独立评估真实回答。参考运行只证明其断言对应的框架行为。</p><ul><li>证据边界</li><li>未测项</li><li>作者运行与学习评估区别</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">adk/interface.go:100-105</p><p>GetMessage 在 streaming 模式会拼接并消费 MessageStream。</p><pre><code>func (mv *TypedMessageVariant[M]) GetMessage() (M, error) {
+	if mv.IsStreaming {
+		return concatMessageStream(mv.MessageStream)
+	}
+	return mv.Message, nil
+}</code></pre></details></details><details class="concept-card" id="concept-transfer-plan"><summary>先冻结可比较的扩展</summary><p>迁移到“读取两个报价、比较价格、生成采购摘要”时，保持同样的骨架：类型化输入→合法路由→只读工具→结果身份→模型或模板摘要→事件消费。变化的首先是参数、单位、权限和失败规则，而不是先选一个更复杂 Agent 名称。
+
+推荐下一步局部重建 stream 拼接与身份校验，边界只包括文本块、EOF、错误与冲突 ToolCallID。先写正常拼接、两路复制、身份冲突、提前取消的行为契约，再独立实现小核心与真实 Eino 比较。这个重建尚未交付，不把阅读课伪装成完整框架复刻。
+
+受控扩展候选是工具加入 currency 和 amount_minor，冻结币种与最小单位、缺字段、负数、未知币种、重复 ID 和正常路径。增加结构描述、解码后业务校验和结果格式，再跑原六个回归与新增契约。最后复述哪个问题由类型负责、哪个由运行时负责、哪个仍由业务负责。</p><p>前置概念: compile-contract, runtime-evidence, checkpoint-load</p><a href="#module-08">根据证据定位故障，并把订单主线迁移到一个有边界的新场景。</a><div class="recall" data-recall-id="transfer-plan-0"><label for="recall-transfer-plan-0">将订单工具换成报价比较，第一份规格应冻结哪些内容？</label><textarea id="recall-transfer-plan-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先写可比较的行为，后选择实现。</li><li>回到本概念的精确锚点，对照输入、输出、状态和错误。</li></ul><p>冻结输入/输出类型、币种和单位、只读权限、来源时间、ID 关联、错误与超时行为，以及正常/非法/重复样例。保持原循环正对照后再测试真实 Provider。</p><ul><li>明确数据口径</li><li>协议身份</li><li>正常与失败</li><li>真实模型另验</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">compose/runnable.go:32-37</p><p>Runnable 的输入输出边界适合定义局部替代与迁移的行为契约。</p><pre><code>type Runnable[I, O any] interface {
+	Invoke(ctx context.Context, input I, opts ...Option) (output O, err error)
+	Stream(ctx context.Context, input I, opts ...Option) (output *schema.StreamReader[O], err error)
+	Collect(ctx context.Context, input *schema.StreamReader[I], opts ...Option) (output O, err error)
+	Transform(ctx context.Context, input *schema.StreamReader[I], opts ...Option) (output *schema.StreamReader[O], err error)
+}</code></pre></details></details><button type="button" class="export-learning-notes">导出回忆记录</button><p class="notes-feedback" aria-live="polite"></p><details class="export-preview" hidden><summary>可复制的导出记录</summary><label for="export-data">尚未评价的回忆记录（JSON）</label><textarea id="export-data" readonly rows="6"></textarea><a class="export-download" download="code-learning-recall.json">下载 JSON</a></details></section>
+  <main id="course"><section class="course-module" id="module-01" data-title="Eino 的地图：先看输入输出契约"><div class="screen hero-screen"><p class="eyebrow">第 1 章 · Eino 源码详解</p><h2>Eino 的地图：先看输入输出契约</h2><p class="lede">从一个订单请求出发，区分框架、组件实现和你自己的应用。</p><p>贯穿案例：本地订单摘要。版本固定为 58d184303f4e；主线采用默认 Message API。</p><p>词汇桥接：<dfn data-definition="给函数或类型声明输入输出类型参数，让同一实现能安全用于多种数据类型。">泛型</dfn>。</p></div><div class="screen"><h3>类型参数与组件接口</h3><p>先把任务缩小为“输入订单编号，读出金额，生成摘要”。Eino 负责组织这些步骤；订单存储、HTTP 服务、模型供应商和用户权限由应用提供。不要从目录数量推断它已经替你搭好了一个聊天网站。最好的阅读入口是组件的输入输出类型，而不是先读全部内部调度器。</p><p>Go 的 <code>interface</code> 描述一组方法；实现这些方法的类型就能被接入，不需要继承框架基类。<code>BaseModel[M]</code> 的 M 是消息类型参数，Generate 收取消息切片并返回一条消息，Stream 则返回消息流。<code>context.Context</code> 用于传播取消、期限和调用范围数据；它不是永久数据库。<code>error</code> 是独立返回值，调用者必须处理。</p><p>本课使用默认的 <code>*schema.Message</code> 路线。当前源码还提供 <code>*schema.AgenticMessage</code> 与 Typed API，后者不能通过随意强制转换接入前者。读到类型别名时先找泛型本体；旧文章里的同名接口可能已经废弃。</p><figure class="code-translation" data-source="components/model/interface.go" data-lines="31-39"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>// BaseModel is the generic base model interface parameterized by message type M.
+// It exposes two modes of interaction:
+//   - [BaseModel.Generate]: blocks until the model returns a complete response.
+//   - [BaseModel.Stream]: returns a [schema.StreamReader] that yields message
+//     chunks incrementally as the model generates them.
+type BaseModel[M messageType] interface {
+	Generate(ctx context.Context, input []M, opts ...Option) (M, error)
+	Stream(ctx context.Context, input []M, opts ...Option) (*schema.StreamReader[M], error)
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>BaseModel 同时定义完整响应与流式响应，并以消息类型 M 参数化。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>工具元信息与执行分开</h3><p>“计算订单”函数可以直接写成 Go 函数；让模型使用它时，还需要名称、说明、参数描述和调用约定。<code>Info</code> 是可见能力的目录项，<code>InvokableRun</code> 是实际执行入口。只有名称的元信息并不会执行任何业务；模型返回一个工具请求，也还没有调用本地函数。</p><p>标准工具入口接收 JSON 字符串，返回字符串与错误。工具可以自己解析，也可以用 utils.InferTool 从 Go 参数结构生成描述并包裹编解码。这里要分清类型检查与业务检查：金额为负、订单不属于当前用户、同一个退款请求重复提交，都需要应用的明确规则。</p><p>我们的订单工具仅做两个整数求和，既无网络也无写入。它是框架接入的最小正对照，不是生产订单服务。将来改成数据库工具，必须另外证明查询权限、单位、溢出、超时和结果脱敏。这些条件不能靠工具描述里的自然语言替代。</p><figure class="code-translation" data-source="components/tool/interface.go" data-lines="32-46"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>type BaseTool interface {
+	Info(ctx context.Context) (*schema.ToolInfo, error)
+}
+
+// InvokableTool is a tool that can be executed by ToolsNode.
+//
+// InvokableRun receives the model&#x27;s tool call arguments as a JSON-encoded
+// string and returns a plain string result that is sent back to the model as
+// a tool message. The framework handles JSON decoding automatically when using
+// the [utils.InferTool] or [utils.NewTool] constructors.
+type InvokableTool interface {
+	BaseTool
+
+	// InvokableRun executes the tool with arguments encoded as a JSON string.
+	InvokableRun(ctx context.Context, argumentsInJSON string, opts ...Option) (string, error)</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>BaseTool 描述工具；InvokableTool 在其上增加 JSON 参数执行方法。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>统一执行对象</h3><p>Graph、Chain 和 Workflow 表达连接关系；Compile 后得到 <code>Runnable[I,O]</code>，调用者面对统一的执行接口。I/O 是这段编排的外部类型，不要求每个内部节点都用同一种类型。例如字符串订单号可以经过 Document、金额结构，最终返回字符串摘要。</p><p>四个方法是一个二乘二表：Invoke 单值进单值出，Stream 单值进流出，Collect 流进单值出，Transform 流进流出。它们表达数据形态，不能自动推导网络协议、实时性或性能。一个内部阶段若必须收齐全部输入，外部使用 Stream 仍可能经历等待。</p><p>包地图按职责读：schema 定义跨组件数据；components 定义可替换能力；compose 连接与执行；callbacks 观察执行；adk 建立 Agent 循环与事件。供应商实现通常在 eino-ext，调试平台与完整应用示例另有仓库。这个分层是从目录、接口和调用入口归纳的阅读地图，不是动态调用追踪。</p><figure class="code-translation" data-source="compose/runnable.go" data-lines="28-37"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>// Runnable is the interface for an executable object. Graph, Chain can be compiled into Runnable.
+// runnable is the core conception of eino, we do downgrade compatibility for four data flow patterns,
+// and can automatically connect components that only implement one or more methods.
+// eg, if a component only implements Stream() method, you can still call Invoke() to convert stream output to invoke output.
+type Runnable[I, O any] interface {
+	Invoke(ctx context.Context, input I, opts ...Option) (output O, err error)
+	Stream(ctx context.Context, input I, opts ...Option) (output *schema.StreamReader[O], err error)
+	Collect(ctx context.Context, input *schema.StreamReader[I], opts ...Option) (output O, err error)
+	Transform(ctx context.Context, input *schema.StreamReader[I], opts ...Option) (output *schema.StreamReader[O], err error)
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Runnable 提供四种单值与流之间的输入输出组合。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>把源码放回主线</h3><figure class="code-translation" data-source="compose/generic_graph.go" data-lines="72-85"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func NewGraph[I, O any](opts ...NewGraphOption) *Graph[I, O] {
+	options := &amp;newGraphOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	g := &amp;Graph[I, O]{
+		newGraphFromGeneric[I, O](
+			ComponentOfGraph,
+			options.withState,
+			options.stateType,
+			opts,
+		),
+	}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>NewGraph 建立带外部输入输出类型的图。</p><p>将此锚点与前三个契约合并解释，避免把单个接口或选项当成完整实现。</p></figcaption></figure><div class="data-flow" aria-label="源码推导的执行顺序"><button type="button" class="flow-step is-active" data-detail="应用提供业务输入、身份与运行上下文。">1. 应用</button><button type="button" class="flow-step " data-detail="模型和工具满足各自的 Go 接口，Provider 实现独立接入。">2. 组件</button><button type="button" class="flow-step " data-detail="compose 连接 typed nodes，Compile 得到 Runnable。">3. 编排</button><button type="button" class="flow-step " data-detail="adk 在模型与工具间组织循环；无工具可走直接路径。">4. Agent</button><button type="button" class="flow-step " data-detail="应用读取值或流，验收业务结果；库不提供现成网页。">5. 消费</button><p class="flow-detail" aria-live="polite">应用提供业务输入、身份与运行上下文。</p></div></div><div class="screen"><h3>预测、调试与迁移</h3><div class="quiz" data-explanation="先解决组件契约。迭代次数与 UI 速度都不能补齐接口方法。"><p class="quiz-kicker">先预测，再对照</p><h3>模型缺少 Stream 导致 Go 接口错误，应先做什么？</h3><div class="quiz-options"><button type="button" data-correct="true">检查组件方法签名与消息类型</button><button type="button" >增大 MaxIterations</button><button type="button" >修改网页的显示速度</button></div><p class="quiz-feedback" aria-live="polite"></p></div><p>本章阅读任务：不看答案，按“输入→调用→状态→输出→失败”写一张五列表，至少指出一个容易混淆的层次。返回顶部概念卡，先提交预测草稿，再展开分级提示和评分依据。</p><div class="callout warning"><p>证据边界：六个实际框架测试仅覆盖 playground/README.md 的案例。恢复、并发压力、真实 Provider、多模态、MCP、沙箱和用户授权没有在本课验收。网页记录是学习草稿，不代表已掌握。</p></div></div></section>
+
+<section class="course-module" id="module-02" data-title="消息与流：内容、身份、消费权"><div class="screen hero-screen"><p class="eyebrow">第 2 章 · Eino 源码详解</p><h2>消息与流：内容、身份、消费权</h2><p class="lede">解释消息如何关联工具结果，正确处理流的消费、结束和复制。</p><p>贯穿案例：本地订单摘要。版本固定为 58d184303f4e；主线采用默认 Message API。</p><p>词汇桥接：<dfn data-definition="一系列按顺序被消费的数据块；数据块边界不保证等于词、消息或完整 JSON。">流</dfn>。</p></div><div class="screen"><h3>消息不是纯字符串</h3><p>一次工具往返至少有三段消息：user 请求；assistant 发出 ToolCalls；tool 返回结果，随后 assistant 再总结。角色说明消息来源，Content 提供可读内容，工具身份字段保持请求与结果的关联。工具消息即使正文相同，也不能只靠文字找到对应请求。</p><p>假设模型一次请求两次 sum_order：一张订单 19+23，另一张 8+9。工具名称都一样，ID 才区分这两次调用。结果的 <code>ToolCallID</code> 应对应各自 assistant.ToolCalls 的 ID。丢失 ID 后，内容仍然看起来合理，但下一次模型输入已经破坏协议。</p><p>消息可能携带多模态输入、输出和元信息；本课只覆盖文本加标准工具调用。不要将旧 MultiContent 字段当成当前所有多模态类型的唯一入口。需要扩展时从字段注释、Provider 支持和消息拼接规则逐层验证。</p><figure class="code-translation" data-source="schema/message.go" data-lines="515-525"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>	Name string `json:&quot;name,omitempty&quot;`
+
+	// only for AssistantMessage
+	ToolCalls []ToolCall `json:&quot;tool_calls,omitempty&quot;`
+
+	// only for ToolMessage
+	ToolCallID string `json:&quot;tool_call_id,omitempty&quot;`
+	// only for ToolMessage
+	ToolName string `json:&quot;tool_name,omitempty&quot;`
+
+	ResponseMeta *ResponseMeta `json:&quot;response_meta,omitempty&quot;`</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Message 将工具请求集合与 ToolCallID、ToolName 分开保存。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>流的消费与复制</h3><p><code>Recv</code> 每次取一个块；<code>io.EOF</code> 表示结束，其他错误表示失败。消费循环要分别处理这两类结果，且在不用时关闭 Reader。Writer 的关闭与 Reader 的关闭责任不同：前者表示不再产生，后者表示下游不再接收。</p><p>一个 Reader 不是可以随时重放的数组。若日志回调先读完原流，下游就可能只见 EOF。需要两路消费时使用 Copy(2)，把一个副本交给日志，一个交给下游，并关闭各自持有的副本。原 Reader 在复制后不能继续作为第三路使用。慢消费者可能迫使复制机制保留数据，必须关注内存与取消。</p><p>数组 Reader 的验证很轻，但真实 Pipe 会有背压：缓冲满时生产者需要等下游消费。无消费者、忘记关闭、回调读流没有退出，都可能造成卡住。教程实测两个数组副本内容一致；没有把这个结果推广为任意网络流的内存或吞吐保证。</p><figure class="code-translation" data-source="schema/stream.go" data-lines="246-274"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>// Copy creates n independent StreamReaders that each receive every element of
+// the original stream. The original StreamReader becomes unusable after Copy.
+//
+// Use Copy when two or more pipeline branches need the same stream —
+// for example, when a stream must be fed to both a callback handler and the
+// next node in a graph:
+//
+//	copies := sr.Copy(2)
+//	sr1, sr2 := copies[0], copies[1]
+//	defer sr1.Close()
+//	defer sr2.Close()
+//
+//	// sr1 and sr2 independently read the same elements
+//
+// n must be at least 1. If n &lt; 2, the original reader is returned unchanged.
+func (sr *StreamReader[T]) Copy(n int) []*StreamReader[T] {
+	if n &lt; 2 {
+		return []*StreamReader[T]{sr}
+	}
+
+	if sr.typ == readerTypeArray {
+		ret := make([]*StreamReader[T], n)
+		for i, ar := range sr.ar.copy(n) {
+			ret[i] = &amp;StreamReader[T]{typ: readerTypeArray, ar: ar}
+		}
+		return ret
+	}
+
+	return copyStreamReaders[T](sr, n)</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Copy 为多个下游提供独立 Reader；n 小于 2 时返回原 Reader。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>拼接也有不变量</h3><p>流块可能只包含半段文本或部分工具参数，例如 <code>{"a":19,</code> 与 <code>"b":23}</code>。每块都不一定是合法 JSON；应按消息与工具调用的拼接协议处理后，再进入参数解析阶段。简单地逐块执行工具会把半个参数当成完整请求。</p><p>源码会拒绝将不同 ToolCallID 或 ToolName 的块拼成同一消息。这个错误是身份保护，不应为了“继续输出”而吞掉。文本的字符串连接只是拼接规则的一部分；工具调用数组、多模态片段、元信息还各有规则，因此一般不能用 strings.Join 替代框架消息拼接。</p><p>诊断时保留：第几个块出错、角色、工具 ID 和类型；不用保存真实个人数据或模型密钥。先构造两个不含敏感内容的冲突块复现，再比较合法块。这样能区分 Provider 输出异常、应用串错两路流和拼接器本身的问题。</p><figure class="code-translation" data-source="schema/message.go" data-lines="1683-1697"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>		if msg.ToolCallID != &quot;&quot; {
+			if ret.ToolCallID == &quot;&quot; {
+				ret.ToolCallID = msg.ToolCallID
+			} else if ret.ToolCallID != msg.ToolCallID {
+				return nil, fmt.Errorf(&quot;cannot concat messages with&quot;+
+					&quot; different toolCallIDs: &#x27;%s&#x27; &#x27;%s&#x27;&quot;, ret.ToolCallID, msg.ToolCallID)
+			}
+		}
+		if msg.ToolName != &quot;&quot; {
+			if ret.ToolName == &quot;&quot; {
+				ret.ToolName = msg.ToolName
+			} else if ret.ToolName != msg.ToolName {
+				return nil, fmt.Errorf(&quot;cannot concat messages with&quot;+
+					&quot; different toolNames: &#x27;%s&#x27; &#x27;%s&#x27;&quot;, ret.ToolCallID, msg.ToolCallID)
+			}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>拼接消息时，非空 ToolCallID 与 ToolName 必须保持一致。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>把源码放回主线</h3><figure class="code-translation" data-source="schema/stream.go" data-lines="99-102"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func Pipe[T any](cap int) (*StreamReader[T], *StreamWriter[T]) {
+	stm := newStream[T](cap)
+	return stm.asReader(), &amp;StreamWriter[T]{stm: stm}
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Pipe 成对创建 Reader 与 Writer。</p><p>将此锚点与前三个契约合并解释，避免把单个接口或选项当成完整实现。</p></figcaption></figure><div class="table-scroll"><table><thead><tr><th>观察点</th><th>首先核对</th><th>不能据此推导</th></tr></thead><tbody><tr><td>输入</td><td>类型、角色、身份、单位</td><td>合法输入一定有正确业务结果</td></tr><tr><td>状态</td><td>拥有者、寿命与写入时点</td><td>状态已持久化或跨用户安全</td></tr><tr><td>输出</td><td>完整值、流结束或控制事件</td><td>看到正文就是成功结束</td></tr><tr><td>失败</td><td>构造、编译、执行、消费分别记录</td><td>所有错误都能靠重试解决</td></tr></tbody></table></div></div><div class="screen"><h3>预测、调试与迁移</h3><div class="quiz" data-explanation="独立消费者需要独立 Reader。Copy 的生命周期、慢消费者和关闭责任仍须管理。"><p class="quiz-kicker">先预测，再对照</p><h3>要让日志与业务各消费完整流，应采用哪种方式？</h3><div class="quiz-options"><button type="button" >同一 Reader 轮流 Recv</button><button type="button" data-correct="true">Copy(2) 后各用一个副本</button><button type="button" >每块都当完整 JSON 执行</button></div><p class="quiz-feedback" aria-live="polite"></p></div><p>本章阅读任务：不看答案，按“输入→调用→状态→输出→失败”写一张五列表，至少指出一个容易混淆的层次。返回顶部概念卡，先提交预测草稿，再展开分级提示和评分依据。</p><div class="callout warning"><p>证据边界：六个实际框架测试仅覆盖 playground/README.md 的案例。恢复、并发压力、真实 Provider、多模态、MCP、沙箱和用户授权没有在本课验收。网页记录是学习草稿，不代表已掌握。</p></div></div></section>
+
+<section class="course-module" id="module-03" data-title="编排与编译：把关系变成可执行契约"><div class="screen hero-screen"><p class="eyebrow">第 3 章 · Eino 源码详解</p><h2>编排与编译：把关系变成可执行契约</h2><p class="lede">构造一条有类型的图，分清建图错误、编译错误和运行错误。</p><p>贯穿案例：本地订单摘要。版本固定为 58d184303f4e；主线采用默认 Message API。</p><p>词汇桥接：<dfn data-definition="把编排定义检查并转换为可执行对象；这里不同于 Go 编译器构建程序。">编译</dfn>。</p></div><div class="screen"><h3>显式节点与连边</h3><p>订单最小图是 START→normalize→report→END。normalize 去掉输入两端空白，report 输出订单摘要。每个节点只负责一个输入输出变换，AddEdge 表达数据与控制的连接。START/END 是框架哨兵，不是你需要注册的普通节点。</p><p><code>Graph[string,string]</code> 说明图对外收发字符串；Lambda 内部也有自身类型。不要把所有节点包成 <code>any</code> 来逃避类型错误，这会把编排期可发现的问题推迟到运行时断言。若两节点类型不同，增加明确转换节点，或使用受支持的字段映射和合并机制，并说明转换语义。</p><p>本课 playground 的 TestTypedPipeline 使用真实 compose.NewGraph、InvokableLambda、AddEdge、Compile、Invoke。输入“  A-17  ”返回“订单:A-17”；空白输入走业务错误。这里的最小正常链是调试正对照，以后加入模型节点时可先确认图本身仍然连通。</p><figure class="code-translation" data-source="compose/generic_graph.go" data-lines="72-85"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func NewGraph[I, O any](opts ...NewGraphOption) *Graph[I, O] {
+	options := &amp;newGraphOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	g := &amp;Graph[I, O]{
+		newGraphFromGeneric[I, O](
+			ComponentOfGraph,
+			options.withState,
+			options.stateType,
+			opts,
+		),
+	}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>NewGraph 的类型参数描述对外边界。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>两层编译与三类错误</h3><p>Go 编译器检查你的程序、接口与泛型调用；Eino Compile 检查已经构造的图并返回 Runnable。两层编译解决的问题不同：Go 程序可成功编译，Eino 图仍可能存在不合法的连接、缺失节点或不受支持的结构。</p><p>也不能假设所有错误都延迟到 Compile。显式 AddEdge 可立即拒绝 int→string；某些便捷 API 保存 buildError 到后续编译。每次返回 error 的构造方法都要检查，便捷链式方法也要检查最终 Compile。失败之后应重新构造清晰的图，而不是忽略错误继续追加。</p><p>执行期错误则来自业务函数、模型、工具、流或上下文取消。TestBadEdgeRejected 实测错误指出 length 输出 int 与 text 输入 string 不匹配；TestTypedPipeline 的 empty order 是运行期业务错误。把它们放在不同日志阶段，能快速判断应该修改图，还是修改输入与业务规则。</p><figure class="code-translation" data-source="compose/generic_graph.go" data-lines="123-136"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func (g *Graph[I, O]) Compile(ctx context.Context, opts ...GraphCompileOption) (Runnable[I, O], error) {
+	return compileAnyGraph[I, O](ctx, g, opts...)
+}
+
+func compileAnyGraph[I, O any](ctx context.Context, g AnyGraph, opts ...GraphCompileOption) (Runnable[I, O], error) {
+	if len(globalGraphCompileCallbacks) &gt; 0 {
+		opts = append([]GraphCompileOption{WithGraphCompileCallbacks(globalGraphCompileCallbacks...)}, opts...)
+	}
+	option := newGraphCompileOptions(opts...)
+
+	cr, err := g.compile(ctx, option)
+	if err != nil {
+		return nil, err
+	}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Compile 构造编译选项，调用内部图编译并传播错误。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>编译后冻结结构</h3><p>图编译后会使用稳定的节点和边关系。源码显式拒绝在已编译的图上继续新增节点；实测也验证新增边返回 ErrGraphCompiled。不要把一个已共享给多个请求的图当成每次请求都能原地增删工具的可变对象。</p><p>Chain 适合明显的顺序流程，Compile 会补 END 边再委托底层 Graph；Graph 适合分支、循环与显式结构；Workflow 强调依赖组织与字段映射。三者共享执行抽象，但构造便利性、触发方式和可表达结构需要分别看当前实现。</p><p>正确迁移方法是先冻结最小输入输出与失败契约，选择最简构造 API，然后用相同样例检验结果。只有遇到真实需要的路由、循环或字段依赖，再提升为更一般的图。更多节点和更复杂的抽象本身不会提高任务质量。</p><figure class="code-translation" data-source="compose/graph.go" data-lines="162-178"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func (g *graph) addNode(key string, node *graphNode, options *graphAddNodeOpts) (err error) {
+	if g.buildError != nil {
+		return g.buildError
+	}
+
+	if g.compiled {
+		return ErrGraphCompiled
+	}
+
+	defer func() {
+		if err != nil {
+			g.buildError = err
+		}
+	}()
+
+	if key == END || key == START {
+		return fmt.Errorf(&quot;node &#x27;%s&#x27; is reserved, cannot add manually&quot;, key)</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>编译后的图拒绝新增节点，START/END 名称保留。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>把源码放回主线</h3><figure class="code-translation" data-source="compose/chain.go" data-lines="157-163"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func (c *Chain[I, O]) Compile(ctx context.Context, opts ...GraphCompileOption) (Runnable[I, O], error) {
+	if err := c.addEndIfNeeded(); err != nil {
+		return nil, err
+	}
+
+	return c.gg.Compile(ctx, opts...)
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Chain 编译补终点后委托 Graph。</p><p>将此锚点与前三个契约合并解释，避免把单个接口或选项当成完整实现。</p></figcaption></figure><div class="data-flow" aria-label="源码推导的执行顺序"><button type="button" class="flow-step is-active" data-detail="指定外部输入输出类型为 string。">1. NewGraph</button><button type="button" class="flow-step " data-detail="Lambda 去除两端空白，仍输出 string。">2. normalize</button><button type="button" class="flow-step " data-detail="Lambda 检查非空；失败返回 empty order，成功生成订单摘要。">3. report</button><button type="button" class="flow-step " data-detail="检查图与连接，得到 Runnable；编译后结构冻结。">4. Compile</button><button type="button" class="flow-step " data-detail="真实框架输入空白包围的 A-17，得到订单:A-17。">5. Invoke</button><p class="flow-detail" aria-live="polite">指定外部输入输出类型为 string。</p></div></div><div class="screen"><h3>预测、调试与迁移</h3><div class="quiz" data-explanation="类型不匹配是确定的编排结构错误；必须修正连接契约。"><p class="quiz-kicker">先预测，再对照</p><h3>哪个错误应通过修改编排而不是重试业务请求解决？</h3><div class="quiz-options"><button type="button" >暂时性外部连接超时</button><button type="button" data-correct="true">AddEdge 的 int→string 类型不匹配</button><button type="button" >用户输入了空订单号</button></div><p class="quiz-feedback" aria-live="polite"></p></div><p>本章阅读任务：不看答案，按“输入→调用→状态→输出→失败”写一张五列表，至少指出一个容易混淆的层次。返回顶部概念卡，先提交预测草稿，再展开分级提示和评分依据。</p><div class="callout warning"><p>证据边界：六个实际框架测试仅覆盖 playground/README.md 的案例。恢复、并发压力、真实 Provider、多模态、MCP、沙箱和用户授权没有在本课验收。网页记录是学习草稿，不代表已掌握。</p></div></div></section>
+
+<section class="course-module" id="module-04" data-title="运行时：分支、触发与局部状态"><div class="screen hero-screen"><p class="eyebrow">第 4 章 · Eino 源码详解</p><h2>运行时：分支、触发与局部状态</h2><p class="lede">预测分支目的节点，解释触发模式和共享状态的作用范围。</p><p>贯穿案例：本地订单摘要。版本固定为 58d184303f4e；主线采用默认 Message API。</p><p>词汇桥接：<dfn data-definition="一次图运行里节点可共享的数据；它的寿命与长期业务数据库不同。">局部状态</dfn>。</p></div><div class="screen"><h3>分支返回下一步身份</h3><p>“订单已知就读取，否则进入人工复核”是一个控制选择。我们的 route 节点输出原输入；条件函数根据 known 前缀返回 local 或 review；两个目标再通向 END。分支返回的是节点 key，而不是最终业务结果，也不是用户看到的文字。</p><p>构造分支时声明可达目标集合，可以约束运行期的选择。条件函数的输入类型必须匹配分支源的输出。返回未声明或不存在的目标属于编排/路由错误；不要默认未知返回值会自动落入安全的兜底路径。应用应显式设计 review 之类的合法兜底。</p><p>实测 known-A→local:known-A，unknown-B→review:unknown-B。这个验证只说明确定性路由与两个目标连接成立；没有运行模型分类，也没有证明业务上“已知订单”的判定正确。将条件换成模型时，应保留这两条冻结样例并增加不合法路由输出案例。</p><figure class="code-translation" data-source="compose/branch.go" data-lines="145-152"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func NewGraphBranch[T any](condition GraphBranchCondition[T], endNodes map[string]bool) *GraphBranch {
+	return NewGraphMultiBranch(func(ctx context.Context, in T) (endNode map[string]bool, err error) {
+		ret, err := condition(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]bool{ret: true}, nil
+	}, endNodes)</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>单目标分支把条件返回的节点名转换为多目标集合。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>触发模式与 eager 不混用</h3><p>AnyPredecessor 关注前一已完成 superstep 中任一前驱；AllPredecessor 要等所有前驱完成。不能把二者概括成“所有图都是等待全部上游”。一个有环 Agent 流程和一个静态依赖 DAG，常有不同触发需求。</p><p>当前版本 AllPredecessor Graph 与 Workflow 默认 eager：节点就绪即可执行，不必等整轮 superstep 结束。WithEagerExecution 已废弃且为空操作；需要旧的屏障等待行为时看 WithEagerExecutionDisabled。旧教程给出的选项名不一定还代表一次有效配置变更。</p><p>触发与数据合并是两件事：节点满足运行条件，不代表多个上游返回同类型数据就自动按业务语义合并。多路金额如何加总、失败是否短路、是否需要所有订单到齐，应在输入映射/合并与错误策略中明确。教程没有跑并发压力或复杂 fan-in；此段是源码观察。</p><figure class="code-translation" data-source="compose/graph_compile_options.go" data-lines="84-101"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>// WithEagerExecutionDisabled disables the eager execution mode for the graph.
+// By default, eager execution is enabled for Workflow and Graph with the AllPredecessor trigger mode.
+// After using this option, nodes will wait for the completion of a super step instead of execute immediately once they are ready to run.
+// ref: https://www.cloudwego.io/docs/eino/core_modules/chain_and_graph_orchestration/orchestration_design_principles/#runtime-engine
+func WithEagerExecutionDisabled() GraphCompileOption {
+	return func(o *graphCompileOptions) {
+		o.eagerDisabled = true
+	}
+}
+
+// WithNodeTriggerMode sets the trigger mode for nodes in the graph.
+// The trigger mode determines when a node is triggered during graph execution, ref: https://www.cloudwego.io/docs/eino/core_modules/chain_and_graph_orchestration/orchestration_design_principles/#runtime-engine
+// AnyPredecessor by default.
+func WithNodeTriggerMode(triggerMode NodeTriggerMode) GraphCompileOption {
+	return func(o *graphCompileOptions) {
+		o.nodeTriggerMode = triggerMode
+	}
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Graph 默认 AnyPredecessor；AllPredecessor/Workflow 默认 eager，可禁用。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>状态工厂与受锁访问</h3><p>有些信息不适合每条边都传：处理计数、局部缓存、审计标签。WithGenLocalState 接收工厂，为每次运行生成状态；ProcessState 从当前上下文找到相应类型并在锁内处理。若多个运行都返回同一个全局指针，工厂就失去了隔离意义。</p><p>锁保护 handler 期间的访问，不能保护你在 handler 外保留的指针，也不自动约束外部 goroutine。不要在锁内调用同一状态的 ProcessState，可能自锁；不要在锁内做很慢的网络请求，让其他节点一直等待。可以先取需要的快照，释放锁，再执行外部操作，最后按明确规则更新。</p><p>图局部状态、ADK 一次运行的消息状态、session 值、持久 checkpoint、业务订单记录各有边界。恢复旧状态需要序列化与存储契约，跨用户共享需要应用身份规则。单看 ProcessState 的互斥锁，不能推导这些跨运行与跨用户保证。</p><figure class="code-translation" data-source="compose/state.go" data-lines="165-180"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func ProcessState[S any](ctx context.Context, handler func(context.Context, S) error) error {
+	s, pMu, err := getState[S](ctx)
+	if err != nil {
+		return fmt.Errorf(&quot;get state from context fail: %w&quot;, err)
+	}
+	pMu.Lock()
+	defer pMu.Unlock()
+	return handler(ctx, s)
+}
+
+func getState[S any](ctx context.Context) (S, *sync.Mutex, error) {
+	state := ctx.Value(stateKey{})
+
+	if state == nil {
+		var s S
+		return s, nil, fmt.Errorf(&quot;have not set state&quot;)</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>ProcessState 查找状态，在互斥锁内执行 handler；没有状态则返回错误。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>把源码放回主线</h3><figure class="code-translation" data-source="compose/generic_graph.go" data-lines="35-43"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>// WithGenLocalState registers a function to generate per-run local state
+// that can be shared across nodes in the graph.
+func WithGenLocalState[S any](gls GenLocalState[S]) NewGraphOption {
+	return func(ngo *newGraphOptions) {
+		ngo.withState = func(ctx context.Context) any {
+			return gls(ctx)
+		}
+		ngo.stateType = generic.TypeOf[S]()
+	}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>WithGenLocalState 注册每次运行的局部状态工厂。</p><p>将此锚点与前三个契约合并解释，避免把单个接口或选项当成完整实现。</p></figcaption></figure><div class="table-scroll"><table><thead><tr><th>观察点</th><th>首先核对</th><th>不能据此推导</th></tr></thead><tbody><tr><td>输入</td><td>类型、角色、身份、单位</td><td>合法输入一定有正确业务结果</td></tr><tr><td>状态</td><td>拥有者、寿命与写入时点</td><td>状态已持久化或跨用户安全</td></tr><tr><td>输出</td><td>完整值、流结束或控制事件</td><td>看到正文就是成功结束</td></tr><tr><td>失败</td><td>构造、编译、执行、消费分别记录</td><td>所有错误都能靠重试解决</td></tr></tbody></table></div></div><div class="screen"><h3>预测、调试与迁移</h3><div class="quiz" data-explanation="它保护局部状态访问；数据库幂等与用户鉴权需要独立设计。"><p class="quiz-kicker">先预测，再对照</p><h3>ProcessState 的锁能保证什么？</h3><div class="quiz-options"><button type="button" data-correct="true">当前 handler 内对该状态的受锁访问</button><button type="button" >所有数据库写入都恰好一次</button><button type="button" >跨用户访问自动鉴权</button></div><p class="quiz-feedback" aria-live="polite"></p></div><p>本章阅读任务：不看答案，按“输入→调用→状态→输出→失败”写一张五列表，至少指出一个容易混淆的层次。返回顶部概念卡，先提交预测草稿，再展开分级提示和评分依据。</p><div class="callout warning"><p>证据边界：六个实际框架测试仅覆盖 playground/README.md 的案例。恢复、并发压力、真实 Provider、多模态、MCP、沙箱和用户授权没有在本课验收。网页记录是学习草稿，不代表已掌握。</p></div></div></section>
+
+<section class="course-module" id="module-05" data-title="工具调用：从能力描述到关联结果"><div class="screen hero-screen"><p class="eyebrow">第 5 章 · Eino 源码详解</p><h2>工具调用：从能力描述到关联结果</h2><p class="lede">沿工具名称、JSON 参数和调用 ID 定位执行及失败。</p><p>贯穿案例：本地订单摘要。版本固定为 58d184303f4e；主线采用默认 Message API。</p><p>词汇桥接：<dfn data-definition="描述参数的字段、类型和约束，帮助生成和校验调用输入。">参数 schema</dfn>。</p></div><div class="screen"><h3>结构描述与解析的边界</h3><p>工具接口有三层：Info 告诉模型能调用什么；参数 schema 描述输入形状；执行方法把输入变成结果。InferTool 可以根据 Go 结构生成元信息并包装函数，减少重复编解码；它不能替你决定金额单位、退款政策或所有权。</p><p>源码默认将 JSON 反序列化为 T。成功反序列化不等于所有业务约束已验证，例如缺少数值字段常得到零值，负金额仍可能是合法整数，无法仅靠 JSON 解码区分“未提供”和“明确为零”。必要时使用指针字段、显式校验和业务错误类型。</p><p>本课 sumTool 故意使用手写 Info 和 JSON 解析，让描述与执行的边界可见。脚本模型预先知道参数，不依赖 schema 诱导生成，所以测试没有证明 schema 的模型可用性。真实 Provider 必须再验证参数描述、required、枚举、多模态结果以及 tools 请求选项支持。</p><figure class="code-translation" data-source="components/tool/utils/invokable_func.go" data-lines="173-195"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>// InvokableRun invokes the tool with the given arguments.
+func (i *invokableTool[T, D]) InvokableRun(ctx context.Context, arguments string, opts ...tool.Option) (output string, err error) {
+
+	var inst T
+	if i.um != nil {
+		var val any
+		val, err = i.um(ctx, arguments)
+		if err != nil {
+			return &quot;&quot;, fmt.Errorf(&quot;[LocalFunc] failed to unmarshal arguments, toolName=%s, err=%w&quot;, i.getToolName(), err)
+		}
+		gt, ok := val.(T)
+		if !ok {
+			return &quot;&quot;, fmt.Errorf(&quot;[LocalFunc] invalid type, toolName=%s, expected=%T, given=%T&quot;, i.getToolName(), inst, val)
+		}
+		inst = gt
+	} else {
+		inst = generic.NewInstance[T]()
+
+		err = sonic.UnmarshalString(arguments, &amp;inst)
+		if err != nil {
+			return &quot;&quot;, fmt.Errorf(&quot;[LocalFunc] failed to unmarshal arguments in json, toolName=%s, err=%w&quot;, i.getToolName(), err)
+		}
+	}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>InvokableRun 使用自定义解码或 Sonic JSON 解码得到类型 T。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>注册与未知工具</h3><p>ToolsNode 建立工具名称到可执行入口的索引，并把 assistant.ToolCalls 转成任务。调用前应确认名称指向当前授权的能力。未知工具在没有 UnknownToolsHandler 时失败；配置自定义处理器会改变这条行为，不能把教程的默认断言推广到所有配置。</p><p>默认可以并发运行工具，配置 executeSequentially 时顺序运行。并发的价值是减少互相独立任务的等待；若两个调用修改同一订单，仍需业务事务、锁或显式依赖。结果列表关联请求身份，不等于外部写入天然安全或可回滚。</p><p>实测先执行 sum_order 得到 42，再将名称改成 unknown。后一请求被拒绝，工具调用计数保持 1。这验证了默认注册表拒绝路径；没有证明所有恶意参数或越权请求都被拒绝。不要把“在名单里”当成“当前用户可以做任何事情”。</p><figure class="code-translation" data-source="compose/tool_node.go" data-lines="925-934"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>		index, ok := tuple.indexes[toolCall.Function.Name]
+		if !ok {
+			if tn.unknownToolHandler == nil {
+				return nil, fmt.Errorf(&quot;tool %s not found in toolsNode indexes&quot;, toolCall.Function.Name)
+			}
+			toolCallTasks[i] = newUnknownToolTask(toolCall.Function.Name, toolCall.Function.Arguments, toolCall.ID, tn.unknownToolHandler)
+		} else {
+			toolCallTasks[i].meta = tuple.meta[index]
+			toolCallTasks[i].name = toolCall.Function.Name
+			toolCallTasks[i].callID = toolCall.ID</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>工具按名称索引分发；未注册且无 UnknownToolsHandler 时返回错误。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>结果身份与重复副作用</h3><p>本地函数返回字符串后，框架才把它封装成 tool 消息，带上任务的调用 ID 和名称。模型下一轮因此能把“42”与自己刚请求的计算对应。标准文本工具和增强多模态工具的结果结构不同，源码在这里分别处理。</p><p>ToolCallID 是协议关联身份，不天然是数据库幂等键。工具已经付款成功、响应还没送到模型就进程崩溃，重跑可能再次付款；即使 checkpoint 记录了部分已执行工具，持久化时序和业务系统也需要证明。对写工具，应由应用明确稳定幂等键、事务结果查询和失败恢复策略。</p><p>排错顺序：请求 ID→注册工具→参数→执行返回值→ToolMessage→下一轮模型输入。若最终答案错，不要直接归因“模型幻觉”：可能根本没执行，可能金额单位错，可能结果 ID 错配，也可能模型没有正确使用合法工具结果。</p><figure class="code-translation" data-source="compose/tool_node.go" data-lines="1232-1241"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>		if len(errs) == 0 {
+			if tasks[i].useEnhanced {
+				output[i] = schema.ToolMessage(&quot;&quot;, tasks[i].callID, schema.WithToolName(tasks[i].name))
+				output[i].UserInputMultiContent, err = tasks[i].enhancedOutput.ToMessageInputParts()
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				output[i] = schema.ToolMessage(tasks[i].output, tasks[i].callID, schema.WithToolName(tasks[i].name))
+			}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>标准结果用任务的 callID 和名称构造 ToolMessage。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>把源码放回主线</h3><figure class="code-translation" data-source="compose/tool_node.go" data-lines="1178-1186"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>	if err != nil {
+		return nil, err
+	}
+
+	if tn.executeSequentially {
+		sequentialRunToolCall(ctx, runToolCallTaskByInvoke, tasks, opt.ToolOptions...)
+	} else {
+		parallelRunToolCall(ctx, runToolCallTaskByInvoke, tasks, opt.ToolOptions...)
+	}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>ToolsNode 根据执行配置选择顺序或并行任务运行。</p><p>将此锚点与前三个契约合并解释，避免把单个接口或选项当成完整实现。</p></figcaption></figure><div class="table-scroll"><table><thead><tr><th>观察点</th><th>首先核对</th><th>不能据此推导</th></tr></thead><tbody><tr><td>输入</td><td>类型、角色、身份、单位</td><td>合法输入一定有正确业务结果</td></tr><tr><td>状态</td><td>拥有者、寿命与写入时点</td><td>状态已持久化或跨用户安全</td></tr><tr><td>输出</td><td>完整值、流结束或控制事件</td><td>看到正文就是成功结束</td></tr><tr><td>失败</td><td>构造、编译、执行、消费分别记录</td><td>所有错误都能靠重试解决</td></tr></tbody></table></div></div><div class="screen"><h3>预测、调试与迁移</h3><div class="quiz" data-explanation="测试只覆盖默认未知名称路径。业务校验、用户权限和幂等均是其他契约。"><p class="quiz-kicker">先预测，再对照</p><h3>测试 unknown 工具被拒绝，证明了什么？</h3><div class="quiz-options"><button type="button" data-correct="true">当前默认注册表路径拒绝了未知名称</button><button type="button" >全部参数和用户权限都安全</button><button type="button" >所有外部写操作可以重跑</button></div><p class="quiz-feedback" aria-live="polite"></p></div><p>本章阅读任务：不看答案，按“输入→调用→状态→输出→失败”写一张五列表，至少指出一个容易混淆的层次。返回顶部概念卡，先提交预测草稿，再展开分级提示和评分依据。</p><div class="callout warning"><p>证据边界：六个实际框架测试仅覆盖 playground/README.md 的案例。恢复、并发压力、真实 Provider、多模态、MCP、沙箱和用户授权没有在本课验收。网页记录是学习草稿，不代表已掌握。</p></div></div></section>
+
+<section class="course-module" id="module-06" data-title="ADK：模型与工具怎样形成循环"><div class="screen hero-screen"><p class="eyebrow">第 6 章 · Eino 源码详解</p><h2>ADK：模型与工具怎样形成循环</h2><p class="lede">复述 Runner、ChatModelAgent、事件与 ReAct 的分工。</p><p>贯穿案例：本地订单摘要。版本固定为 58d184303f4e；主线采用默认 Message API。</p><p>词汇桥接：<dfn data-definition="把模型生成与行动结果交替组织的执行模式；循环状态与退出规则由实现约束。">ReAct</dfn>。</p></div><div class="screen"><h3>Runner 管一次执行与事件</h3><p>Runner 接入 Agent，配置流式模式和可选 CheckPointStore；Query 是快捷入口，把一个字符串变成 user 消息后调用 Run。它不是自动把所有过往 Query 加进聊天历史的数据库。要继续普通对话，应用应明确管理消息列表；恢复中断则使用 Resume 系列入口。</p><p>Run 返回 AsyncIterator，逐个读取事件。事件可包含输出、Action 或 Err，因此没有正文的工具请求和控制事件也可能有意义。只取最后一个 Content 字段会漏掉工具事件、错误和中断。示例完整迭代到结束，遇到 Err 就失败，并读取 Output.MessageOutput。</p><p>若 EnableStreaming 为真，MessageOutput 可能持有流；GetMessage 会消费并拼成完整消息，适合完整展示但失去逐块可见性。要流式 UI，需要正确消费 MessageStream、处理 EOF 与错误，再定义应用传输协议。Runner 自己不提供网页连接、HTTP 认证或浏览器重连。</p><figure class="code-translation" data-source="adk/runner.go" data-lines="102-115"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func (r *TypedRunner[M]) Run(ctx context.Context, messages []M,
+	opts ...AgentRunOption) *AsyncIterator[*TypedAgentEvent[M]] {
+	return typedRunnerRunImpl(r.a, r.enableStreaming, r.store, ctx, messages, opts...)
+}
+
+// Query is a convenience method that starts a new execution with a single user query string.
+func (r *TypedRunner[M]) Query(ctx context.Context,
+	query string, opts ...AgentRunOption) *AsyncIterator[*TypedAgentEvent[M]] {
+	msgs, err := newUserMessage[M](query)
+	if err != nil {
+		return errorIterator[M](err)
+	}
+	return r.Run(ctx, []M{msgs}, opts...)
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Query 构造一条 user 消息并调用 Run，开始新执行。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>ChatModelAgent 的工具分支与迭代上限</h3><p>ChatModelAgent 将指令、消息、工具配置和模型组织成执行行为。有工具时走 ReAct，无工具时走较直接的模型流程。它让“模型请求工具→工具结果追加→模型再次生成”成为可驱动的闭环；选择能力和判断结果仍依赖具体模型与应用。</p><p>当前版本通过 <code>model.WithTools</code> 调用选项传递工具信息，配置字段接受 BaseModel。不要机械要求所有接入模型必须实现旧 BindTools。另一个 ToolCallingChatModel.WithTools 接口强调返回新实例的安全绑定，两种同名机制的层次不同。</p><p>MaxIterations 是模型生成周期上限，不是工具调用数、token 预算或时间期限。一次模型生成可发多条 ToolCalls；一次工具结果后也可能继续发新调用。因此即使 MaxIterations=3，也不能据此断言最多三次工具执行或固定费用。模型 token 限制、上下文取消、工具超时应分别配置。</p><figure class="code-translation" data-source="adk/chatmodel.go" data-lines="277-308"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>	// Model is the chat model used by the agent.
+	// If your ChatModelAgent uses any tools, this model must support the model.WithTools
+	// call option, as that&#x27;s how ChatModelAgent configures the model with tool information.
+	Model model.BaseModel[M]
+
+	ToolsConfig ToolsConfig
+
+	// GenModelInput transforms instructions and input messages into the model&#x27;s input format.
+	// Optional. Defaults to defaultGenModelInput which combines instruction and messages.
+	GenModelInput TypedGenModelInput[M]
+
+	// Exit defines the tool used to terminate the agent process.
+	// Optional. If nil, no Exit Action will be generated.
+	// You can use the provided &#x27;ExitTool&#x27; implementation directly.
+	//
+	// NOT RECOMMENDED: Agent transfer with full context sharing between agents has not proven
+	// to be more effective empirically. Consider using ChatModelAgent with AgentTool
+	// or DeepAgent instead for most multi-agent scenarios.
+	Exit tool.BaseTool
+
+	// OutputKey stores the agent&#x27;s response in the session.
+	// Optional. When set, stores output via AddSessionValue(ctx, outputKey, msg.Content).
+	//
+	// NOT RECOMMENDED: Agent transfer with full context sharing between agents has not proven
+	// to be more effective empirically. Consider using ChatModelAgent with AgentTool
+	// or DeepAgent instead for most multi-agent scenarios.
+	OutputKey string
+
+	// MaxIterations defines the upper limit of ChatModel generation cycles.
+	// The agent will terminate with an error if this limit is exceeded.
+	// Optional. Defaults to 20.
+	MaxIterations int</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>配置要求模型支持请求级 tools 选项；MaxIterations 限制模型生成周期，默认 20。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>把 Agent 当工具而不是全量转交</h3><p>当订单 Agent 需要税费专家时，可以把专家 Agent 包成工具：父 Agent 给一个局部 request，拿回结果后继续原任务。默认 request 参数是清晰的输入边界；WithFullChatHistoryAsInput 显式扩大上下文范围。这个选项的存在提醒我们，子能力并不天然需要全部历史。</p><p>AgentTool、agent transfer 与预置 DeepAgent 是不同组织方式。当前源码对全上下文 transfer 的有效性有保留注释；这属于源码方观点，不是本课实验结论。教程以最小父 Agent 工具循环为主，不宣称跑过多 Agent、文件系统中间件或真实子任务。</p><p>实测脚本模型两次 Generate：第一次给 sum_order 参数，第二次收到 tool 结果后给最终答案；工具只执行一次，收到三个事件。这证明框架闭环、事件和工具关联路径可工作。脚本模型预设了正确路线，所以它不测自然语言理解、工具选择质量和复杂问题解决能力。</p><figure class="code-translation" data-source="adk/agent_tool.go" data-lines="32-60"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>var (
+	defaultAgentToolParam = schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
+		&quot;request&quot;: {
+			Desc:     &quot;request to be processed&quot;,
+			Required: true,
+			Type:     schema.String,
+		},
+	})
+)
+
+type AgentToolOptions struct {
+	fullChatHistoryAsInput bool
+	agentInputSchema       *schema.ParamsOneOf
+}
+
+type AgentToolOption func(*AgentToolOptions)
+
+// WithFullChatHistoryAsInput enables using the full chat history as input.
+func WithFullChatHistoryAsInput() AgentToolOption {
+	return func(options *AgentToolOptions) {
+		options.fullChatHistoryAsInput = true
+	}
+}
+
+// WithAgentInputSchema sets a custom input schema for the agent tool.
+func WithAgentInputSchema(schema *schema.ParamsOneOf) AgentToolOption {
+	return func(options *AgentToolOptions) {
+		options.agentInputSchema = schema
+	}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>AgentTool 默认输入描述为 request，可显式开启全量历史或自定义 schema。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>把源码放回主线</h3><figure class="code-translation" data-source="adk/interface.go" data-lines="419-435"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>type TypedAgentEvent[M MessageType] struct {
+	AgentName string
+
+	// RunPath represents the execution path from root agent to the current event source.
+	// This field is managed entirely by the framework and cannot be set by end-users.
+	//
+	// NOT RECOMMENDED: RunPath is mainly relevant for agent transfer and workflow agents,
+	// which have not proven to be more effective empirically. For ChatModelAgent with
+	// AgentTool or DeepAgent, RunPath is trivial. Consider those patterns instead.
+	RunPath []RunStep
+
+	Output *TypedAgentOutput[M]
+
+	Action *AgentAction
+
+	Err error
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>AgentEvent 区分 Output、Action 与 Err。</p><p>将此锚点与前三个契约合并解释，避免把单个接口或选项当成完整实现。</p></figcaption></figure><div class="data-flow" aria-label="源码推导的执行顺序"><button type="button" class="flow-step is-active" data-detail="Runner 创建 user 消息，开始新执行。">1. Query</button><button type="button" class="flow-step " data-detail="脚本模型返回 agent-call-17，sum_order 参数19与23。">2. Generate 1</button><button type="button" class="flow-step " data-detail="ToolsNode 找到 sum_order，函数计算42并封装关联结果。">3. 工具</button><button type="button" class="flow-step " data-detail="模型收到 tool 消息，返回包含42的最终摘要。">4. Generate 2</button><button type="button" class="flow-step " data-detail="应用读到三个事件，检查 error、model=2、tool=1。">5. 事件</button><p class="flow-detail" aria-live="polite">Runner 创建 user 消息，开始新执行。</p></div><div class="component-chat" aria-label="组件责任对话"><div class="chat-message" data-speaker="Runner">将 Query 变成一次 user 输入，驱动 Agent 并提供事件。</div><div class="chat-message" data-speaker="脚本模型">发出 agent-call-17，要求本地 sum_order 计算 19+23。</div><div class="chat-message" data-speaker="ToolsNode">在注册表找到 sum_order，执行并封装 ID 对应的结果。</div><div class="chat-message" data-speaker="工具">返回 {&quot;total&quot;:42}，本例无网络或业务写入。</div><div class="chat-message" data-speaker="脚本模型">收到 tool 消息，返回订单摘要。</div><div class="chat-message" data-speaker="应用">消费三个事件，检查 Err、调用计数与最终内容。</div><button type="button" class="replay-chat">重新播放</button></div></div><div class="screen"><h3>预测、调试与迁移</h3><div class="quiz" data-explanation="这是确定性接入正对照；真实模型质量与其他 Agent 模式仍未测。"><p class="quiz-kicker">先预测，再对照</p><h3>脚本模型跑通了两轮 Agent，能验收哪一项？</h3><div class="quiz-options"><button type="button" data-correct="true">真实框架工具循环与事件路径</button><button type="button" >真实模型推理质量</button><button type="button" >所有多 Agent 模式的效果</button></div><p class="quiz-feedback" aria-live="polite"></p></div><p>本章阅读任务：不看答案，按“输入→调用→状态→输出→失败”写一张五列表，至少指出一个容易混淆的层次。返回顶部概念卡，先提交预测草稿，再展开分级提示和评分依据。</p><div class="callout warning"><p>证据边界：六个实际框架测试仅覆盖 playground/README.md 的案例。恢复、并发压力、真实 Provider、多模态、MCP、沙箱和用户授权没有在本课验收。网页记录是学习草稿，不代表已掌握。</p></div></div></section>
+
+<section class="course-module" id="module-07" data-title="中断与恢复：地址、状态、存储各管什么"><div class="screen hero-screen"><p class="eyebrow">第 7 章 · Eino 源码详解</p><h2>中断与恢复：地址、状态、存储各管什么</h2><p class="lede">定位 checkpoint 不存在、解码失败和错误恢复目标，说明持久化边界。</p><p>贯穿案例：本地订单摘要。版本固定为 58d184303f4e；主线采用默认 Message API。</p><p>词汇桥接：<dfn data-definition="为继续一次执行保存的状态快照；它不等于消息历史、权限凭证或业务事务。">检查点</dfn>。</p></div><div class="screen"><h3>存储接口不等于持久性保证</h3><p>检查点保存“从哪里继续、哪些中断点、哪些状态”的必要信息。Store 只规定按 ID 读写字节。内存实现可验证接口，却不能在进程退出后保留；文件、数据库、对象存储需要独立验证一致性、容量、加密和生命周期。</p><p>ADK Runner 的 CheckPointStore 与 compose 的检查点选项是各自公开入口，内部共享一些核心机制，但调用层不能随意混用。需要给一次执行明确 CheckPointID，并提供可用存储；仅写入一个同名字符串并不自动创建可恢复状态。</p><p>Store.Get 返回 bytes、是否存在和 error。找不到不是空白消息；读取失败也不能当不存在。可选 Delete 不保证任何存储都自动清理，注释明确提醒 TTL 或外部清理属于存储拥有者的责任。本课没有运行重启恢复或存储故障注入，后续应针对选定实现另立基准。</p><figure class="code-translation" data-source="internal/core/interrupt.go" data-lines="31-44"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>type CheckPointStore interface {
+	Get(ctx context.Context, checkPointID string) ([]byte, bool, error)
+	Set(ctx context.Context, checkPointID string, checkPoint []byte) error
+}
+
+// CheckPointDeleter is an optional interface that CheckPointStore implementations
+// can implement to support explicit checkpoint deletion.
+//
+// If the Store does not implement this interface, stale checkpoints will NOT be
+// automatically cleaned up. The store owner is responsible for managing checkpoint
+// lifecycle in that case (e.g., via TTL, external cleanup, or implementing this
+// interface).
+type CheckPointDeleter interface {
+	Delete(ctx context.Context, checkPointID string) error</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>CheckPointStore 要求 Get/Set；可选 Deleter 提供显式删除，生命周期由存储拥有者管理。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>恢复目标与恢复数据</h3><p>中断不是把函数睡眠到明天；执行返回中断事件，框架保留继续所需状态，外部收到确认或新信息后再调用恢复。Resume 是隐式全部继续的简化入口；ResumeWithParams 用 Targets 精确指定哪些地址获得什么恢复数据。</p><p>地址识别中断层级里的具体组件，ResumeData 是该组件期待的数据。若两个工具分别等“允许查询订单”和“允许退款”，不能把一个 true 自动扩散成所有操作授权。未命中的叶子中断点需要保留状态并再次中断；复合 Agent 负责把信号传给下游。</p><p>应用仍需验证批准者、时间、范围和对象，将外部批准映射到合法地址与数据。框架提供中断/恢复结构，不自动决定批准是否足够或是否过期。断网、取消、业务错误与人为中断也不是同义状态，必须按实际事件分类。</p><figure class="code-translation" data-source="adk/runner.go" data-lines="129-148"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>// ResumeWithParams continues an interrupted execution from a checkpoint with specific parameters.
+// This is the most common and powerful way to resume, allowing you to target specific interrupt points
+// (identified by their address/ID) and provide them with data.
+//
+// The params.Targets map should contain the addresses of the components to be resumed as keys. These addresses
+// can point to any interruptible component in the entire execution graph, including ADK agents, compose
+// graph nodes, or tools. The value can be the resume data for that component, or `nil` if no data is needed.
+//
+// When using this method:
+//   - Components whose addresses are in the params.Targets map will receive `isResumeFlow = true` when they
+//     call `GetResumeContext`.
+//   - Interrupted components whose addresses are NOT in the params.Targets map must decide how to proceed:
+//     -- &quot;Leaf&quot; components (the actual root causes of the original interrupt) MUST re-interrupt themselves
+//     to preserve their state.
+//     -- &quot;Composite&quot; agents (like SequentialAgent or ChatModelAgent) should generally proceed with their
+//     execution. They act as conduits, allowing the resume signal to flow to their children. They will
+//     naturally re-interrupt if one of their interrupted children re-interrupts, as they receive the
+//     new `CompositeInterrupt` signal from them.
+func (r *TypedRunner[M]) ResumeWithParams(ctx context.Context, checkPointID string, params *ResumeParams, opts ...AgentRunOption) (*AsyncIterator[*TypedAgentEvent[M]], error) {
+	return r.resumeInternal(ctx, checkPointID, params.Targets, opts...)</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>ResumeWithParams 使用地址到数据的 Targets，未命中的叶子中断点应再次中断。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>恢复失败的三道门</h3><p>加载路径给出自然排错顺序：Store.Get 是否成功且 existed；checkpoint 字节是否能 gob 解码；框架状态能否恢复；最后才进入继续执行。把“ID 不存在”与“字节版本不兼容”都记成模型失败，会丢掉最关键的定位信息。</p><p>当前实现带有旧检查点格式兼容处理，源码中可见 preprocess 与类型注册。兼容代码存在不能证明你的所有自定义状态、Provider 变化或跨版本快照都能恢复。自定义状态中接口字段的实际类型、不可序列化对象和版本变更需要固定样例。</p><p>更困难的是副作用窗口：工具已完成而 checkpoint 未落盘，或者 checkpoint 保存后外部结果仍未确定。恢复时应结合业务幂等与结果查询。此章节所有恢复行为来自源码读取，六个已运行测试没有覆盖这里；这条证据边界在课程、讲义和验收里保持一致。</p><figure class="code-translation" data-source="adk/interrupt.go" data-lines="223-248"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func runnerLoadCheckPointImpl(store CheckPointStore, ctx context.Context, checkpointID string) (
+	context.Context, *runContext, *ResumeInfo, error) {
+	data, existed, err := store.Get(ctx, checkpointID)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf(&quot;failed to get checkpoint from store: %w&quot;, err)
+	}
+	if !existed {
+		return nil, nil, nil, fmt.Errorf(&quot;checkpoint[%s] not exist&quot;, checkpointID)
+	}
+
+	data = preprocessADKCheckpoint(data)
+
+	s := &amp;serialization{}
+	err = gob.NewDecoder(bytes.NewReader(data)).Decode(s)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf(&quot;failed to decode checkpoint: %w&quot;, err)
+	}
+	if err = restoreRunnerCheckpointInfoData(s); err != nil {
+		return nil, nil, nil, err
+	}
+	ctx = core.PopulateInterruptState(ctx, s.InterruptID2Address, s.InterruptID2State)
+
+	return ctx, s.RunCtx, &amp;ResumeInfo{
+		EnableStreaming: s.EnableStreaming,
+		InterruptInfo:   s.Info,
+	}, nil</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>加载先检查存储存在，再解码，再恢复 checkpoint 数据与中断状态。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>把源码放回主线</h3><figure class="code-translation" data-source="adk/runner.go" data-lines="330-337"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>			if checkPointID != nil {
+				err := runnerSaveCheckPointImpl(enableStreaming, store, ctx, *checkPointID, &amp;InterruptInfo{
+					Data: legacyData,
+				}, interruptSignal)
+				if err != nil {
+					gen.Send(&amp;TypedAgentEvent[M]{Err: fmt.Errorf(&quot;failed to save checkpoint: %w&quot;, err)})
+				}
+			}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>中断路径在配置 checkpoint ID 时尝试保存，保存失败作为错误事件发送。</p><p>将此锚点与前三个契约合并解释，避免把单个接口或选项当成完整实现。</p></figcaption></figure><div class="table-scroll"><table><thead><tr><th>观察点</th><th>首先核对</th><th>不能据此推导</th></tr></thead><tbody><tr><td>输入</td><td>类型、角色、身份、单位</td><td>合法输入一定有正确业务结果</td></tr><tr><td>状态</td><td>拥有者、寿命与写入时点</td><td>状态已持久化或跨用户安全</td></tr><tr><td>输出</td><td>完整值、流结束或控制事件</td><td>看到正文就是成功结束</td></tr><tr><td>失败</td><td>构造、编译、执行、消费分别记录</td><td>所有错误都能靠重试解决</td></tr></tbody></table></div></div><div class="screen"><h3>预测、调试与迁移</h3><div class="quiz" data-explanation="恢复依赖有效存储、ID、兼容状态及调用路径；外部事务和耐久性要另验。"><p class="quiz-kicker">先预测，再对照</p><h3>Checkpoint 能自动保证哪一项？</h3><div class="quiz-options"><button type="button" >所有外部业务写入恰好一次</button><button type="button" data-correct="true">已存储且兼容状态的恢复机制</button><button type="button" >任何进程重启都无需持久存储</button></div><p class="quiz-feedback" aria-live="polite"></p></div><p>本章阅读任务：不看答案，按“输入→调用→状态→输出→失败”写一张五列表，至少指出一个容易混淆的层次。返回顶部概念卡，先提交预测草稿，再展开分级提示和评分依据。</p><div class="callout warning"><p>证据边界：六个实际框架测试仅覆盖 playground/README.md 的案例。恢复、并发压力、真实 Provider、多模态、MCP、沙箱和用户授权没有在本课验收。网页记录是学习草稿，不代表已掌握。</p></div></div></section>
+
+<section class="course-module" id="module-08" data-title="调试、复述与受控扩展"><div class="screen hero-screen"><p class="eyebrow">第 8 章 · Eino 源码详解</p><h2>调试、复述与受控扩展</h2><p class="lede">根据证据定位故障，并把订单主线迁移到一个有边界的新场景。</p><p>贯穿案例：本地订单摘要。版本固定为 58d184303f4e；主线采用默认 Message API。</p><p>词汇桥接：<dfn data-definition="在已知输入和预期结果下应该成功的样例，用来证明环境与基本路径可工作。">正对照</dfn>。</p></div><div class="screen"><h3>回调观察也有流边界</h3><p>callbacks 的价值是沿执行边界观测，而不是给业务结果盖章。记录节点名称/组件类型、开始结束、错误和必要的身份，可以把“最终没答案”分解为：没有生成、工具找不到、参数失败、流错误、达到上限或用户取消。</p><p>流回调与单值回调不同。若为调试而把整段流收集后打印，可能改变延迟和内存行为；若错误地共享 Reader，还会影响业务消费。选择需要的字段，保留身份与阶段，避免日志里存真实密钥、个人数据和完整私有上下文。</p><p>本课没有增加全局追踪平台或验证 callback 的所有时序。它提供接口锚点与排错表，让你在本地最小图中先加一层轻量观测，记录是否改变输出、调用数与流消费。观测自身的无干扰性也应有行为对照。</p><figure class="code-translation" data-source="internal/callbacks/interface.go" data-lines="38-48"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>type Handler interface {
+	OnStart(ctx context.Context, info *RunInfo, input CallbackInput) context.Context
+	OnEnd(ctx context.Context, info *RunInfo, output CallbackOutput) context.Context
+
+	OnError(ctx context.Context, info *RunInfo, err error) context.Context
+
+	OnStartWithStreamInput(ctx context.Context, info *RunInfo,
+		input *schema.StreamReader[CallbackInput]) context.Context
+	OnEndWithStreamOutput(ctx context.Context, info *RunInfo,
+		output *schema.StreamReader[CallbackOutput]) context.Context
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Handler 提供开始、结束、错误以及流输入/输出回调。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>生成与消费事件不要混为一谈</h3><p>阅读最终答案之前，先阅读验证日志：六个 PASS 各有明确样例与断言。类型链覆盖正常、空输入与编译后修改拒绝；分支覆盖两条路线；不合法边覆盖类型失败；流覆盖副本与 Stream→Invoke；ToolsNode 覆盖 ID 与 unknown；ADK 覆盖两次模型、一次工具、三个事件。</p><p>运行的是固定 revision 的真实 Eino 包，脚本模型和本地工具是替身。因此“真实库执行”与“真实模型推理”可以分别成立或未测。Sonic 在 Go 1.27.1 上报告不支持该快路径并回退标准 JSON；示例结果通过，但不能宣称测得 Sonic 性能或最低 Go 版本兼容。</p><p>开始自己的学习记录时，请先写预测再运行。看过答案、网页完成进度、作者参考测试通过，都不能记录为你掌握了概念。课程只保存浏览器草稿；评估必须依据你给出的因果解释、正确定位和新场景迁移。</p><figure class="code-translation" data-source="adk/interface.go" data-lines="100-105"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>func (mv *TypedMessageVariant[M]) GetMessage() (M, error) {
+	if mv.IsStreaming {
+		return concatMessageStream(mv.MessageStream)
+	}
+	return mv.Message, nil
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>GetMessage 在 streaming 模式会拼接并消费 MessageStream。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>先冻结可比较的扩展</h3><p>迁移到“读取两个报价、比较价格、生成采购摘要”时，保持同样的骨架：类型化输入→合法路由→只读工具→结果身份→模型或模板摘要→事件消费。变化的首先是参数、单位、权限和失败规则，而不是先选一个更复杂 Agent 名称。</p><p>推荐下一步局部重建 stream 拼接与身份校验，边界只包括文本块、EOF、错误与冲突 ToolCallID。先写正常拼接、两路复制、身份冲突、提前取消的行为契约，再独立实现小核心与真实 Eino 比较。这个重建尚未交付，不把阅读课伪装成完整框架复刻。</p><p>受控扩展候选是工具加入 currency 和 amount_minor，冻结币种与最小单位、缺字段、负数、未知币种、重复 ID 和正常路径。增加结构描述、解码后业务校验和结果格式，再跑原六个回归与新增契约。最后复述哪个问题由类型负责、哪个由运行时负责、哪个仍由业务负责。</p><figure class="code-translation" data-source="compose/runnable.go" data-lines="32-37"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>type Runnable[I, O any] interface {
+	Invoke(ctx context.Context, input I, opts ...Option) (output O, err error)
+	Stream(ctx context.Context, input I, opts ...Option) (output *schema.StreamReader[O], err error)
+	Collect(ctx context.Context, input *schema.StreamReader[I], opts ...Option) (output O, err error)
+	Transform(ctx context.Context, input *schema.StreamReader[I], opts ...Option) (output *schema.StreamReader[O], err error)
+}</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>Runnable 的输入输出边界适合定义局部替代与迁移的行为契约。</p><p>阅读时先写出这段负责的输入、输出与错误，再向调用方追一层。它支持局部契约，不单独证明整条业务链。</p></figcaption></figure></div><div class="screen"><h3>把源码放回主线</h3><figure class="code-translation" data-source="adk/chatmodel.go" data-lines="1378-1395"><div class="code-pane"><p class="pane-label source-label"></p><pre tabindex="0"><code>		if len(ec.toolsNodeConf.Tools) == 0 {
+			var run typedRunFunc[M]
+			run, err = a.buildNoToolsRunFunc(ctx)
+			if err != nil {
+				a.run = typedErrFunc[M](err)
+				return
+			}
+			a.run = run
+			return
+		}
+
+		var run typedRunFunc[M]
+		run, err = a.buildReActRunFunc(ctx, ec)
+		if err != nil {
+			a.run = typedErrFunc[M](err)
+			return
+		}
+		a.run = run</code></pre></div><figcaption><p class="pane-label">源码观察</p><p>有无工具决定无工具运行路径或 ReAct 路径。</p><p>将此锚点与前三个契约合并解释，避免把单个接口或选项当成完整实现。</p></figcaption></figure><div class="table-scroll"><table><thead><tr><th>观察点</th><th>首先核对</th><th>不能据此推导</th></tr></thead><tbody><tr><td>输入</td><td>类型、角色、身份、单位</td><td>合法输入一定有正确业务结果</td></tr><tr><td>状态</td><td>拥有者、寿命与写入时点</td><td>状态已持久化或跨用户安全</td></tr><tr><td>输出</td><td>完整值、流结束或控制事件</td><td>看到正文就是成功结束</td></tr><tr><td>失败</td><td>构造、编译、执行、消费分别记录</td><td>所有错误都能靠重试解决</td></tr></tbody></table></div></div><div class="screen"><h3>预测、调试与迁移</h3><div class="quiz" data-explanation="实际新样例与旧行为回归才给出扩展证据；文档和页面只交付材料。"><p class="quiz-kicker">先预测，再对照</p><h3>要证明局部扩展可靠，最合适的验收方法是？</h3><div class="quiz-options"><button type="button" >只重新生成漂亮页面</button><button type="button" data-correct="true">新增契约样例加原有回归，并保存实际结果</button><button type="button" >只修改说明中的状态为完成</button></div><p class="quiz-feedback" aria-live="polite"></p></div><p>本章阅读任务：不看答案，按“输入→调用→状态→输出→失败”写一张五列表，至少指出一个容易混淆的层次。返回顶部概念卡，先提交预测草稿，再展开分级提示和评分依据。</p><div class="callout warning"><p>证据边界：六个实际框架测试仅覆盖 playground/README.md 的案例。恢复、并发压力、真实 Provider、多模态、MCP、沙箱和用户授权没有在本课验收。网页记录是学习草稿，不代表已掌握。</p></div></div></section></main>
+
+  <footer class="course-footer">
+    <p>Eino 摘录 Copyright 2024 CloudWeGo Authors，按 <a href="source-license.txt">Apache-2.0</a> 分发；课程工具与资产为 <a href="tooling-license.txt">MIT</a>。</p>
+    <p>基于已检查的源码。摘录保留原文件与连续行号，学习结论可回到证据。</p>
+    <a href="#course-start">返回顶部 ↑</a>
+  </footer>
+  <script>(() => {
+  const modules = [...document.querySelectorAll('.course-module')];
+  const dots = [...document.querySelectorAll('.nav-dot')];
+  const progress = document.querySelector('#progress-bar');
+  const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let userReducedMotion = false;
+  try { userReducedMotion = localStorage.getItem('code-learning:reduce-motion') === 'true'; } catch (_) {}
+  let reduceMotion = systemReducedMotion || userReducedMotion;
+  const motionToggle = document.querySelector('#motion-toggle');
+  const applyMotion = () => {
+    reduceMotion = systemReducedMotion || userReducedMotion;
+    document.documentElement.dataset.reducedMotion = String(reduceMotion);
+    if (motionToggle) {
+      motionToggle.setAttribute('aria-pressed', String(reduceMotion));
+      motionToggle.disabled = systemReducedMotion;
+    }
+  };
+  applyMotion();
+  motionToggle?.addEventListener('click', () => {
+    userReducedMotion = !userReducedMotion;
+    try { localStorage.setItem('code-learning:reduce-motion', String(userReducedMotion)); } catch (_) {}
+    applyMotion();
+  });
+
+  let activeModuleId;
+  const setActiveModule = (id) => {
+    if (activeModuleId === id) return;
+    activeModuleId = id;
+    dots.forEach((dot) => {
+      const active = dot.dataset.target === id;
+      dot.classList.toggle('is-active', active);
+      if (active) dot.setAttribute('aria-current', 'step');
+      else dot.removeAttribute('aria-current');
+      const nav = dot.parentElement;
+      if (active && nav.scrollWidth > nav.clientWidth) {
+        nav.scrollTo({ left: dot.offsetLeft - nav.offsetLeft - (nav.clientWidth - dot.offsetWidth) / 2,
+          behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    });
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      document.getElementById(dot.dataset.target)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  });
+
+  const updateProgress = () => {
+    const available = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = available > 0 ? Math.min(1, Math.max(0, window.scrollY / available)) : 0;
+    if (progress) progress.style.width = `${ratio * 100}%`;
+    const current = currentModuleIndex();
+    if (modules.length) setActiveModule(current >= 0 ? modules[current].id : null);
+  };
+  document.addEventListener('scroll', updateProgress, { passive: true });
+
+  const currentModuleIndex = () => {
+    const center = window.scrollY + window.innerHeight * 0.45;
+    let best = -1;
+    modules.forEach((module, index) => {
+      if (module.offsetTop <= center) best = index;
+    });
+    return best;
+  };
+  updateProgress();
+
+  document.addEventListener('keydown', (event) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) return;
+    if (document.activeElement?.closest('[data-code-scroll], .table-scroll')) return;
+    const forward = event.key === 'j' || event.key === 'J' || event.key === 'ArrowDown';
+    const backward = event.key === 'k' || event.key === 'K' || event.key === 'ArrowUp';
+    if (!forward && !backward) return;
+    const offset = forward ? 1 : -1;
+    const target = modules[Math.min(modules.length - 1, Math.max(0, currentModuleIndex() + offset))];
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+  });
+
+  document.querySelectorAll('dfn[data-definition]').forEach((term) => {
+    term.tabIndex = 0;
+    term.setAttribute('aria-label', `${term.textContent}: ${term.dataset.definition}`);
+  });
+
+  document.querySelectorAll('.code-translation').forEach((translation) => {
+    const label = translation.querySelector('.source-label');
+    if (label) {
+      const range = (translation.dataset.lines || '').replace('-', '–');
+      label.textContent = `源码 · ${translation.dataset.source || 'unknown source'}:${range}`;
+    }
+    const code = translation.querySelector('pre');
+    if (code) {
+      code.tabIndex = 0;
+      code.setAttribute('data-code-scroll', '');
+      code.setAttribute('aria-label', '源码摘录，可用方向键滚动');
+    }
+  });
+
+  document.querySelectorAll('.table-scroll').forEach((table) => {
+    table.tabIndex = 0;
+    table.setAttribute('aria-label', '对照表，可用方向键横向滚动');
+  });
+
+  document.querySelectorAll('.quiz').forEach((quiz) => {
+    const choices = [...quiz.querySelectorAll('.quiz-options button')];
+    const feedback = quiz.querySelector('.quiz-feedback');
+    choices.forEach((choice) => {
+      choice.addEventListener('click', () => {
+        choices.forEach((item) => item.classList.remove('is-correct', 'is-wrong'));
+        const correct = choice.dataset.correct === 'true';
+        choice.classList.add(correct ? 'is-correct' : 'is-wrong');
+        feedback.textContent = `${correct ? '正确。' : '再想一想。'}${quiz.dataset.explanation || ''}`;
+      });
+    });
+  });
+
+  const playChat = (chat) => {
+    const messages = [...chat.querySelectorAll('.chat-message')];
+    messages.forEach((message) => message.classList.remove('is-visible'));
+    messages.forEach((message, index) => {
+      if (reduceMotion) message.classList.add('is-visible');
+      else window.setTimeout(() => message.classList.add('is-visible'), 180 + index * 520);
+    });
+  };
+
+  document.querySelectorAll('.component-chat').forEach((chat) => {
+    playChat(chat);
+    chat.querySelector('.replay-chat')?.addEventListener('click', () => playChat(chat));
+  });
+
+  document.querySelectorAll('.data-flow').forEach((flow) => {
+    const steps = [...flow.querySelectorAll('.flow-step')];
+    const detail = flow.querySelector('.flow-detail');
+    steps.forEach((step) => {
+      step.addEventListener('click', () => {
+        steps.forEach((item) => item.classList.remove('is-active'));
+        step.classList.add('is-active');
+        if (detail) detail.textContent = step.dataset.detail || '';
+      });
+    });
+  });
+
+  const panel = document.querySelector('.learning-panel');
+  if (panel) {
+    const conceptCards = [...panel.querySelectorAll('.concept-card')];
+    const conceptNames = new Map(conceptCards.map(card => [card.id.replace('concept-', ''), card.querySelector('summary')?.textContent]));
+    conceptCards.forEach(card => {
+      const prerequisites = [...card.children].find(el => el.tagName === 'P' && el.textContent.startsWith('前置概念:'));
+      if (!prerequisites) return;
+      const ids = prerequisites.textContent.replace('前置概念:', '').trim().split(',').map(id => id.trim());
+      if (!ids.every(id => conceptNames.has(id))) return;
+      prerequisites.replaceChildren(document.createTextNode('前置概念：'));
+      ids.forEach((id, index) => {
+        if (index) prerequisites.append(document.createTextNode('、'));
+        const link = document.createElement('a');
+        link.href = `#concept-${id}`;
+        link.textContent = conceptNames.get(id);
+        link.className = 'concept-prerequisite';
+        link.addEventListener('click', () => { document.getElementById(`concept-${id}`).open = true; });
+        prerequisites.append(link);
+      });
+    });
+    const storageKey = `code-learning:${panel.dataset.kitId}`;
+    const sourceRevision = document.querySelectorAll('.course-meta dd')[1]?.textContent || 'unknown';
+    const feedback = panel.querySelector('.notes-feedback');
+    const zh = document.documentElement.lang.startsWith('zh');
+    let notes = {};
+    try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) { notes = {}; }
+    if (!notes || typeof notes !== 'object' || Array.isArray(notes)) notes = {};
+    panel.querySelectorAll('.recall').forEach((recall) => {
+      const field = recall.querySelector('textarea');
+      const key = recall.dataset.recallId;
+      field.value = typeof notes[key]?.response === 'string' ? notes[key].response : '';
+      field.addEventListener('input', () => {
+        notes[key] = { response: field.value, sourceRevision, recordedAt: new Date().toISOString(), kind: 'provisional-recall' };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(notes));
+          if (feedback) feedback.textContent = zh ? '回忆已保存到本机浏览器；尚未评价掌握程度。' : 'Recall saved in this browser; mastery has not been assessed.';
+        } catch (_) {
+          if (feedback) feedback.textContent = zh ? '浏览器未允许保存；可导出本次记录。' : 'Browser storage is unavailable; export this session to keep it.';
+        }
+      });
+    });
+    let exportURL;
+    panel.querySelector('.export-learning-notes')?.addEventListener('click', () => {
+      const content = { kitId: panel.dataset.kitId, sourceRevision, assessment: 'unassessed', notes };
+      const text = JSON.stringify(content, null, 2);
+      const preview = panel.querySelector('.export-preview');
+      if (preview) {
+        preview.hidden = false;
+        preview.open = true;
+        preview.querySelector('textarea').value = text;
+        if (exportURL) URL.revokeObjectURL(exportURL);
+        exportURL = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+        preview.querySelector('.export-download').href = exportURL;
+        if (feedback) feedback.textContent = zh ? '记录已准备好：可以下载 JSON，或从下方文本框复制。' : 'Records are ready: download JSON or copy the text below.';
+      }
+    });
+    window.addEventListener('pagehide', () => { if (exportURL) URL.revokeObjectURL(exportURL); });
+  }
+})();
+</script>
+</body>
+</html>
+

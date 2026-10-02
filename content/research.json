@@ -1,0 +1,242 @@
+[
+  {
+    "full_name": "letta-ai/letta",
+    "html_url": "https://github.com/letta-ai/letta",
+    "pushed_at": "2026-09-10T17:59:08Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "apache-2.0",
+      "name": "Apache License 2.0",
+      "spdx_id": "Apache-2.0",
+      "url": "https://api.github.com/licenses/apache-2.0",
+      "node_id": "MDc6TGljZW5zZTI="
+    },
+    "id": "letta",
+    "readmeSha256": "1d624e8fd383c1198c8d42da87b055d591a5760e19607692eb46bbbfe2a58f03"
+  },
+  {
+    "full_name": "huggingface/smolagents",
+    "html_url": "https://github.com/huggingface/smolagents",
+    "pushed_at": "2026-09-30T05:07:25Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "apache-2.0",
+      "name": "Apache License 2.0",
+      "spdx_id": "Apache-2.0",
+      "url": "https://api.github.com/licenses/apache-2.0",
+      "node_id": "MDc6TGljZW5zZTI="
+    },
+    "id": "smolagents",
+    "readmeSha256": "131628d2669b4ee983c715002b57ea4b375b62c8502f6354b8d9fdf3fbc39f8d"
+  },
+  {
+    "full_name": "browser-use/browser-use",
+    "html_url": "https://github.com/browser-use/browser-use",
+    "pushed_at": "2026-10-02T02:56:28Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "mit",
+      "name": "MIT License",
+      "spdx_id": "MIT",
+      "url": "https://api.github.com/licenses/mit",
+      "node_id": "MDc6TGljZW5zZTEz"
+    },
+    "id": "browser-use",
+    "readmeSha256": "90425bd76b204cc901f93243f9c55ec2b93212ddd5616efe703198883473f748"
+  },
+  {
+    "full_name": "google/adk-python",
+    "html_url": "https://github.com/google/adk-python",
+    "pushed_at": "2026-10-02T03:40:54Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "apache-2.0",
+      "name": "Apache License 2.0",
+      "spdx_id": "Apache-2.0",
+      "url": "https://api.github.com/licenses/apache-2.0",
+      "node_id": "MDc6TGljZW5zZTI="
+    },
+    "id": "adk-python",
+    "readmeSha256": "2c00eddffa97daff996076f442f63bf6687da90a0fcdd144e441c704ef2dd32b"
+  },
+  {
+    "full_name": "openai/openai-agents-python",
+    "html_url": "https://github.com/openai/openai-agents-python",
+    "pushed_at": "2026-10-02T06:13:27Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "mit",
+      "name": "MIT License",
+      "spdx_id": "MIT",
+      "url": "https://api.github.com/licenses/mit",
+      "node_id": "MDc6TGljZW5zZTEz"
+    },
+    "id": "openai-agents-python",
+    "readmeSha256": "cf68cb43182d6ea4f79a32421f6723e8ee2cc0f68f97524da7f300e9fc77940b"
+  },
+  {
+    "full_name": "sierra-research/tau2-bench",
+    "html_url": "https://github.com/sierra-research/tau2-bench",
+    "pushed_at": "2026-09-28T19:42:48Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "mit",
+      "name": "MIT License",
+      "spdx_id": "MIT",
+      "url": "https://api.github.com/licenses/mit",
+      "node_id": "MDc6TGljZW5zZTEz"
+    },
+    "id": "tau2-bench",
+    "readmeSha256": "ed39688aa5d40bd73007355df65f4e41a6c250960642e56764c3ad44da1df8d2"
+  },
+  {
+    "full_name": "pydantic/pydantic-ai",
+    "html_url": "https://github.com/pydantic/pydantic-ai",
+    "pushed_at": "2026-10-02T07:02:58Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "mit",
+      "name": "MIT License",
+      "spdx_id": "MIT",
+      "url": "https://api.github.com/licenses/mit",
+      "node_id": "MDc6TGljZW5zZTEz"
+    },
+    "id": "pydantic-ai",
+    "readmeSha256": "2c00df9b5978be8cfa6c0109da1e2ed08a94c849b49261cd67618a8612f9576c"
+  },
+  {
+    "full_name": "mastra-ai/mastra",
+    "html_url": "https://github.com/mastra-ai/mastra",
+    "pushed_at": "2026-10-02T08:27:08Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "other",
+      "name": "Other",
+      "spdx_id": "NOASSERTION",
+      "url": null,
+      "node_id": "MDc6TGljZW5zZTA="
+    },
+    "id": "mastra",
+    "readmeSha256": "3cf7ca8d2c00593f8f452fc1ac1f75f8269f1df9c98cbaca59409271a4ffa7e8"
+  },
+  {
+    "full_name": "microsoft/agent-framework",
+    "html_url": "https://github.com/microsoft/agent-framework",
+    "pushed_at": "2026-10-02T08:35:26Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "mit",
+      "name": "MIT License",
+      "spdx_id": "MIT",
+      "url": "https://api.github.com/licenses/mit",
+      "node_id": "MDc6TGljZW5zZTEz"
+    },
+    "id": "agent-framework",
+    "readmeSha256": "42b5837e2a40cb5897dbe300617751cf6a39fb10ff9eb3acb6ab34fb54a8acaa"
+  },
+  {
+    "full_name": "crewAIInc/crewAI",
+    "html_url": "https://github.com/crewAIInc/crewAI",
+    "pushed_at": "2026-10-01T19:47:51Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "mit",
+      "name": "MIT License",
+      "spdx_id": "MIT",
+      "url": "https://api.github.com/licenses/mit",
+      "node_id": "MDc6TGljZW5zZTEz"
+    },
+    "id": "crewAI",
+    "readmeSha256": "b0f39843f93676b12883d5821a34555e2146e62bd2c42dc12733fc41222de013"
+  },
+  {
+    "full_name": "microsoft/autogen",
+    "html_url": "https://github.com/microsoft/autogen",
+    "pushed_at": "2026-04-15T11:59:09Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "cc-by-4.0",
+      "name": "Creative Commons Attribution 4.0 International",
+      "spdx_id": "CC-BY-4.0",
+      "url": "https://api.github.com/licenses/cc-by-4.0",
+      "node_id": "MDc6TGljZW5zZTI1"
+    },
+    "id": "autogen",
+    "readmeSha256": "5d300aa3304aeecf1a48f68ac76a1af255b8645d666b8aa154790cb30f1dbb94"
+  },
+  {
+    "full_name": "agentscope-ai/agentscope",
+    "html_url": "https://github.com/agentscope-ai/agentscope",
+    "pushed_at": "2026-09-30T09:47:13Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "apache-2.0",
+      "name": "Apache License 2.0",
+      "spdx_id": "Apache-2.0",
+      "url": "https://api.github.com/licenses/apache-2.0",
+      "node_id": "MDc6TGljZW5zZTI="
+    },
+    "id": "agentscope",
+    "readmeSha256": "f0bb5ab84bab1ffbd35ad5d2a97634ff26cb7c613b6026c11fb200363afe3aca"
+  },
+  {
+    "full_name": "mem0ai/mem0",
+    "html_url": "https://github.com/mem0ai/mem0",
+    "pushed_at": "2026-10-01T20:07:39Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "apache-2.0",
+      "name": "Apache License 2.0",
+      "spdx_id": "Apache-2.0",
+      "url": "https://api.github.com/licenses/apache-2.0",
+      "node_id": "MDc6TGljZW5zZTI="
+    },
+    "id": "mem0",
+    "readmeSha256": "7509347d34a767a2ef37ceb6cf6c714de9e8d84fe66ad5eea92bbae824a8fbeb"
+  },
+  {
+    "full_name": "bojieli/ai-agent-book",
+    "html_url": "https://github.com/bojieli/ai-agent-book",
+    "pushed_at": "2026-09-30T03:03:29Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "apache-2.0",
+      "name": "Apache License 2.0",
+      "spdx_id": "Apache-2.0",
+      "url": "https://api.github.com/licenses/apache-2.0",
+      "node_id": "MDc6TGljZW5zZTI="
+    },
+    "id": "ai-agent-book",
+    "readmeSha256": "21195bfba51235eeba6f272e6454ab046f0791b3b2bf260417c56b8f4abb95a2"
+  },
+  {
+    "full_name": "opensandbox-group/OpenSandbox",
+    "html_url": "https://github.com/opensandbox-group/OpenSandbox",
+    "pushed_at": "2026-10-01T02:21:12Z",
+    "archived": false,
+    "accessDate": "2026-10-02",
+    "license": {
+      "key": "apache-2.0",
+      "name": "Apache License 2.0",
+      "spdx_id": "Apache-2.0",
+      "url": "https://api.github.com/licenses/apache-2.0",
+      "node_id": "MDc6TGljZW5zZTI="
+    },
+    "id": "OpenSandbox",
+    "readmeSha256": "6c02b69e5e157204cf64e6de1af0fe64b3bc262589dab3fbd53d7aa7c68f730d"
+  }
+]

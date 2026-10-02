@@ -1,0 +1,2033 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="generator" content="codebase-to-mastery">
+  <title>读懂 Inspect AI：一次 Agent 任务如何变成可复核评测</title>
+  <style>:root {
+  --paper: #eef3f6; --paper-deep: #e3ecef; --ink: #172d3a; --muted: #536b79;
+  --line: #d4e0e6; --card: #fff; --code: #112630; --code-ink: #e6f4f7;
+  --accent: #147d92; --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
+  --good: #16745a; --bad: #ae394b; --shadow: 0 6px 22px rgba(23,45,58,.04);
+  --radius: 12px; --measure: 72rem; --rail-width: 228px;
+  --rail: #122936; --rail-ink: #edf7f8; --lime: #b8e3a4;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scroll-behavior: smooth; }
+html, body { overflow-x: clip; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: .2em; }
+button, textarea { font: inherit; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -.025em; }
+h1 { margin: 0; max-width: 22ch; font-size: clamp(2.4rem,5vw,4.6rem); font-weight: 750; }
+h2 { margin: 0; font-size: clamp(2rem,3.6vw,3.3rem); }
+h3 { margin: 0 0 1rem; font-size: clamp(1.35rem,2.5vw,2rem); }
+p { overflow-wrap: anywhere; }
+.progress { position: fixed; inset: 0 0 auto var(--rail-width); height: 3px; z-index: 50; background: var(--paper-deep); }
+.progress span { display: block; width: 0; height: 100%; background: var(--accent); transition: width 120ms linear; }
+.course-rail { position: fixed; inset: 0 auto 0 0; z-index: 30; width: var(--rail-width); display: flex; flex-direction: column; padding: 32px 18px 22px; color: var(--rail-ink); background: var(--rail); overflow-y: auto; }
+.course-mark { display: flex; align-items: center; gap: 12px; padding: 0 8px 26px; text-decoration: none; flex-shrink: 0; }
+.brand-emblem { display: flex; align-items: flex-end; gap: 3px; width: 34px; height: 34px; padding: 8px 6px; border-radius: 9px; background: var(--lime); }
+.brand-emblem i { display: block; width: 5px; background: var(--rail); border-radius: 1px; }
+.brand-emblem i:nth-child(1) { height: 7px; }
+.brand-emblem i:nth-child(2) { height: 12px; }
+.brand-emblem i:nth-child(3) { height: 18px; }
+.brand-name { font-size: 15px; font-weight: 700; line-height: 1.35; letter-spacing: -.01em; }
+.brand-name > span { display: block; color: var(--lime); }
+.overview-link { display: flex; justify-content: space-between; align-items: center; padding: 12px; font-size: 13px; text-decoration: none; border: 1px solid #35505e; border-radius: 8px; }
+.overview-link:hover { background: #203c4b; }
+.nav-label { margin: 28px 12px 10px; color: #a5bdc9; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.module-nav { display: grid; gap: 6px; }
+.nav-dot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #c7d9e1; text-align: left; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.nav-title { min-width: 0; overflow-wrap: anywhere; }
+.nav-arrow { opacity: 0; color: var(--lime); }
+.nav-dot:hover { background: #203c4b; color: white; }
+.nav-dot.is-active { color: white; background: #244b5b; border-color: #416a7a; }
+.nav-dot.is-active .nav-arrow { opacity: 1; }
+.rail-source { display: grid; gap: 5px; margin: auto 8px 0; padding-top: 36px; font-size: 12px; overflow-wrap: anywhere; }
+.rail-source-label { color: #a5bdc9; font-size: 10px; letter-spacing: .08em; }
+.rail-source strong { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-weight: 500; }
+.key-hint { display: flex; align-items: center; gap: 5px; margin: 18px 8px 0; color: #a5bdc9; font-size: 10px; }
+.key-hint > span { margin-left: 5px; }
+kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px solid #4c6977; border-radius: 4px; text-align: center; font: 10px/1.5 ui-monospace,monospace; }
+.course-cover, .learning-panel, .course-module, .course-footer { margin-left: var(--rail-width); min-width: 0; }
+.course-cover { position: relative; display: grid; align-content: center; padding: 64px clamp(28px,4vw,64px) 46px; min-height: 520px; border-bottom: 1px solid var(--line); background: var(--card); }
+.cover-topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 32px; }
+.cover-kicker, .eyebrow, .pane-label, .quiz-kicker { margin: 0 0 10px; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.cover-topline .cover-kicker { margin: 0; }
+.format-tag, .stage-count { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.cover-subtitle, .lede { max-width: 48rem; margin: 20px 0; color: var(--muted); font-size: clamp(1rem,1.6vw,1.2rem); }
+.course-meta { display: flex; flex-wrap: wrap; gap: 16px 32px; margin: 16px 0 28px; }
+.course-meta div { min-width: 70px; }
+.course-meta dt { color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+.course-meta dd { margin: 5px 0 0; font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.cover-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.start-link { display: inline-flex; align-items: center; gap: 30px; width: fit-content; padding: 11px 16px; border-radius: 8px; background: var(--accent); color: white; text-decoration: none; font-size: 13px; font-weight: 700; }
+.motion-toggle { padding: 9px 13px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.motion-toggle[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.cover-route { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 38px; padding-top: 22px; border-top: 1px solid var(--line); font: 10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing: .12em; color: var(--muted); }
+.cover-route b { font-weight: 400; color: var(--accent); }
+.learning-panel { padding: 28px clamp(28px,4vw,64px) 56px; border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.panel-heading .eyebrow { margin: 0; }
+.learning-panel h2 { max-width: none; font-size: clamp(1.65rem,3vw,2.3rem); }
+.panel-scope { margin: 10px 0 18px; max-width: 66rem; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.learning-stages { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }
+.learning-stage { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.stage-topline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.stage-number { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; color: var(--accent); background: var(--accent-soft); font: 700 12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+.stage-kind { color: var(--muted); font: 9px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform: uppercase; letter-spacing: .08em; }
+.learning-stage h3 { margin: 0; font-size: 17px; line-height: 1.4; letter-spacing: -.02em; }
+.stage-outcome { margin: 8px 0 10px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.gate { margin: auto 0 0; padding: 8px 0 10px; border-top: 1px solid var(--line); }
+.gate > span { color: var(--accent); font-size: 10px; font-weight: 700; }
+.gate p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.stage-links { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 650; }
+.stage-links a { overflow-wrap: anywhere; text-decoration: none; }
+.stage-links a:hover { text-decoration: underline; }
+.scope-note { margin: 18px 0 0; padding: 12px 16px; box-shadow: none; font-size: 12px; }
+.scope-note p { margin-bottom: 0; color: var(--muted); }
+.recall-heading { margin: 46px 0 24px; }
+.recall-heading h3 { font-size: 24px; margin-bottom: 8px; }
+.recall-heading > p:last-child { margin: 0; color: var(--muted); font-size: 12px; }
+.concept-card { padding: 18px; margin: 10px 0; min-width: 0; box-shadow: none; }
+.concept-card > summary { font-size: 14px; }
+.concept-card > p { color: var(--muted); font-size: 13px; }
+.concept-card details { min-width: 0; }
+.recall { margin: 22px 0; }
+.recall label { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 650; }
+.recall textarea { display: block; width: 100%; resize: vertical; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); font-size: 13px; }
+.recall-answer { margin: 12px 0; padding: 14px; background: var(--accent-soft); border: 0; box-shadow: none; font-size: 13px; }
+.export-learning-notes { margin-top: 16px; padding: 11px 16px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 12px; cursor: pointer; }
+.notes-feedback { font-size: 12px; color: var(--muted); }
+.export-preview { margin: 16px 0; padding: 16px; }
+.export-preview label { display: block; margin: 12px 0; font-size: 12px; }
+.export-preview textarea { width: 100%; color: var(--ink); background: #f7fafb; font: 12px/1.6 ui-monospace,monospace; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.course-module { border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.course-module:nth-child(odd) { background: #f8fafb; }
+.screen { display: grid; grid-template-columns: minmax(0,1fr); align-content: center; min-height: 550px; max-width: var(--measure); margin: 0 auto; padding: 64px clamp(28px,4vw,64px); }
+.hero-screen { position: relative; }
+.hero-screen > p:not(.eyebrow):not(.lede) { max-width: 58rem; font-size: 15px; color: var(--muted); }
+.actor-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(14rem,100%),1fr)); gap: 14px; }
+.actor-card, .callout, .quiz, .data-flow, .component-chat, details { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.actor-card, .callout, details { padding: 20px; }
+.actor-card h4 { margin: 0 0 8px; font-size: 16px; }
+.actor-card p { margin: 0; color: var(--muted); font-size: 14px; }
+.callout { border-left: 3px solid var(--accent); font-size: 14px; }
+.callout.warning { border-left-color: var(--bad); }
+.path-chip { display: inline-flex; max-width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--accent); font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.code-translation { min-width: 0; contain: inline-size; display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); margin: 24px 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.code-pane { min-width: 0; padding: 22px; color: var(--code-ink); background: var(--code); }
+.code-pane .pane-label { color: #8cd4d9; font-family: ui-monospace,monospace; text-transform: none; letter-spacing: 0; }
+pre { margin: 0; max-width: 100%; overflow: auto; tab-size: 2; }
+pre > code { display: block; min-width: 100%; }
+code { font: 12px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.code-translation figcaption { min-width: 0; padding: 22px; background: white; font-size: 14px; }
+.quiz, .data-flow, .component-chat { padding: 24px; }
+.quiz h3 { font-size: 24px; line-height: 1.45; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-options button, .flow-step, .replay-chat { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); text-align: left; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+.quiz-options button:hover, .quiz-options button:focus-visible, .flow-step:hover, .flow-step:focus-visible { border-color: var(--accent); }
+.quiz-options button.is-correct { border-color: var(--good); background: color-mix(in srgb,var(--good) 8%,white); }
+.quiz-options button.is-wrong { border-color: var(--bad); background: color-mix(in srgb,var(--bad) 7%,white); }
+.quiz-feedback { min-height: 1.6em; margin-bottom: 0; font-size: 13px; font-weight: 600; }
+.component-chat { display: grid; gap: 12px; }
+.chat-message { width: min(34rem,85%); padding: 14px; border-radius: 10px 10px 10px 2px; background: var(--paper); font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 260ms ease, transform 260ms ease; }
+.chat-message::before { content: attr(data-speaker); display: block; margin-bottom: 4px; color: var(--muted); font: 700 10px ui-monospace,monospace; text-transform: uppercase; }
+.chat-message:nth-child(even) { justify-self: end; border-radius: 10px 10px 2px 10px; background: var(--accent-soft); }
+.chat-message.is-visible { opacity: 1; transform: none; }
+.replay-chat { width: fit-content; justify-self: center; margin-top: 6px; }
+.data-flow { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(10rem,100%),1fr)); gap: 10px; }
+.flow-step { text-align: center; }
+.flow-step.is-active { background: var(--accent); border-color: var(--accent); color: white; }
+.flow-detail { grid-column: 1 / -1; margin: 6px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+dfn { position: relative; border-bottom: 2px dotted var(--accent); font-style: normal; cursor: help; }
+dfn::after { content: attr(data-definition); position: absolute; left: 0; bottom: calc(100% + 10px); z-index: 40; width: min(18rem,70vw); padding: 12px; border-radius: 8px; color: white; background: var(--rail); box-shadow: var(--shadow); font-size: 12px; font-weight: 400; opacity: 0; pointer-events: none; transform: translateY(5px); transition: opacity 140ms ease, transform 140ms ease; }
+dfn:hover::after, dfn:focus::after { opacity: 1; transform: none; }
+details { margin-top: 16px; }
+summary { cursor: pointer; font-weight: 650; }
+.course-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 28px clamp(28px,4vw,64px); color: var(--muted); background: white; font-size: 12px; }
+.course-footer p { max-width: 40rem; margin: 0; }
+.course-footer a { color: var(--accent); }
+:focus-visible { outline: 3px solid #57b6c5; outline-offset: 4px; }
+html[data-reduced-motion="true"] *, html[data-reduced-motion="true"] *::before, html[data-reduced-motion="true"] *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+html[data-reduced-motion="true"] { scroll-behavior: auto !important; }
+html[data-reduced-motion="true"] .chat-message { opacity: 1; transform: none; }
+@media (max-width:1050px) {
+  :root { --rail-width: 204px; }
+  .learning-stages { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  :root { --rail-width: 0px; }
+  .progress { inset: 0 0 auto; }
+  .course-rail { inset: 0 0 auto; width: auto; height: 116px; padding: 12px 16px 10px; overflow: hidden; }
+  .course-mark { padding: 0; gap: 8px; width: fit-content; }
+  .brand-emblem { width: 28px; height: 28px; padding: 5px 3px; }
+  .brand-name { display: flex; gap: 4px; font-size: 13px; }
+  .brand-name > span { display: inline; }
+  .overview-link { position: absolute; right: 16px; top: 12px; padding: 5px 8px; gap: 10px; font-size: 10px; }
+  .nav-label, .key-hint, .rail-source { display: none; }
+  .module-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 13px; padding: 3px; }
+  .nav-dot { flex: 0 0 auto; width: auto; max-width: 220px; min-height: 35px; padding: 7px 10px; font-size: 11px; white-space: nowrap; border-color: #35505e; }
+  .nav-arrow { display: none; }
+  .course-cover { margin-top: 116px; min-height: auto; padding: 30px 20px; scroll-margin-top: 116px; }
+  .cover-topline { margin-bottom: 24px; }
+  .cover-kicker { font-size: 10px; }
+  .format-tag { font-size: 10px; padding: 4px 7px; }
+  h1 { font-size: 36px; }
+  h2 { font-size: 32px; }
+  .cover-subtitle { font-size: 14px; }
+  .course-meta { gap: 16px 22px; }
+  .cover-route { gap: 12px; font-size: 9px; }
+  .learning-panel { padding: 28px 20px 40px; scroll-margin-top: 132px; }
+  .learning-panel h2 { font-size: 27px; }
+  .panel-heading { align-items: flex-start; }
+  .stage-count { font-size: 10px; padding: 4px 7px; }
+  .learning-stages { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .learning-stage { padding: 18px; }
+  .learning-stage h3 { font-size: 18px; }
+  .stage-outcome { font-size: 13px; }
+  .course-module { scroll-margin-top: 132px; }
+  .concept-card { scroll-margin-top: 132px; }
+  .screen { min-height: auto; padding: 44px 20px; }
+  .hero-screen { min-height: 420px; }
+  .code-translation { grid-template-columns: minmax(0,1fr); }
+  .code-pane, .code-translation figcaption { padding: 18px; }
+  .quiz, .data-flow, .component-chat { padding: 18px; }
+  .quiz h3 { font-size: 20px; }
+  .course-footer { padding: 26px 20px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+  .chat-message { opacity: 1; transform: none; }
+}
+@media print {
+  :root { --rail-width: 0px; }
+  .course-rail, .progress, .start-link, .replay-chat, .motion-toggle, .cover-route { display: none !important; }
+  .course-cover { margin-top: 0; }
+  .course-cover, .screen { min-height: auto; page-break-after: always; }
+  .chat-message { opacity: 1; transform: none; }
+  body { background: white; }
+}
+
+/* Source tables scroll inside the lesson, so narrow screens retain every cell. */
+.table-scroll { max-width: 100%; overflow-x: auto; margin: 22px 0; border: 1px solid #d3dce5; border-radius: 8px; }
+.table-scroll table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.table-scroll th, .table-scroll td { padding: 13px 16px; border-bottom: 1px solid #dbe3ea; text-align: left; vertical-align: top; line-height: 1.7; overflow-wrap: anywhere; }
+.table-scroll th { color: #153747; background: #edf5f7; font-weight: 700; }
+.table-scroll tr:last-child td { border-bottom: 0; }
+.table-scroll:focus-visible, .code-pane pre:focus-visible { outline: 3px solid #069db0; outline-offset: 3px; }
+</style>
+</head>
+<body style="--accent: #D95D39">
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+  <aside class="course-rail" aria-label="Course navigation">
+    <a class="course-mark" href="#course-start" aria-label="Codebase to Mastery">
+      <span class="brand-emblem" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-name">Codebase<span>to Mastery</span></span>
+    </a>
+    <a class="overview-link" href="#course-start">学习总览 <span aria-hidden="true">↗</span></a>
+    <p class="nav-label">课程目录</p>
+    <nav class="module-nav" aria-label="课程目录"><button class="nav-dot" type="button" data-target="module-01" aria-label="进入 从 inspect eval 到一次评测" title="从 inspect eval 到一次评测"><span class="nav-title">从 inspect eval 到一次评测</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-02" aria-label="进入 Task：把问题变成可重复样本" title="Task：把问题变成可重复样本"><span class="nav-title">Task：把问题变成可重复样本</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-03" aria-label="进入 Agent Solver：循环、工具与提交" title="Agent Solver：循环、工具与提交"><span class="nav-title">Agent Solver：循环、工具与提交</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-04" aria-label="进入 沙箱与审批：能力如何被约束" title="沙箱与审批：能力如何被约束"><span class="nav-title">沙箱与审批：能力如何被约束</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-05" aria-label="进入 Scorer：答案如何变成证据" title="Scorer：答案如何变成证据"><span class="nav-title">Scorer：答案如何变成证据</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-06" aria-label="进入 Eval Log：从一次运行到回归判断" title="Eval Log：从一次运行到回归判断"><span class="nav-title">Eval Log：从一次运行到回归判断</span><span class="nav-arrow" aria-hidden="true">↗</span></button></nav>
+    <div class="rail-source"><span class="rail-source-label">学习源码</span><strong>roadmap-inspect-ai-course-source</strong></div>
+    <p class="key-hint"><kbd>J</kbd><kbd>K</kbd><span>切换章节</span></p>
+  </aside>
+
+  <header class="course-cover" id="course-start">
+    <div class="cover-topline"><p class="cover-kicker">源码掌握工坊</p><span class="format-tag">离线交互课</span></div>
+    <h1>读懂 Inspect AI：一次 Agent 任务如何变成可复核评测</h1>
+    <p class="cover-subtitle">沿真实源码，从 inspect eval、Task 与 ReAct 工具循环，一路追到 Docker 沙箱、Scorer、Eval Log 与回归判断。</p>
+    <dl class="course-meta">
+      <div><dt>学习源码</dt><dd>roadmap-inspect-ai-course-source</dd></div>
+      <div><dt>源码版本</dt><dd>e4b8ad59d846</dd></div>
+      <div><dt>章节</dt><dd>6</dd></div>
+    </dl>
+    <div class="cover-actions"><a class="start-link" href="#learning-path">开始学习 <span aria-hidden="true">→</span></a>
+    <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">减少动效</button></div>
+    <div class="cover-route" aria-hidden="true"><span>READ</span><b>→</b><span>TRACE</span><b>→</b><span>REASON</span><b>→</b><span>TEACH BACK</span></div>
+  </header>
+
+  <section id="learning-path" class="learning-panel" data-kit-id="4af01988-32ee-4b2b-ad53-289a196b6dd7"><div class="panel-heading"><p class="eyebrow">The mastery path</p><span class="stage-count">4 个学习阶段</span></div><h2>由浅入深的学习路径</h2><p class="panel-scope">inspect eval载入Skills Task→Agent Solver→工具与沙箱→提交答案→Scorer→Eval Log。</p><div class="learning-stages"><article class="learning-stage"><div class="stage-topline"><span class="stage-number">01</span><span class="stage-kind">orient</span></div><h3>建立地图</h3><p class="stage-outcome">解释入口、角色和控制面。</p><div class="gate"><span>先想一想</span><p>画出主线并指出真正开始执行的位置。</p></div><div class="stage-links"><a href="#module-01">进入课程</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">02</span><span class="stage-kind">trace</span></div><h3>逐步追踪</h3><p class="stage-outcome">追踪调用、数据与状态变化。</p><div class="gate"><span>先想一想</span><p>从一个输入写出调用和状态表，并定位源码。</p></div><div class="stage-links"><a href="#module-02">Task：把问题变成可重复样本</a> <a href="#module-03">Agent Solver：循环、工具与提交</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">03</span><span class="stage-kind">reason</span></div><h3>解释边界</h3><p class="stage-outcome">分析许可、失败、持久化与恢复。</p><div class="gate"><span>先想一想</span><p>解释两个不同层级的故障，并给出证据与反例。</p></div><div class="stage-links"><a href="#module-04">沙箱与审批：能力如何被约束</a> <a href="#module-05">Scorer：答案如何变成证据</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">04</span><span class="stage-kind">teach-back</span></div><h3>复述与迁移</h3><p class="stage-outcome">将契约迁移到自建 Agent 与评测系统。</p><div class="gate"><span>先想一想</span><p>不看答案写出完整主线与未验证边界，再对照评分依据。</p></div><div class="stage-links"><a href="#module-06">进入课程</a><span aria-hidden="true">→</span></div></article></div><details class="scope-note"><summary>实践范围与边界</summary><p>评分协议解析与有效样本计数；不包含真实grader、Docker和完整评测调度。</p></details><div class="recall-heading"><p class="eyebrow">Recall &amp; connect</p><h3>概念地图与主动回忆</h3><p>回答保存在本机浏览器；阅读和自评不代表已掌握。</p></div><details class="concept-card" id="concept-c01-01"><summary>命令入口与参数装配</summary><p>安装映射把inspect指向CLI main，命令组再注册eval等子命令。入口存在只说明命令可发现；样本实际执行还要经过Task加载与运行调度。
+
+找不到命令、参数错误和模型失败不属于同一层。先保存CLI参数和加载错误，不要通过改Task Prompt解决环境映射问题。包版本与源码SHA也必须在评测口径里固定。</p><p>前置概念: —</p><a href="#module-01">能够解释“命令入口与参数装配”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-01-0"><label for="recall-c01-01-0">inspect命令找不到，先修改Solver合适吗？</label><textarea id="recall-c01-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 pyproject.toml:186-187，对照状态、身份、异常和保存边界。</li></ul><p>不合适。先查安装入口与环境路径；能进入eval后再查参数、Task加载和Solver。</p><ul><li>明确本题契约：命令入口与参数装配</li><li>依据源码解释原因：不合适。先查安装入口与环境路径；能进入eval后再查参数、Task加载和Solver。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">pyproject.toml:186-187</p><p>白话翻译
+        安装包把终端里的 inspect 指向 inspect_ai._cli.main 模块中的 main()。先有这个映射，后面才谈得上 eval 子命令。</p><pre><code>[project.scripts]
+inspect = &quot;inspect_ai._cli.main:main&quot;</code></pre></details></details><details class="concept-card" id="concept-c01-02"><summary>命令组与单次执行分开</summary><p>main注册eval/log/view等命令并初始化异常与环境行为；它不实现每个样本的解题循环。CLI层的责任是把可复现配置传给公共入口。
+
+参数默认值发生变化可能让同名任务跑出不同实验。记录最终ResolvedTask比只保存用户敲下的命令更可靠，因为配置、默认模型与角色仍可能在下游补齐。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“命令组与单次执行分开”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-02-0"><label for="recall-c01-02-0">相同CLI字符串是否保证两次评测相同？</label><textarea id="recall-c01-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/_cli/main.py:43-62，对照状态、身份、异常和保存边界。</li></ul><p>不保证。还需冻结版本、解析后的模型/角色、Task参数、数据、Sandbox、Solver和Scorer配置。</p><ul><li>明确本题契约：命令组与单次执行分开</li><li>依据源码解释原因：不保证。还需冻结版本、解析后的模型/角色、Task参数、数据、Sandbox、Solver和Scorer配置。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/_cli/main.py:43-62</p><p>白话翻译
+        主入口把 eval、log、view 等子命令挂到同一个 Click 命令组，然后初始化异常处理与环境变量。这里负责“有哪些线路”，不是执行样本。</p><pre><code>inspect.add_command(acp_command)
+inspect.add_command(cache_command)
+inspect.add_command(ctl_command)
+inspect.add_command(download_command)
+inspect.add_command(eval_command)
+inspect.add_command(eval_set_command)
+inspect.add_command(eval_retry_command)
+inspect.add_command(info_command)
+inspect.add_command(list_command)
+inspect.add_command(log_command)
+inspect.add_command(score_command)
+inspect.add_command(view_command)
+inspect.add_command(sandbox_command)
+inspect.add_command(trace_command)
+
+
+def main() -&gt; None:
+    set_exception_hook()
+    init_dotenv()
+    inspect(auto_envvar_prefix=&quot;INSPECT&quot;)  # pylint: disable=no-value-for-parameter</code></pre></details></details><details class="concept-card" id="concept-c01-03"><summary>eval与eval-set的生命周期</summary><p>普通评测进入eval，eval-set还组织重试与恢复策略。重新安排任务不等于改变Agent求解器；但会改变运行数量和样本的实际覆盖。
+
+分析成功率时不能把重试挑出的最好结果与单次结果直接比较。要说明每个实例的尝试数、最终采用规则、失败和日志归属，再归因模型或系统变化。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“eval与eval-set的生命周期”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-03-0"><label for="recall-c01-03-0">启用eval-set重试后准确率提高，能直接称模型变强吗？</label><textarea id="recall-c01-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/_cli/eval.py:2161-2185，对照状态、身份、异常和保存边界。</li></ul><p>不能。重试与选择策略改变了实验条件；先对齐样本、尝试次数和聚合规则，再做受控比较。</p><ul><li>明确本题契约：eval与eval-set的生命周期</li><li>依据源码解释原因：不能。重试与选择策略改变了实验条件；先对齐样本、尝试次数和聚合规则，再做受控比较。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/_cli/eval.py:2161-2185</p><p>白话翻译
+        命令层把公共参数组装成 params。若是 Eval Set，走带重试与恢复配置的路径；普通单次评测则调用 eval(**params)。</p><pre><code>    # evaluate
+    if is_eval_set:
+        params[&quot;retry_attempts&quot;] = retry_attempts
+        params[&quot;retry_immediate&quot;] = retry_immediate
+        params[&quot;retry_wait&quot;] = retry_wait
+        params[&quot;retry_connections&quot;] = retry_connections
+        params[&quot;retry_cleanup&quot;] = retry_cleanup
+        params[&quot;incomplete_action&quot;] = incomplete_action
+        params[&quot;incomplete_max&quot;] = incomplete_max
+        params[&quot;bundle_dir&quot;] = bundle_dir
+        params[&quot;bundle_overwrite&quot;] = bundle_overwrite
+        params[&quot;embed_viewer&quot;] = embed_viewer
+        params[&quot;log_dir_allow_dirty&quot;] = log_dir_allow_dirty
+        params[&quot;eval_set_id&quot;] = eval_set_id
+        if json_output:
+            return _eval_exec_json(lambda: eval_set(**params), is_eval_set=True)
+        success, _ = eval_set(**params)
+        return success
+    else:
+        params[&quot;log_header_only&quot;] = True  # cli invocation doesn&#x27;t need full log
+        if json_output:
+            _eval_exec_json(lambda: (True, eval(**params)))
+        else:
+            eval(**params)
+        return True</code></pre></details></details><details class="concept-card" id="concept-c02-01"><summary>Sample的输入与target</summary><p>官方Skills示例并列保存input和target。input提供求解任务，target是评分依据，不能默认认为target已经进入Agent提示。
+
+把target泄漏给求解器会污染评测。审查时检查消息生成、Solver和Scorer各自访问什么数据；训练式示例与真正评分样本的界限必须明确。</p><p>前置概念: c01-01</p><a href="#module-02">能够解释“Sample的输入与target”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-01-0"><label for="recall-c02-01-0">Agent碰巧输出target，如何排除答案泄漏？</label><textarea id="recall-c02-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 examples/skills/task.py:26-51，对照状态、身份、异常和保存边界。</li></ul><p>核对实际模型输入、Solver变换与工具可访问文件；target在样本存在不等于可见，必须用输入证据排除泄漏。</p><ul><li>明确本题契约：Sample的输入与target</li><li>依据源码解释原因：核对实际模型输入、Solver变换与工具可访问文件；target在样本存在不等于可见，必须用输入证据排除泄漏。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">examples/skills/task.py:26-51</p><p>白话翻译
+        @task 让加载器能发现这个工厂函数。每个 Sample 把用户输入和评分目标并列保存；目标是判卷依据，不会自动变成给 Agent 的提示。</p><pre><code>@task
+def skills_example() -&gt; Task:
+    &quot;&quot;&quot;Demonstrate agent skills for Linux system exploration.&quot;&quot;&quot;
+    return Task(
+        dataset=[
+            Sample(
+                input=&quot;What Linux distribution is this system running? Include the version.&quot;,
+                target=&quot;The system is running Ubuntu 24.04&quot;,
+            ),
+            Sample(
+                input=&quot;How many CPU cores does this system have?&quot;,
+                target=&quot;The number of CPU cores available on the system&quot;,
+            ),
+            Sample(
+                input=&quot;What is the total amount of memory (RAM) on this system?&quot;,
+                target=&quot;The total RAM available on the system&quot;,
+            ),
+            Sample(
+                input=&quot;What is the IP address of this system?&quot;,
+                target=&quot;The IP address(es) configured on the system&#x27;s network interfaces&quot;,
+            ),
+            Sample(
+                input=&quot;How much disk space is available on the root filesystem?&quot;,
+                target=&quot;The available disk space on the root (/) filesystem&quot;,
+            ),
+        ],</code></pre></details></details><details class="concept-card" id="concept-c02-02"><summary>Task装配四个独立职责</summary><p>Dataset组织题目，Solver决定怎样求解，Scorer决定如何判，Sandbox决定执行环境。示例的ReAct、Skills/Bash、模型评分和Docker是组合，而不是互相替代。
+
+Docker不会批准工具，Scorer不会约束Bash，Prompt也不是隔离设置。修改实验前明确改变哪一项、保持哪几项不变，否则无法解释分数差异。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“Task装配四个独立职责”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-02-0"><label for="recall-c02-02-0">更换Sandbox但保持Prompt不变，实验是否无变化？</label><textarea id="recall-c02-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 examples/skills/task.py:52-69，对照状态、身份、异常和保存边界。</li></ul><p>有变化。环境资源、依赖和访问范围可能改变结果；需记录Sandbox配置与运行证据，并保持其他变量可比较。</p><ul><li>明确本题契约：Task装配四个独立职责</li><li>依据源码解释原因：有变化。环境资源、依赖和访问范围可能改变结果；需记录Sandbox配置与运行证据，并保持其他变量可比较。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">examples/skills/task.py:52-69</p><p>白话翻译
+        ReAct Agent 被要求先查 Skill，再用 Bash；model_graded_qa() 负责判卷；Docker Compose 提供每个样本运行的环境。四者各司其职。</p><pre><code>        solver=react(
+            prompt=&quot;You are a Linux system administrator. You have access to skills &quot;
+            &quot;that provide guidance for system exploration tasks. Use the skill &quot;
+            &quot;tool to get instructions before attempting tasks, then use bash &quot;
+            &quot;to execute the appropriate commands.&quot;,
+            tools=[
+                skill(
+                    [
+                        SKILLS_DIR / &quot;system-info&quot;,
+                        SKILLS_DIR / &quot;network-info&quot;,
+                        SKILLS_DIR / &quot;disk-usage&quot;,
+                    ]
+                ),
+                bash(),
+            ],
+        ),
+        scorer=model_graded_qa(),
+        sandbox=(&quot;docker&quot;, &quot;compose.yaml&quot;),</code></pre></details></details><details class="concept-card" id="concept-c02-03"><summary>从工厂到ResolvedTask</summary><p>Loader把工厂、参数、模型角色、Sandbox与顺序解析为具体Task。源码函数名不是完整实验身份；同一工厂可通过参数产生不同任务。
+
+复现必须保存解析后的执行对象关键配置、数据版本和样本ID。动态加载失败发生在求解前，不应作为模型答错计入accuracy。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“从工厂到ResolvedTask”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-03-0"><label for="recall-c02-03-0">加载失败应该记为模型incorrect吗？</label><textarea id="recall-c02-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/_eval/loader.py:101-124，对照状态、身份、异常和保存边界。</li></ul><p>不应混为一谈。记录加载/环境错误及未运行样本，评分只处理其协议定义下的有效答案。</p><ul><li>明确本题契约：从工厂到ResolvedTask</li><li>依据源码解释原因：不应混为一谈。记录加载/环境错误及未运行样本，评分只处理其协议定义下的有效答案。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/_eval/loader.py:101-124</p><p>白话翻译
+        加载器把任务参数、来源文件、模型、角色、沙箱与顺序全部解析进 ResolvedTask。从这一刻起，调度器拿到的是具体执行单，而不是模糊配置。</p><pre><code>    def as_resolved_tasks(tasks: list[Task]) -&gt; list[ResolvedTask]:
+        # shuffle data in tasks if requested
+        if sample_shuffle:
+            for task in tasks:
+                if not task.dataset.shuffled:
+                    task.dataset.shuffle(
+                        None if sample_shuffle is True else sample_shuffle
+                    )
+
+        return [
+            ResolvedTask(
+                id=uuid(),
+                task=task,
+                task_args=resolve_task_args(task),
+                task_file=task_file(task, relative=True),
+                model=task.model or model,
+                model_roles=_merge_model_roles(task.model_roles, model_roles),
+                sandbox=resolve_task_sandbox(task, sandbox),
+                checkpoint=task.checkpoint,
+                sequence=sequence,
+                input_media_policy=input_media_policy,
+            )
+            for sequence, task in enumerate(tasks)
+        ]</code></pre></details></details><details class="concept-card" id="concept-c03-01"><summary>Agent到Solver的适配</summary><p>Task接受Solver列表、Agent或Solver对象；Agent通过as_solver转接。适配器负责把TaskState消息交给AgentState，再将输出带回评测。
+
+Agent执行成功不保证适配返回的completion正确。调试空答案应同时检查Agent事件和TaskState.output，而不是只看工具日志。</p><p>前置概念: c02-01</p><a href="#module-03">能够解释“Agent到Solver的适配”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-01-0"><label for="recall-c03-01-0">工具执行有结果，但Scorer拿到空completion，查哪里？</label><textarea id="recall-c03-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/_eval/task/task.py:636-642，对照状态、身份、异常和保存边界。</li></ul><p>查as_solver的消息/输出回写、异常路径与Agent是否提交；工具输出存在不能替代Solver答案。</p><ul><li>明确本题契约：Agent到Solver的适配</li><li>依据源码解释原因：查as_solver的消息/输出回写、异常路径与Agent是否提交；工具输出存在不能替代Solver答案。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/_eval/task/task.py:636-642</p><p>白话翻译
+        列表会串成 Solver chain；Agent 会走 as_solver()；已经是 Solver 的对象保持原样。转接在 Task 解析时发生。</p><pre><code>def resolve_solver(solver: Solver | Agent | list[Solver]) -&gt; Solver:
+    if isinstance(solver, list):
+        return chain(solver)
+    elif is_agent(solver):
+        return as_solver(solver)
+    else:
+        return cast(Solver, solver)</code></pre></details></details><details class="concept-card" id="concept-c03-02"><summary>异常时的现场保存</summary><p>适配器使用finally尽量把Agent消息和输出交回TaskState，保留失败现场供日志与评分查看。保存现场不等于把失败运行标为正确。
+
+要区分求解异常、部分输出、可评分答案与评测状态。调试时保持原错误和partial trace，不用空答案覆盖异常。若Scorer选择评部分结果，必须在实验定义里写明。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“异常时的现场保存”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-02-0"><label for="recall-c03-02-0">异常后仍有output字段，能标完成吗？</label><textarea id="recall-c03-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/agent/_as_solver.py:62-82，对照状态、身份、异常和保存边界。</li></ul><p>不能仅凭字段存在。检查错误、submit状态、评分资格和日志计数；部分现场用于诊断，不自动成为有效成功样本。</p><ul><li>明确本题契约：异常时的现场保存</li><li>依据源码解释原因：不能仅凭字段存在。检查错误、submit状态、评分资格和日志计数；部分现场用于诊断，不自动成为有效成功样本。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/agent/_as_solver.py:62-82</p><p>白话翻译
+        适配器把 Task 的消息放进 AgentState，运行 Agent，再把消息与输出写回 TaskState。即使发生异常，finally 也尽量保留可记录、可评分的现场。</p><pre><code>    @solver
+    def agent_to_solver() -&gt; Solver:
+        async def solve(state: TaskState, generate: Generate) -&gt; TaskState:
+            agent_state = AgentState(messages=state.messages)
+
+            try:
+                # run the agent with limits
+                with apply_limits(limits):
+                    async with span(name=agent_name, type=AGENT_SPAN_TYPE):
+                        agent_state = await agent(agent_state, **agent_kwargs)
+            # if an exception occurs, we still want to update the TaskState with the
+            # AgentState&#x27;s messages + output so that it appears in the log and is scored
+            finally:
+                # update messages
+                state.messages = agent_state.messages
+
+                # update output if its not empty
+                if agent_state.output:
+                    state.output = agent_state.output
+
+            return state</code></pre></details></details><details class="concept-card" id="concept-c03-03"><summary>submit与普通文本的退出协议</summary><p>ReAct可循环生成与执行工具，成功submit工具结果才抽取答案，尝试上限和评分反馈控制继续。输出一句结论未必是提交完成。
+
+退出原因会影响成本和样本有效性。要记录尝试数、限制、submit失败及最终采用答案。到达上限也不是业务答案正确，应交给独立Scorer和日志判断。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“submit与普通文本的退出协议”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-03-0"><label for="recall-c03-03-0">模型说“完成了”但没有成功submit，如何解释？</label><textarea id="recall-c03-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/agent/_react.py:294-327，对照状态、身份、异常和保存边界。</li></ul><p>这只是模型文字；核对submit调用、工具结果与Agent输出。退出协议和Scorer评分必须分别验收。</p><ul><li>明确本题契约：submit与普通文本的退出协议</li><li>依据源码解释原因：这只是模型文字；核对submit调用、工具结果与Agent输出。退出协议和Scorer评分必须分别验收。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/agent/_react.py:294-327</p><p>白话翻译
+        成功的 submit Tool Result 被抽成答案并写入输出。达到最大尝试数，或中间评分成功，循环才结束；否则还可能带反馈继续下一次尝试。</p><pre><code>                                # check for a submission
+                                answer = submission(messages)
+                                if answer is not None:
+                                    # set the output to the answer for scoring
+                                    if submit.answer_only:
+                                        state.output.completion = answer
+                                    else:
+                                        state.output.completion = f&quot;{state.output.completion}{submit.answer_delimiter}{answer}&quot;.strip()
+
+                                    # also populate the message text (as the submit tool will be removed)
+                                    if (
+                                        not submit.keep_in_messages
+                                        and len(state.output.choices) &gt; 0
+                                    ):
+                                        message = state.output.choices[0].message
+                                        if isinstance(message.content, str):
+                                            message.content = f&quot;{message.content}{submit.answer_delimiter}{answer}&quot;.strip()
+                                        else:
+                                            message.content.append(
+                                                ContentText(text=answer)
+                                            )
+
+                                    # exit if we are at max_attempts
+                                    attempt_count += 1
+                                    if attempt_count &gt;= attempts.attempts:
+                                        break
+
+                                    # exit if the submission is successful
+                                    answer_scores = await score(state)
+                                    if (
+                                        attempts.score_value(answer_scores[0].value)
+                                        == 1.0
+                                    ):
+                                        break</code></pre></details></details><details class="concept-card" id="concept-c04-01"><summary>沙箱创建与清理</summary><p>Sandbox初始化样本ID、文件和setup，在yield期间运行样本，finally负责清理并处理取消。每题隔离资源与清理寿命，是可复现环境的重要部分。
+
+清理代码存在不能证明容器实际成功退出或挂载安全。需要真实环境日志、资源检查和失败注入；本课只读取路径，不启动Docker。</p><p>前置概念: c03-01</p><a href="#module-04">能够解释“沙箱创建与清理”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-01-0"><label for="recall-c04-01-0">取消后Docker仍运行，能用finally存在证明已清理吗？</label><textarea id="recall-c04-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/_eval/task/sandbox.py:145-178，对照状态、身份、异常和保存边界。</li></ul><p>不能。检查实际清理结果、取消屏蔽与资源状态；源码控制结构只是意图与路径，不能替代运行观察。</p><ul><li>明确本题契约：沙箱创建与清理</li><li>依据源码解释原因：不能。检查实际清理结果、取消屏蔽与资源状态；源码控制结构只是意图与路径，不能替代运行观察。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/_eval/task/sandbox.py:145-178</p><p>白话翻译
+        环境初始化时带入样本 ID、文件和 setup；yield 期间真正运行样本；无论正常结束还是取消，finally 都负责清理，并对中断清理做 shield。</p><pre><code>        interrupted = False
+        environments: dict[str, SandboxEnvironment] | None = None
+        try:
+            # initialize sandbox environment
+            metadata = dict(sample.metadata) if sample.metadata else {}
+            metadata[&quot;__sample_id__&quot;] = sample.id
+
+            environments = await init_sandbox_environments_sample(
+                sandboxenv_type=sandboxenv_type,
+                task_name=registry_unqualified_name(task_name),
+                config=sandbox.config,
+                files=files,
+                setup=setup,
+                metadata=metadata,
+            )
+
+            # run sample
+            yield
+
+        except anyio.get_cancelled_exc_class() as ex:
+            interrupted = True
+            raise ex
+
+        finally:
+            # cleanup sandbox environment
+            if environments and cleanup:
+                with anyio.CancelScope(shield=interrupted):
+                    await cleanup_sandbox_environments_sample(
+                        type=sandbox.type,
+                        task_name=task_name,
+                        config=sandbox.config,
+                        environments=environments,
+                        interrupted=interrupted,
+                    )</code></pre></details></details><details class="concept-card" id="concept-c04-02"><summary>没有审批与没有匹配策略</summary><p>apply_approval在没有approver注册时允许；启用policy后未匹配则拒绝。两个默认属于不同配置状态，不能统称“默认拒绝”。
+
+Docker隔离和approval决策相互独立。测试至少包括未配置、配置且匹配允许、配置但无匹配；每个结果保存有效策略，才能排除环境默认的混淆。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“没有审批与没有匹配策略”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-02-0"><label for="recall-c04-02-0">policy开启后工具无匹配，应当继承未配置时allow吗？</label><textarea id="recall-c04-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/approval/_apply.py:48-71，对照状态、身份、异常和保存边界。</li></ul><p>不应。当前启用policy的未匹配路径拒绝；先区分是否注册审批与已注册策略的匹配结果。</p><ul><li>明确本题契约：没有审批与没有匹配策略</li><li>依据源码解释原因：不应。当前启用policy的未匹配路径拒绝；先区分是否注册审批与已注册策略的匹配结果。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/approval/_apply.py:48-71</p><p>白话翻译
+        有 approver 时，决策可以批准、修改、拒绝或终止；没有任何审批系统注册时，函数明确返回允许。是否在 Docker 里运行不会改变这条逻辑。</p><pre><code>        # call approver (approvers which use model inference — e.g. LLM monitors —
+        # shouldn&#x27;t have that inference charged to the agent&#x27;s own budget)
+        with suspend_token_limit(), suspend_turn_limit():
+            approval = await approver(
+                message=message,
+                call=call,
+                view=view,
+                history=history,
+            )
+
+        # process decision
+        match approval.decision:
+            case &quot;approve&quot; | &quot;modify&quot;:
+                return True, approval
+            case &quot;reject&quot;:
+                return False, approval
+            case &quot;terminate&quot;:
+                return False, approval
+            case &quot;escalate&quot;:
+                raise RuntimeError(&quot;Unexpected &#x27;escalate&#x27; from policy approver.&quot;)
+
+    # no approval system registered
+    else:
+        return True, None</code></pre></details></details><details class="concept-card" id="concept-c04-03"><summary>批准、修改、拒绝与终止</summary><p>审批可以改变参数、拒绝一次调用或终止运行。批准最终参数与模型提出参数可能不同，审计必须保留两者及决策。
+
+一次允许不自动覆盖后续所有操作；评分正确也不撤销越权行为。授权来自应用策略与审批者，Tool描述及模型建议不提供授权。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“批准、修改、拒绝与终止”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-03-0"><label for="recall-c04-03-0">审批者改了命令，日志应保存什么？</label><textarea id="recall-c04-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/approval/_policy.py:67-82，对照状态、身份、异常和保存边界。</li></ul><p>保存原提议、修改后的执行参数、审批决策与实际工具结果，再关联样本和调用身份；不能只保留模型原文。</p><ul><li>明确本题契约：批准、修改、拒绝与终止</li><li>依据源码解释原因：保存原提议、修改后的执行参数、审批决策与实际工具结果，再关联样本和调用身份；不能只保留模型原文。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/approval/_policy.py:67-82</p><p>白话翻译
+        一旦启用 policy approver，调用必须匹配某条工具策略并得到非 escalate 决策；没有匹配者时反而拒绝。别混淆“未启用审批”和“已启用但未匹配”。</p><pre><code>        # process approvers for this tool call (continue loop on &quot;escalate&quot;)
+        has_approver = False
+        for approver in tool_approvers(call):
+            has_approver = True
+            approval = await call_approver(approver, message, call, view, history)
+            if approval.decision != &quot;escalate&quot;:
+                return approval
+
+        # if there are no approvers then we reject
+        reject = Approval(
+            decision=&quot;reject&quot;,
+            explanation=f&quot;No {&#x27;approval granted&#x27; if has_approver else &#x27;approvers registered&#x27;} for tool {call.function}&quot;,
+        )
+        # record and return the rejection
+        record_approval(&quot;policy&quot;, message, call, view, reject)
+        return reject</code></pre></details></details><details class="concept-card" id="concept-c05-01"><summary>grader是另一阶段模型</summary><p>Scorer把问题/历史、completion、target和说明填入模板，再调用grader。求解模型与判卷模型可能不同，成本、版本与失败各自归属。
+
+grader看见target是正常评分过程，但它的输出还需要严格解析。评价质量不能只看求解模型版本；提示、grader和reducer都可能造成分数漂移。</p><p>前置概念: c04-01</p><a href="#module-05">能够解释“grader是另一阶段模型”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-01-0"><label for="recall-c05-01-0">只换grader后分数提高，可归因Solver吗？</label><textarea id="recall-c05-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/scorer/_model.py:283-312，对照状态、身份、异常和保存边界。</li></ul><p>不能。冻结或单独比较grader、评分模板与聚合规则；Solver质量与判卷变化需要独立对照。</p><ul><li>明确本题契约：grader是另一阶段模型</li><li>依据源码解释原因：不能。冻结或单独比较grader、评分模板与聚合规则；Solver质量与判卷变化需要独立对照。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/scorer/_model.py:283-312</p><p>白话翻译
+        评分器选择当前问题或完整历史，把 Agent 输出、target、说明和元数据填入模板，再调用 grader 模型。这个调用与 Agent 求解请求是不同阶段。</p><pre><code>    async def score(state: TaskState, target: Target) -&gt; Score:
+        # resolve model
+        nonlocal model
+        model = model if isinstance(model, Model) else get_model(model)
+
+        # metadata without grading template variables
+        metadata = omit(
+            state.metadata, [&quot;question&quot;, &quot;answer&quot;, &quot;criterion&quot;, &quot;instructions&quot;]
+        )
+
+        # present the question
+        if include_history is True:
+            question = chat_history(state)
+        elif callable(include_history):
+            question = include_history(state)
+        else:
+            question = state.input_text
+
+        # format the scoring template
+        scoring_prompt = model_scoring_prompt(
+            template=grading_template,
+            question=question,
+            output=state.output,
+            criterion=target.text,
+            instructions=instructions,
+            metadata=metadata,
+        )
+
+        # query the model for the score
+        result = await model.generate([scoring_prompt])</code></pre></details></details><details class="concept-card" id="concept-c05-02"><summary>非法grade与incorrect分开</summary><p>解析只接受约定的grade；非法、多字符或无法解析的结果返回带grader_failed原因的unscored。未评分不是合法incorrect。
+
+把全部grader失败记成0会混合基础设施/协议和能力差异。应同时报告有效评分数、错误数、计划数和采用的缺失处理口径。教学正反例将检验这一边界。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“非法grade与incorrect分开”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-02-0"><label for="recall-c05-02-0">grader返回UNKNOWN，应直接记I吗？</label><textarea id="recall-c05-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/scorer/_model.py:314-360，对照状态、身份、异常和保存边界。</li></ul><p>先按评分协议标为unscored/grader_failed，保留原因；只有预先冻结的缺失策略可影响聚合，不能悄悄当成答错。</p><ul><li>明确本题契约：非法grade与incorrect分开</li><li>依据源码解释原因：先按评分协议标为unscored/grader_failed，保留原因；只有预先冻结的缺失策略可影响聚合，不能悄悄当成答错。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/scorer/_model.py:314-360</p><p>白话翻译
+        解析器只接受约定 grade。多字符异常值或不在可选集合中的结果被视为协议偏差；代码返回带 grader_failed 原因的 unscored Score，而不是偷偷记为 incorrect。</p><pre><code>        # extract the grade
+        match = re.search(resolved_grade_pattern, result.completion)
+        value = match.group(1) if match else None
+        if value is not None and default_grade_pattern:
+            # The permissive capture takes the whole word so that &quot;GRADE:
+            # Correct&quot;/&quot;GRADE: Incorrect&quot;/&quot;GRADE: Partial&quot; keep resolving to
+            # their letter. A multi-character verdict that is not one of the
+            # spelled-out grades (e.g. &quot;GRADE: CI&quot;) is a protocol deviation,
+            # not evidence about the submission, so it is a parse failure
+            # rather than a silently laundered first letter.
+            normalized = value.strip().lower()
+            if normalized in _GRADE_WORD_VALUES:
+                value = _GRADE_WORD_VALUES[normalized]
+            elif len(value.strip()) == 1:
+                value = value.strip().upper()
+            else:
+                value = None
+            if validate_offered_grades and value not in offered_grades:
+                # A verdict outside the grades the instructions offered is a
+                # protocol deviation, not evidence about the submission, so it
+                # is a scoring failure rather than an incorrect answer.
+                value = None
+        if value is not None:
+            return Score(
+                value=value,
+                answer=state.output.completion,
+                explanation=result.completion,
+                metadata=dict(
+                    grading=[
+                        scoring_prompt,
+                        result.message,
+                    ]
+                ),
+            )
+        else:
+            return Score.unscored(
+                reason=&quot;grader_failed&quot;,
+                answer=state.output.completion,
+                explanation=&quot;Grade not found in model output: &quot;
+                + f&quot;{result.completion}&quot;,
+                metadata=dict(
+                    grading=[
+                        scoring_prompt,
+                        result.message,
+                    ],
+                ),
+            )</code></pre></details></details><details class="concept-card" id="concept-c05-03"><summary>metric值与样本分母</summary><p>默认accuracy映射C/I/P/N为1/0/0.5/0，并对传入分数求平均。空分数返回0不能解释为完整评测的0%正确。
+
+聚合值依赖传入集合；部分取消、未评分和多个attempt会改变分母。报告必须写有效样本数与处理规则，否则单个accuracy没有可比较意义。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“metric值与样本分母”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-03-0"><label for="recall-c05-03-0">计划100题只完成10题，accuracy=0.9可以说90题正确吗？</label><textarea id="recall-c05-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/scorer/_metrics/accuracy.py:14-37，对照状态、身份、异常和保存边界。</li></ul><p>不能。应报告有效计分10题及其9题正确，并另外给出计划/完成/未评分/错误计数；不得把比例乘错分母。</p><ul><li>明确本题契约：metric值与样本分母</li><li>依据源码解释原因：不能。应报告有效计分10题及其9题正确，并另外给出计划/完成/未评分/错误计数；不得把比例乘错分母。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/scorer/_metrics/accuracy.py:14-37</p><p>白话翻译
+        默认映射是 C=1、I=0、P=0.5、N=0，再对传入分数求平均。没有分数时返回 0；解读报告时仍要同时查看已完成、已记录和未评分样本数。</p><pre><code>@metric
+def accuracy(to_float: ValueToFloat = value_to_float()) -&gt; Metric:
+    r&quot;&quot;&quot;Compute proportion of total answers which are correct.
+
+    Args:
+       to_float: Function for mapping `Value` to float for computing
+          metrics. The default `value_to_float()` maps CORRECT (&quot;C&quot;) to 1.0,
+          INCORRECT (&quot;I&quot;) to 0, PARTIAL (&quot;P&quot;) to 0.5, and NOANSWER (&quot;N&quot;) to 0,
+          casts numeric values to float directly, and prints a warning and returns
+          0 if the Value is a complex object (list or dict).
+
+    Returns:
+       Accuracy metric
+    &quot;&quot;&quot;
+
+    def metric(scores: list[SampleScore]) -&gt; float:
+        if not scores:
+            # No scores to average; return 0 rather than dividing by zero,
+            # mirroring the insufficient-data guards in std()/var().
+            return 0.0
+        total = 0.0
+        for item in scores:
+            total += to_float(item.score.value)
+        return total / float(len(scores))</code></pre></details></details><details class="concept-card" id="concept-c06-01"><summary>EvalSpec使差异可归因</summary><p>EvalSpec保存Task身份、参数、模型、样本ID、Solver、Scorer、Metric、Sandbox、revision与包版本。这些字段把一次分数变成可复核实验。
+
+只保存最终表格会丢掉最容易造成回归的变量。比较前先列不变项与变更项，再确认两边数据截止与尝试规则相同。</p><p>前置概念: c05-01</p><a href="#module-06">能够解释“EvalSpec使差异可归因”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-01-0"><label for="recall-c06-01-0">两份结果只写模型名和accuracy，下一步是什么？</label><textarea id="recall-c06-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/_eval/task/log.py:280-319，对照状态、身份、异常和保存边界。</li></ul><p>补齐Task/样本/版本/Solver/Scorer/Sandbox/限制与尝试参数，确认可比后再讨论回归。</p><ul><li>明确本题契约：EvalSpec使差异可归因</li><li>依据源码解释原因：补齐Task/样本/版本/Solver/Scorer/Sandbox/限制与尝试参数，确认可比后再讨论回归。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/_eval/task/log.py:280-319</p><p>白话翻译
+        EvalSpec 保存任务身份与参数、Solver、模型、数据集及样本 ID、Scorer、Metric、Sandbox、运行配置、源码 revision 和包版本。没有这些，分数差异很难归因。</p><pre><code>        # create eval spec
+        self.eval = EvalSpec(
+            eval_set_id=eval_set_id,
+            run_id=run_id,
+            created=iso_now(),
+            task=f&quot;{task_name}&quot;,
+            task_id=task_id if task_id else uuid(),
+            task_version=task_version,
+            task_file=task_file,
+            task_registry_name=task_registry_name,
+            task_display_name=task_display_name,
+            task_attribs=task_attribs,
+            task_args=task_args,
+            task_args_passed=task_args_passed,
+            solver=solver.solver if solver else None,
+            tags=tags,
+            solver_args=solver.args if solver else None,
+            solver_args_passed=solver.args_passed if solver else None,
+            model=f&quot;{ModelName(model).api}/{model.name}&quot;,
+            model_generate_config=model.config,
+            model_base_url=model.explicit_base_url,
+            model_roles=model_roles_to_model_roles_config(model_roles),
+            dataset=EvalDataset(
+                name=dataset.name,
+                location=cwd_relative_path(dataset.location),
+                samples=len(dataset),
+                sample_ids=sample_ids,
+                shuffled=dataset.shuffled,
+            ),
+            scorers=eval_scorers,
+            metrics=eval_metrics,
+            headline_metric=headline_metric,
+            sandbox=sandbox,
+            model_args=model_args,
+            config=eval_config,
+            revision=revision,
+            packages=packages,
+            metadata=metadata,
+            viewer=viewer,
+        )</code></pre></details></details><details class="concept-card" id="concept-c06-02"><summary>日志状态不是答案准确率</summary><p>顶层status描述评测生命周期；samples/results/stats/error与invalidated分别说明答案、统计、故障和结果可用性。success不等于accuracy=1。
+
+完整运行可全部答错；运行失败也可能有部分正确样本。字段顺序还属于格式兼容责任，不应为方便而随意修改序列化形状。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“日志状态不是答案准确率”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-02-0"><label for="recall-c06-02-0">status=success但accuracy低，是自相矛盾吗？</label><textarea id="recall-c06-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/log/_log.py:1218-1265，对照状态、身份、异常和保存边界。</li></ul><p>不是。生命周期成功表示评测完成，accuracy表示答案结果；二者应一起报告，且保留样本数和评分有效性。</p><ul><li>明确本题契约：日志状态不是答案准确率</li><li>依据源码解释原因：不是。生命周期成功表示评测完成，accuracy表示答案结果；二者应一起报告，且保留样本数和评分有效性。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/log/_log.py:1218-1265</p><p>白话翻译
+        顶层 status 不等于 accuracy；error、invalidated、samples、results 与 stats 各自回答不同问题。字段顺序还是日志格式的一部分，修改需要升版本并同步读写逻辑与测试。</p><pre><code>class EvalLog(BaseModel):
+    &quot;&quot;&quot;Evaluation log.&quot;&quot;&quot;
+
+    # WARNING: The order of these fields is important for the log file format.
+    # Do not change the order of these fields without incrementing the version number,
+    # updating the log file read/write functionality (such as read_eval_log),
+    # and updating the tests.
+    version: int = Field(default=2)
+    &quot;&quot;&quot;Eval log file format version.&quot;&quot;&quot;
+
+    status: EvalStatus = Field(default=&quot;started&quot;)
+    &quot;&quot;&quot;Status of evaluation (did it succeed or fail).&quot;&quot;&quot;
+
+    eval: EvalSpec
+    &quot;&quot;&quot;Eval identity and configuration.&quot;&quot;&quot;
+
+    plan: EvalPlan = Field(default_factory=EvalPlan)
+    &quot;&quot;&quot;Eval plan (solvers and config)&quot;&quot;&quot;
+
+    results: EvalResults | None = None
+    &quot;&quot;&quot;Eval results (scores and metrics).&quot;&quot;&quot;
+
+    stats: EvalStats = Field(default_factory=EvalStats)
+    &quot;&quot;&quot;Eval stats (runtime, model usage)&quot;&quot;&quot;
+
+    error: EvalError | None = Field(default=None)
+    &quot;&quot;&quot;Error that halted eval (if status==&quot;error&quot;)&quot;&quot;&quot;
+
+    invalidated: bool = Field(default=False)
+    &quot;&quot;&quot;Whether any samples were invalidated.&quot;&quot;&quot;
+
+    log_updates: list[LogUpdate] | None = Field(default=None)
+    &quot;&quot;&quot;Post-eval edits to tags and metadata.&quot;&quot;&quot;
+
+    config_updates: list[ConfigUpdate] | None = Field(default=None)
+    &quot;&quot;&quot;Mid-run configuration changes applied via the control channel (`inspect ctl config`).&quot;&quot;&quot;
+
+    tags: list[str] = Field(default_factory=list)
+    &quot;&quot;&quot;Current tags (eval-time + edits). Do not set directly; use edit_eval_log().&quot;&quot;&quot;
+
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    &quot;&quot;&quot;Current metadata (eval-time + edits). Do not set directly; use edit_eval_log().&quot;&quot;&quot;
+
+    samples: list[EvalSample] | None = Field(default=None)
+    &quot;&quot;&quot;Samples processed by eval.&quot;&quot;&quot;
+
+    reductions: list[EvalSampleReductions] | None = Field(default=None)
+    &quot;&quot;&quot;Reduced sample values&quot;&quot;&quot;</code></pre></details></details><details class="concept-card" id="concept-c06-03"><summary>完成、记录与计划计数</summary><p>total_samples是计划数，completed_samples强调无错误完成，取消/drain时logged_samples说明实际解决并记录的范围。三种数目不可互换。
+
+把评测迁移到自建回归系统时，先冻结有效样本判定和缺失策略，再写计算。静态源码检查和教学模型未生成真实Eval Log，无法验真实grader质量或Docker行为。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“完成、记录与计划计数”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-03-0"><label for="recall-c06-03-0">迁移回归报告，最重要的计数不变量是什么？</label><textarea id="recall-c06-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/inspect_ai/log/_log.py:848-871，对照状态、身份、异常和保存边界。</li></ul><p>计划、已记录、完成、有效评分与失败分别计数，任何比例写明分母；先验证取消和grader失败案例，再比较两个版本。</p><ul><li>明确本题契约：完成、记录与计划计数</li><li>依据源码解释原因：计划、已记录、完成、有效评分与失败分别计数，任何比例写明分母；先验证取消和grader失败案例，再比较两个版本。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/inspect_ai/log/_log.py:848-871</p><p>白话翻译
+        total_samples 是计划数；completed_samples 是无错误完成数；取消或 drain 时，logged_samples 还会指出本日志真正解决了多少。只看总数会把中途放弃误读成完整运行。</p><pre><code>class EvalResults(BaseModel):
+    &quot;&quot;&quot;Scoring results from evaluation.&quot;&quot;&quot;
+
+    total_samples: int = Field(default=0)
+    &quot;&quot;&quot;Total samples in eval (dataset samples * epochs)&quot;&quot;&quot;
+
+    completed_samples: int = Field(default=0)
+    &quot;&quot;&quot;Samples completed without error.
+
+    Will be equal to total_samples except when --fail-on-error is enabled
+    or when there is early stopping.
+    &quot;&quot;&quot;
+
+    logged_samples: int | None = Field(default=None)
+    &quot;&quot;&quot;Samples this log actually resolved (present in the log and not
+    cancelled), when a graceful task cancel or drain abandoned queued samples.
+
+    `total_samples` records the *planned* count, so a log finished by
+    `inspect ctl task drain` or `inspect ctl task cancel --action score|error`
+    would otherwise read complete to an eval set; the eval set&#x27;s run-vs-reuse
+    check prefers this count when present so the abandoned remainder is
+    re-run by a later invocation. None on ordinary logs (and logs written by
+    older versions), which classify by `total_samples` as before.
+    &quot;&quot;&quot;</code></pre></details></details><button type="button" class="export-learning-notes">导出回忆记录</button><p class="notes-feedback" aria-live="polite"></p><details class="export-preview" hidden><summary>可复制的导出记录</summary><label for="export-data">尚未评价的回忆记录（JSON）</label><textarea id="export-data" readonly rows="6"></textarea><a class="export-download" download="code-learning-recall.json">下载 JSON</a></details></section>
+  <main id="course"><section class="course-module" id="module-01" data-title="从 inspect eval 到一次评测">
+  <div class="screen hero-screen" data-number="01">
+    <p class="eyebrow">Module 1 · Evaluation entry</p>
+    <h2>一条命令，先经过调度台</h2>
+    <p class="lede">学完这一节，你能把 <span class="path-chip">inspect eval</span> 从终端入口追到 Python 评测 API；命令失败时，会先判断停在命令注册、参数解析、任务解析，还是样本运行。</p>
+    <div class="callout">
+      <strong>本课追踪对象：</strong><span class="path-chip">inspect eval examples/skills/task.py --model openai/gpt-5</span>。它会评测五个 Linux 系统探索问题，而不是启动一个没有判卷规则的自由聊天。
+    </div>
+    <p><dfn data-definition="CLI 是 Command-Line Interface，即通过终端命令与程序交互的入口。">CLI</dfn> 像火车站调度台：负责认出线路、整理参数并发车，本身不是完成整趟旅程的列车。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The dispatch desk</p>
+    <h3><code>inspect</code> 先被映射到一个 Python 入口</h3>
+    <figure class="code-translation" data-source="pyproject.toml" data-lines="186-187">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>[project.scripts]
+inspect = "inspect_ai._cli.main:main"</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>安装包把终端里的 <span class="path-chip">inspect</span> 指向 <span class="path-chip">inspect_ai._cli.main</span> 模块中的 <span class="path-chip">main()</span>。先有这个映射，后面才谈得上 <span class="path-chip">eval</span> 子命令。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/inspect_ai/_cli/main.py" data-lines="43-62">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>inspect.add_command(acp_command)
+inspect.add_command(cache_command)
+inspect.add_command(ctl_command)
+inspect.add_command(download_command)
+inspect.add_command(eval_command)
+inspect.add_command(eval_set_command)
+inspect.add_command(eval_retry_command)
+inspect.add_command(info_command)
+inspect.add_command(list_command)
+inspect.add_command(log_command)
+inspect.add_command(score_command)
+inspect.add_command(view_command)
+inspect.add_command(sandbox_command)
+inspect.add_command(trace_command)
+
+
+def main() -&gt; None:
+    set_exception_hook()
+    init_dotenv()
+    inspect(auto_envvar_prefix="INSPECT")  # pylint: disable=no-value-for-parameter</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>主入口把 <span class="path-chip">eval</span>、<span class="path-chip">log</span>、<span class="path-chip">view</span> 等子命令挂到同一个 Click 命令组，然后初始化异常处理与环境变量。这里负责“有哪些线路”，不是执行样本。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Single run or eval set</p>
+    <h3>参数整理完，才分流到 <code>eval()</code> 或 <code>eval_set()</code></h3>
+    <figure class="code-translation" data-source="src/inspect_ai/_cli/eval.py" data-lines="2161-2185">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    # evaluate
+    if is_eval_set:
+        params["retry_attempts"] = retry_attempts
+        params["retry_immediate"] = retry_immediate
+        params["retry_wait"] = retry_wait
+        params["retry_connections"] = retry_connections
+        params["retry_cleanup"] = retry_cleanup
+        params["incomplete_action"] = incomplete_action
+        params["incomplete_max"] = incomplete_max
+        params["bundle_dir"] = bundle_dir
+        params["bundle_overwrite"] = bundle_overwrite
+        params["embed_viewer"] = embed_viewer
+        params["log_dir_allow_dirty"] = log_dir_allow_dirty
+        params["eval_set_id"] = eval_set_id
+        if json_output:
+            return _eval_exec_json(lambda: eval_set(**params), is_eval_set=True)
+        success, _ = eval_set(**params)
+        return success
+    else:
+        params["log_header_only"] = True  # cli invocation doesn't need full log
+        if json_output:
+            _eval_exec_json(lambda: (True, eval(**params)))
+        else:
+            eval(**params)
+        return True</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>命令层把公共参数组装成 <span class="path-chip">params</span>。若是 <dfn data-definition="Eval Set 是一组可重试、可恢复并统一管理的评测任务。">Eval Set</dfn>，走带重试与恢复配置的路径；普通单次评测则调用 <span class="path-chip">eval(**params)</span>。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="inspect eval 从命令到证据的步骤">
+      <button type="button" class="flow-step is-active" data-detail="shell 根据 pyproject 的 project.scripts 找到 main()。">1. 命令入口</button>
+      <button type="button" class="flow-step" data-detail="Click 识别 eval 子命令，并解析任务路径、模型及运行参数。">2. 参数解析</button>
+      <button type="button" class="flow-step" data-detail="加载器发现 @task，构造稳定的 ResolvedTask。">3. Task 解析</button>
+      <button type="button" class="flow-step" data-detail="调度器把数据集拆成可执行样本。">4. Sample 调度</button>
+      <button type="button" class="flow-step" data-detail="Solver 或 Agent 在工具与模型之间推进每个样本。">5. 执行与评分</button>
+      <button type="button" class="flow-step" data-detail="Recorder 汇总状态、样本、分数、指标与运行统计。">6. Eval Log</button>
+      <p class="flow-detail" aria-live="polite">shell 根据 pyproject 的 project.scripts 找到 main()。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Applied diagnosis</p>
+    <h3>不要把所有失败都叫“模型坏了”</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>命令不存在</h4><p>查安装入口与子命令注册；此时还没有加载 Task。</p></article>
+      <article class="actor-card"><h4>任务找不到</h4><p>查路径、注册名与任务发现；此时通常还没有运行样本。</p></article>
+      <article class="actor-card"><h4>模型无法解析</h4><p>查 Provider、模型名与认证配置，不要先改 Scorer。</p></article>
+      <article class="actor-card"><h4>样本或评分失败</h4><p>此时再进入 Solver、工具、沙箱、Scorer 与日志证据。</p></article>
+    </div>
+    <div class="quiz" data-explanation="主入口必须先注册 eval_command；若其他子命令正常而 eval 独自缺失，命令注册是比模型更靠前的检查点。">
+      <p class="quiz-kicker">Try it</p>
+      <h3><code>inspect view</code> 能打开，但终端提示没有 <code>eval</code> 子命令，先查哪里？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true"><code>_cli/main.py</code> 是否注册 <code>eval_command</code></button>
+        <button type="button">模型评分模板是否返回 C</button>
+        <button type="button">Docker 样本是否正确清理</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout warning">
+      <strong>证据边界：</strong>本课在提交 <span class="path-chip">e4b8ad59d846</span> 上做静态源码追踪；没有调用 OpenAI，也没有启动 Docker 样本。
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-02" data-title="Task：把问题变成可重复样本">
+  <div class="screen hero-screen" data-number="02">
+    <p class="eyebrow">Module 2 · Evaluation contract</p>
+    <h2>Task 是实验配方卡</h2>
+    <p class="lede">学完这一节，你能把“评测一个 Agent”拆成题目、执行方法、判卷规则和运行环境；新增案例时，会改正确的位置，而不是把预期答案塞进提示词。</p>
+    <div class="callout">
+      <strong>一张完整配方卡：</strong>Dataset 决定问什么，Solver 决定怎样作答，Scorer 决定怎样判，Sandbox 决定在哪里执行。
+    </div>
+    <p><dfn data-definition="Sample 是数据集中的一个独立评测案例，通常包含 input、target 和可选元数据。">Sample</dfn> 是一份试题；<dfn data-definition="Task 是把数据集、Solver、Scorer、Sandbox 与运行配置组合起来的评测定义。">Task</dfn> 是整套实验配方。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Questions and targets</p>
+    <h3>真实示例先冻结五道题及其目标</h3>
+    <figure class="code-translation" data-source="examples/skills/task.py" data-lines="26-51">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>@task
+def skills_example() -&gt; Task:
+    """Demonstrate agent skills for Linux system exploration."""
+    return Task(
+        dataset=[
+            Sample(
+                input="What Linux distribution is this system running? Include the version.",
+                target="The system is running Ubuntu 24.04",
+            ),
+            Sample(
+                input="How many CPU cores does this system have?",
+                target="The number of CPU cores available on the system",
+            ),
+            Sample(
+                input="What is the total amount of memory (RAM) on this system?",
+                target="The total RAM available on the system",
+            ),
+            Sample(
+                input="What is the IP address of this system?",
+                target="The IP address(es) configured on the system's network interfaces",
+            ),
+            Sample(
+                input="How much disk space is available on the root filesystem?",
+                target="The available disk space on the root (/) filesystem",
+            ),
+        ],</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">@task</span> 让加载器能发现这个工厂函数。每个 <span class="path-chip">Sample</span> 把用户输入和评分目标并列保存；目标是判卷依据，不会自动变成给 Agent 的提示。</p>
+      </figcaption>
+    </figure>
+    <p>五道题共享同一执行和评分合同，因此能比较 Agent 在系统信息、CPU、内存、网络和磁盘问题上的表现。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The complete recipe</p>
+    <h3>同一个 Task 把 Agent、工具、评分与环境扣在一起</h3>
+    <figure class="code-translation" data-source="examples/skills/task.py" data-lines="52-69">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        solver=react(
+            prompt="You are a Linux system administrator. You have access to skills "
+            "that provide guidance for system exploration tasks. Use the skill "
+            "tool to get instructions before attempting tasks, then use bash "
+            "to execute the appropriate commands.",
+            tools=[
+                skill(
+                    [
+                        SKILLS_DIR / "system-info",
+                        SKILLS_DIR / "network-info",
+                        SKILLS_DIR / "disk-usage",
+                    ]
+                ),
+                bash(),
+            ],
+        ),
+        scorer=model_graded_qa(),
+        sandbox=("docker", "compose.yaml"),</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>ReAct Agent 被要求先查 Skill，再用 Bash；<span class="path-chip">model_graded_qa()</span> 负责判卷；Docker Compose 提供每个样本运行的环境。四者各司其职。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Dataset</h4><p>冻结输入、目标和样本元数据。</p></article>
+      <article class="actor-card"><h4>Solver</h4><p>定义 Agent 或求解步骤如何推进状态。</p></article>
+      <article class="actor-card"><h4>Scorer</h4><p>把输出与 target 转成结构化 Score。</p></article>
+      <article class="actor-card"><h4>Sandbox</h4><p>准备可执行工具的隔离环境和生命周期。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Resolution</p>
+    <h3>运行前，Task 会被解析成不可变的执行单</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/_eval/loader.py" data-lines="101-124">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def as_resolved_tasks(tasks: list[Task]) -&gt; list[ResolvedTask]:
+        # shuffle data in tasks if requested
+        if sample_shuffle:
+            for task in tasks:
+                if not task.dataset.shuffled:
+                    task.dataset.shuffle(
+                        None if sample_shuffle is True else sample_shuffle
+                    )
+
+        return [
+            ResolvedTask(
+                id=uuid(),
+                task=task,
+                task_args=resolve_task_args(task),
+                task_file=task_file(task, relative=True),
+                model=task.model or model,
+                model_roles=_merge_model_roles(task.model_roles, model_roles),
+                sandbox=resolve_task_sandbox(task, sandbox),
+                checkpoint=task.checkpoint,
+                sequence=sequence,
+                input_media_policy=input_media_policy,
+            )
+            for sequence, task in enumerate(tasks)
+        ]</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>加载器把任务参数、来源文件、模型、角色、沙箱与顺序全部解析进 <span class="path-chip">ResolvedTask</span>。从这一刻起，调度器拿到的是具体执行单，而不是模糊配置。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="Task 从定义到样本执行的步骤">
+      <button type="button" class="flow-step is-active" data-detail="@task 把工厂函数注册为可发现的评测任务。">1. 注册</button>
+      <button type="button" class="flow-step" data-detail="调用工厂函数，得到 Dataset、Solver、Scorer 与 Sandbox 的组合。">2. 构造 Task</button>
+      <button type="button" class="flow-step" data-detail="加载器合并命令行覆盖项，并冻结来源、模型与执行顺序。">3. ResolvedTask</button>
+      <button type="button" class="flow-step" data-detail="数据集按 limit、sample id、shuffle 与 epochs 生成计划样本。">4. 计划样本</button>
+      <button type="button" class="flow-step" data-detail="每个样本进入 Solver、工具、评分和日志生命周期。">5. 运行</button>
+      <p class="flow-detail" aria-live="polite">@task 把工厂函数注册为可发现的评测任务。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Steer the right layer</p>
+    <h3>改实验，先说清你要改变哪一个变量</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>新增题目</h4><p>增加 Sample，并写清 input、target 与必要元数据。</p></article>
+      <article class="actor-card"><h4>改变作答策略</h4><p>修改 Solver 或 Agent；不要污染 target。</p></article>
+      <article class="actor-card"><h4>改变判定标准</h4><p>修改 Scorer、模板或 Metric，并保留旧基线。</p></article>
+      <article class="actor-card"><h4>改变机器条件</h4><p>修改 Sandbox 配置，并记录镜像与环境版本。</p></article>
+    </div>
+    <div class="quiz" data-explanation="预期答案属于 Sample.target；把它写进 Agent prompt 会泄漏判卷依据，破坏评测合同。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>要新增“检查 Python 版本”的案例，预期结果最应该放在哪里？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">新 <code>Sample</code> 的 <code>target</code></button>
+        <button type="button">ReAct Agent 的系统提示词</button>
+        <button type="button">Docker 清理函数</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout warning"><strong>排错提示：</strong>样本数不对先查 Dataset 与 limit；行为不对查 Solver；判定不对查 Scorer；命令环境不对查 Sandbox。</div>
+  </div>
+</section>
+
+<section class="course-module" id="module-03" data-title="Agent Solver：循环、工具与提交">
+  <div class="screen hero-screen" data-number="03">
+    <p class="eyebrow">Module 3 · Agent as Solver</p>
+    <h2>Agent 先接转接头，再跑循环赛道</h2>
+    <p class="lede">学完这一节，你能解释 Agent 如何成为 Inspect 的 Solver、为什么一次回答可能包含多轮模型与工具往返，以及 <code>submit</code> 为什么是明确的终点线。</p>
+    <p><dfn data-definition="Solver 是接收 TaskState、推进求解过程并返回更新后状态的可执行步骤。">Solver</dfn> 是 Inspect 评测管线认识的接口；<dfn data-definition="ReAct 是让模型在推理与行动之间交替，通过工具结果继续决定下一步的 Agent 模式。">ReAct</dfn> Agent 则是一名会反复观察和行动的选手。</p>
+    <div class="callout"><strong>关键区别：</strong>模型生成了一段文字，不等于样本已提交。这个示例默认要求成功调用 <code>submit</code> 工具才越过终点线。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The adapter</p>
+    <h3>Task 遇到 Agent，会自动把它包成 Solver</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/_eval/task/task.py" data-lines="636-642">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def resolve_solver(solver: Solver | Agent | list[Solver]) -&gt; Solver:
+    if isinstance(solver, list):
+        return chain(solver)
+    elif is_agent(solver):
+        return as_solver(solver)
+    else:
+        return cast(Solver, solver)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>列表会串成 Solver chain；Agent 会走 <span class="path-chip">as_solver()</span>；已经是 Solver 的对象保持原样。转接在 Task 解析时发生。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/inspect_ai/agent/_as_solver.py" data-lines="62-82">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    @solver
+    def agent_to_solver() -&gt; Solver:
+        async def solve(state: TaskState, generate: Generate) -&gt; TaskState:
+            agent_state = AgentState(messages=state.messages)
+
+            try:
+                # run the agent with limits
+                with apply_limits(limits):
+                    async with span(name=agent_name, type=AGENT_SPAN_TYPE):
+                        agent_state = await agent(agent_state, **agent_kwargs)
+            # if an exception occurs, we still want to update the TaskState with the
+            # AgentState's messages + output so that it appears in the log and is scored
+            finally:
+                # update messages
+                state.messages = agent_state.messages
+
+                # update output if its not empty
+                if agent_state.output:
+                    state.output = agent_state.output
+
+            return state</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>适配器把 Task 的消息放进 <span class="path-chip">AgentState</span>，运行 Agent，再把消息与输出写回 <span class="path-chip">TaskState</span>。即使发生异常，<span class="path-chip">finally</span> 也尽量保留可记录、可评分的现场。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The loop</p>
+    <h3>每一圈：收消息、生成、执行工具、把结果放回对话</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/agent/_react.py" data-lines="246-290">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>                # main loop = will terminate after submit (subject to max_attempts)
+                # or if a message or token limit is hit
+                while True:
+                    # drain any operator-supplied messages for this turn
+                    state.messages.extend(await ch.before_turn(state.messages))
+
+                    # checkpoint at turn boundary (no-op when policy says so)
+                    await cp.tick()
+
+                    try:
+                        with ch.turn_scope():
+                            # generate output and append assistant message
+                            state = await _agent_generate(
+                                model, state, tools, retry_refusals, compact
+                            )
+
+                            # check for context window overflow
+                            if state.output.stop_reason == "model_length":
+                                state, handled = await _handle_overflow(
+                                    state, overflow, compact
+                                )
+                                if handled:
+                                    continue
+                                else:
+                                    break
+
+                            # check for content filter (model refusal) -- allow a few
+                            # chances to recover before breaking to avoid infinite loop
+                            if state.output.stop_reason == "content_filter":
+                                consecutive_content_filter += 1
+                                if consecutive_content_filter &gt;= 3:
+                                    break
+                            else:
+                                consecutive_content_filter = 0
+
+                            # resolve tool calls (if any)
+                            if state.output.message.tool_calls:
+                                # call tool functions
+                                messages, output = await execute_tools(
+                                    state.messages,
+                                    tools,
+                                    approval=approval,
+                                    review=review,
+                                )
+                                state.messages.extend(messages)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>每一轮先接收操作者消息并打 checkpoint，再向模型生成；若模型提出工具调用，就执行工具并把 Tool Message 追加回消息列表。上下文溢出、内容过滤与限制都有独立停点。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The finish line</p>
+    <h3><code>submit</code> 的成功结果才成为待评分答案</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/agent/_react.py" data-lines="294-327">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>                                # check for a submission
+                                answer = submission(messages)
+                                if answer is not None:
+                                    # set the output to the answer for scoring
+                                    if submit.answer_only:
+                                        state.output.completion = answer
+                                    else:
+                                        state.output.completion = f"{state.output.completion}{submit.answer_delimiter}{answer}".strip()
+
+                                    # also populate the message text (as the submit tool will be removed)
+                                    if (
+                                        not submit.keep_in_messages
+                                        and len(state.output.choices) &gt; 0
+                                    ):
+                                        message = state.output.choices[0].message
+                                        if isinstance(message.content, str):
+                                            message.content = f"{message.content}{submit.answer_delimiter}{answer}".strip()
+                                        else:
+                                            message.content.append(
+                                                ContentText(text=answer)
+                                            )
+
+                                    # exit if we are at max_attempts
+                                    attempt_count += 1
+                                    if attempt_count &gt;= attempts.attempts:
+                                        break
+
+                                    # exit if the submission is successful
+                                    answer_scores = await score(state)
+                                    if (
+                                        attempts.score_value(answer_scores[0].value)
+                                        == 1.0
+                                    ):
+                                        break</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>成功的 submit Tool Result 被抽成答案并写入输出。达到最大尝试数，或中间评分成功，循环才结束；否则还可能带反馈继续下一次尝试。</p>
+      </figcaption>
+    </figure>
+    <div class="component-chat" aria-label="Task、Agent、模型与工具的组件对话">
+      <div class="chat-message" data-speaker="Task runner">这是本样本的 input、target 和初始消息，请 Solver 推进。</div>
+      <div class="chat-message" data-speaker="Agent adapter">我把消息转成 AgentState，并在限制与 trace span 内启动 ReAct。</div>
+      <div class="chat-message" data-speaker="ReAct → Model">请结合当前消息与 Skill、Bash、Submit 工具决定下一步。</div>
+      <div class="chat-message" data-speaker="Tool executor">我执行工具调用，把结果作为 Tool Message 放回对话。</div>
+      <div class="chat-message" data-speaker="Submit → TaskState">提交成功；答案写入 completion，完整消息与输出交回评分阶段。</div>
+      <button type="button" class="replay-chat">重放组件对话</button>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Steering and debugging</p>
+    <h3>看它停在哪一圈，而不是只看最后一句</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>没有工具调用</h4><p>查提示、可见工具、模型工具能力与 <code>on_continue</code>。</p></article>
+      <article class="actor-card"><h4>工具调用报错</h4><p>查参数、审批、沙箱与 Tool Message；不要掩盖错误后继续。</p></article>
+      <article class="actor-card"><h4>反复循环</h4><p>查 submit 是否可见、限制是否冻结、失败反馈是否可行动。</p></article>
+      <article class="actor-card"><h4>异常后日志为空</h4><p>核对 AgentState 是否在 finally 中回写到 TaskState。</p></article>
+    </div>
+    <div class="quiz" data-explanation="默认 ReAct 使用 submit 工具作为终止协议；普通文本可能只是这一圈的 assistant message，并不自动等于已提交答案。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>模型写出了正确文字，却一直没有形成可评分提交，最先查什么？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">它是否真正调用并成功完成了 <code>submit</code></button>
+        <button type="button">先把 accuracy 改成 100%</button>
+        <button type="button">删除 Sample 的 target</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-04" data-title="沙箱与审批：能力如何被约束">
+  <div class="screen hero-screen" data-number="04">
+    <p class="eyebrow">Module 4 · Capability boundaries</p>
+    <h2>隔离柜不等于门卫</h2>
+    <p class="lede">学完这一节，你能区分“Agent 能看见哪些工具”“命令在哪里运行”“某次调用是否获准”三件事；设计高风险评测时，不会把 Docker 当成审批策略的替身。</p>
+    <p><dfn data-definition="Sandbox 是为样本准备并在结束后清理的执行环境，用来约束文件、进程、网络等运行边界。">Sandbox</dfn> 像实验室隔离柜；<dfn data-definition="Approval 是在具体工具调用执行前给出 approve、modify、reject 或 terminate 决策的策略层。">Approval</dfn> 像门卫逐单验票。</p>
+    <div class="callout warning"><strong>重要：</strong>示例显式配置了 Docker，却没有显式配置 approval policy。这能证明环境选择，不能证明 Bash 命令会等待人工批准。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Capability vs environment</p>
+    <h3>工具列表授予能力，Sandbox 选择落地点</h3>
+    <figure class="code-translation" data-source="examples/skills/task.py" data-lines="52-69">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        solver=react(
+            prompt="You are a Linux system administrator. You have access to skills "
+            "that provide guidance for system exploration tasks. Use the skill "
+            "tool to get instructions before attempting tasks, then use bash "
+            "to execute the appropriate commands.",
+            tools=[
+                skill(
+                    [
+                        SKILLS_DIR / "system-info",
+                        SKILLS_DIR / "network-info",
+                        SKILLS_DIR / "disk-usage",
+                    ]
+                ),
+                bash(),
+            ],
+        ),
+        scorer=model_graded_qa(),
+        sandbox=("docker", "compose.yaml"),</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">skill()</span> 与 <span class="path-chip">bash()</span> 决定 Agent 可调用什么；<span class="path-chip">("docker", "compose.yaml")</span> 决定样本在哪种环境里运行。Scorer 只判答案，不授予或撤销工具权限。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Tool list</h4><p>定义 Agent 可见的能力表面。</p></article>
+      <article class="actor-card"><h4>Sandbox</h4><p>定义能力实际触达的运行环境。</p></article>
+      <article class="actor-card"><h4>Approval</h4><p>在具体调用前做逐次策略决策。</p></article>
+      <article class="actor-card"><h4>Review</h4><p>对工具结果做后置复核；不能替代执行前审批。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Sandbox lifecycle</p>
+    <h3>每个样本都经历初始化、运行与清理</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/_eval/task/sandbox.py" data-lines="145-178">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        interrupted = False
+        environments: dict[str, SandboxEnvironment] | None = None
+        try:
+            # initialize sandbox environment
+            metadata = dict(sample.metadata) if sample.metadata else {}
+            metadata["__sample_id__"] = sample.id
+
+            environments = await init_sandbox_environments_sample(
+                sandboxenv_type=sandboxenv_type,
+                task_name=registry_unqualified_name(task_name),
+                config=sandbox.config,
+                files=files,
+                setup=setup,
+                metadata=metadata,
+            )
+
+            # run sample
+            yield
+
+        except anyio.get_cancelled_exc_class() as ex:
+            interrupted = True
+            raise ex
+
+        finally:
+            # cleanup sandbox environment
+            if environments and cleanup:
+                with anyio.CancelScope(shield=interrupted):
+                    await cleanup_sandbox_environments_sample(
+                        type=sandbox.type,
+                        task_name=task_name,
+                        config=sandbox.config,
+                        environments=environments,
+                        interrupted=interrupted,
+                    )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>环境初始化时带入样本 ID、文件和 setup；<span class="path-chip">yield</span> 期间真正运行样本；无论正常结束还是取消，<span class="path-chip">finally</span> 都负责清理，并对中断清理做 shield。</p>
+      </figcaption>
+    </figure>
+    <p>因此环境启动失败、样本工具失败和环境清理失败是三条不同故障链。排错时应分别保存错误与时间点。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Approval semantics</p>
+    <h3>没有注册审批系统时，调用默认放行</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/approval/_apply.py" data-lines="48-71">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        # call approver (approvers which use model inference — e.g. LLM monitors —
+        # shouldn't have that inference charged to the agent's own budget)
+        with suspend_token_limit(), suspend_turn_limit():
+            approval = await approver(
+                message=message,
+                call=call,
+                view=view,
+                history=history,
+            )
+
+        # process decision
+        match approval.decision:
+            case "approve" | "modify":
+                return True, approval
+            case "reject":
+                return False, approval
+            case "terminate":
+                return False, approval
+            case "escalate":
+                raise RuntimeError("Unexpected 'escalate' from policy approver.")
+
+    # no approval system registered
+    else:
+        return True, None</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>有 approver 时，决策可以批准、修改、拒绝或终止；没有任何审批系统注册时，函数明确返回允许。是否在 Docker 里运行不会改变这条逻辑。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/inspect_ai/approval/_policy.py" data-lines="67-82">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        # process approvers for this tool call (continue loop on "escalate")
+        has_approver = False
+        for approver in tool_approvers(call):
+            has_approver = True
+            approval = await call_approver(approver, message, call, view, history)
+            if approval.decision != "escalate":
+                return approval
+
+        # if there are no approvers then we reject
+        reject = Approval(
+            decision="reject",
+            explanation=f"No {'approval granted' if has_approver else 'approvers registered'} for tool {call.function}",
+        )
+        # record and return the rejection
+        record_approval("policy", message, call, view, reject)
+        return reject</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>一旦启用 policy approver，调用必须匹配某条工具策略并得到非 escalate 决策；没有匹配者时反而拒绝。别混淆“未启用审批”和“已启用但未匹配”。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Design the boundary</p>
+    <h3>先写威胁，再选择控制层</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>怕污染宿主机</h4><p>冻结 Sandbox 类型、镜像、挂载、网络与清理验证。</p></article>
+      <article class="actor-card"><h4>怕高风险命令</h4><p>配置 Approval Policy，覆盖允许、拒绝和未匹配案例。</p></article>
+      <article class="actor-card"><h4>怕工具结果带毒</h4><p>使用 Review、输出限制和后续模型输入边界。</p></article>
+      <article class="actor-card"><h4>怕评测不可复现</h4><p>记录 Compose、镜像摘要、Skill 内容与外部网络条件。</p></article>
+    </div>
+    <div class="quiz" data-explanation="Docker 约束运行地点；要对具体 Bash 调用做允许或拒绝，必须启用并测试 Approval Policy。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>目标是允许只读系统查询、拒绝危险 Bash 调用，最直接应改哪一层？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">配置并测试匹配 Bash 调用的 Approval Policy</button>
+        <button type="button">只把 Docker 镜像名字改得更安全</button>
+        <button type="button">把 Scorer 从 accuracy 改成 stderr</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout warning"><strong>运行边界：</strong>静态源码证明这些接缝存在；本课没有验证某个 Compose 文件的实际网络、挂载、Linux capability 或清理效果。</div>
+  </div>
+</section>
+
+<section class="course-module" id="module-05" data-title="Scorer：答案如何变成证据">
+  <div class="screen hero-screen" data-number="05">
+    <p class="eyebrow">Module 5 · Evidence pipeline</p>
+    <h2>答题、阅卷、统计是三张桌子</h2>
+    <p class="lede">学完这一节，你能从 Agent 的 completion 追到单样本 Score，再追到 accuracy 等聚合指标；遇到 grader 协议失败时，会保留“未评分”，而不是伪装成错误答案。</p>
+    <p><dfn data-definition="Scorer 接收样本运行后的 TaskState 和 Target，返回结构化 Score。">Scorer</dfn> 是阅卷员；<dfn data-definition="Metric 把多个样本的 Score 聚合成 accuracy、stderr 等总体统计量。">Metric</dfn> 是统计员。Agent 只负责交卷。</p>
+    <div class="callout"><strong>本例：</strong><code>model_graded_qa()</code> 用一个模型判答案，并声明 <code>accuracy</code> 与 <code>stderr</code> 两个指标。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Scorer declaration</p>
+    <h3>评分器在定义时就声明聚合指标与 grader 角色</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/scorer/_model.py" data-lines="114-124">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>@scorer(metrics=[accuracy(), stderr()])
+def model_graded_qa(
+    template: str | None = None,
+    instructions: str | None = None,
+    grade_pattern: str | None = None,
+    include_history: bool | Callable[[TaskState], str] = False,
+    partial_credit: bool = False,
+    model: list[str | Model] | str | Model | None = None,
+    model_role: str | ModelRole | None = "grader",
+    reducer: str | ScoreReducer = "majority",
+) -&gt; Scorer:</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>装饰器把 accuracy 与标准误差绑定到评分器。默认角色名是 <span class="path-chip">grader</span>，也允许显式模型、多 grader 与 reducer；实际模型绑定应写入运行配置与日志。</p>
+      </figcaption>
+    </figure>
+    <p>这让“谁作答”和“谁判卷”可以分离，但也引入新的依赖：grader 模型、模板、正则协议和角色绑定都可能改变结果。</p>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Build the grading prompt</p>
+    <h3>问题、答案与 target 被组装成另一轮模型请求</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/scorer/_model.py" data-lines="283-312">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    async def score(state: TaskState, target: Target) -&gt; Score:
+        # resolve model
+        nonlocal model
+        model = model if isinstance(model, Model) else get_model(model)
+
+        # metadata without grading template variables
+        metadata = omit(
+            state.metadata, ["question", "answer", "criterion", "instructions"]
+        )
+
+        # present the question
+        if include_history is True:
+            question = chat_history(state)
+        elif callable(include_history):
+            question = include_history(state)
+        else:
+            question = state.input_text
+
+        # format the scoring template
+        scoring_prompt = model_scoring_prompt(
+            template=grading_template,
+            question=question,
+            output=state.output,
+            criterion=target.text,
+            instructions=instructions,
+            metadata=metadata,
+        )
+
+        # query the model for the score
+        result = await model.generate([scoring_prompt])</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>评分器选择当前问题或完整历史，把 Agent 输出、target、说明和元数据填入模板，再调用 grader 模型。这个调用与 Agent 求解请求是不同阶段。</p>
+      </figcaption>
+    </figure>
+    <div class="component-chat" aria-label="作答、评分与统计组件对话">
+      <div class="chat-message" data-speaker="Agent">我根据 Skill 与 Bash 结果提交最终答案。</div>
+      <div class="chat-message" data-speaker="Task runner">我把 TaskState.output 与 Sample.target 交给 Scorer。</div>
+      <div class="chat-message" data-speaker="Model grader">我按评分模板返回可解析的 C、I、P 或 N。</div>
+      <div class="chat-message" data-speaker="Scorer">我保存 value、answer、explanation 和 grading 元数据。</div>
+      <div class="chat-message" data-speaker="Metric">我只聚合有分数的样本，并报告 accuracy 与不确定性。</div>
+      <button type="button" class="replay-chat">重放评分对话</button>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Protocol failure</p>
+    <h3>读不出 grade，是评分失败，不是答案错误</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/scorer/_model.py" data-lines="314-360">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        # extract the grade
+        match = re.search(resolved_grade_pattern, result.completion)
+        value = match.group(1) if match else None
+        if value is not None and default_grade_pattern:
+            # The permissive capture takes the whole word so that "GRADE:
+            # Correct"/"GRADE: Incorrect"/"GRADE: Partial" keep resolving to
+            # their letter. A multi-character verdict that is not one of the
+            # spelled-out grades (e.g. "GRADE: CI") is a protocol deviation,
+            # not evidence about the submission, so it is a parse failure
+            # rather than a silently laundered first letter.
+            normalized = value.strip().lower()
+            if normalized in _GRADE_WORD_VALUES:
+                value = _GRADE_WORD_VALUES[normalized]
+            elif len(value.strip()) == 1:
+                value = value.strip().upper()
+            else:
+                value = None
+            if validate_offered_grades and value not in offered_grades:
+                # A verdict outside the grades the instructions offered is a
+                # protocol deviation, not evidence about the submission, so it
+                # is a scoring failure rather than an incorrect answer.
+                value = None
+        if value is not None:
+            return Score(
+                value=value,
+                answer=state.output.completion,
+                explanation=result.completion,
+                metadata=dict(
+                    grading=[
+                        scoring_prompt,
+                        result.message,
+                    ]
+                ),
+            )
+        else:
+            return Score.unscored(
+                reason="grader_failed",
+                answer=state.output.completion,
+                explanation="Grade not found in model output: "
+                + f"{result.completion}",
+                metadata=dict(
+                    grading=[
+                        scoring_prompt,
+                        result.message,
+                    ],
+                ),
+            )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>解析器只接受约定 grade。多字符异常值或不在可选集合中的结果被视为协议偏差；代码返回带 <span class="path-chip">grader_failed</span> 原因的 unscored Score，而不是偷偷记为 incorrect。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Aggregation</p>
+    <h3>accuracy 只在样本分数上做透明换算与平均</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/scorer/_metrics/accuracy.py" data-lines="14-37">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>@metric
+def accuracy(to_float: ValueToFloat = value_to_float()) -&gt; Metric:
+    r"""Compute proportion of total answers which are correct.
+
+    Args:
+       to_float: Function for mapping `Value` to float for computing
+          metrics. The default `value_to_float()` maps CORRECT ("C") to 1.0,
+          INCORRECT ("I") to 0, PARTIAL ("P") to 0.5, and NOANSWER ("N") to 0,
+          casts numeric values to float directly, and prints a warning and returns
+          0 if the Value is a complex object (list or dict).
+
+    Returns:
+       Accuracy metric
+    """
+
+    def metric(scores: list[SampleScore]) -&gt; float:
+        if not scores:
+            # No scores to average; return 0 rather than dividing by zero,
+            # mirroring the insufficient-data guards in std()/var().
+            return 0.0
+        total = 0.0
+        for item in scores:
+            total += to_float(item.score.value)
+        return total / float(len(scores))</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>默认映射是 C=1、I=0、P=0.5、N=0，再对传入分数求平均。没有分数时返回 0；解读报告时仍要同时查看已完成、已记录和未评分样本数。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="无法解析 grade 是 grader 协议失败；源码显式返回 unscored(reason='grader_failed')，不应伪造成 incorrect。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>grader 返回长篇解释，却没有任何可解析 grade，正确处理是什么？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">标记为 <code>unscored / grader_failed</code> 并保留原输出</button>
+        <button type="button">自动记为 incorrect，以免出现空值</button>
+        <button type="button">自动记为 correct，因为解释很长</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <div class="callout warning"><strong>比较提示：</strong>换 grader 模型、模板、grade pattern、reducer 或 Metric，都会改变测量体系；不要把它们和 Agent 能力变化混成一次对比。</div>
+  </div>
+</section>
+
+<section class="course-module" id="module-06" data-title="Eval Log：从一次运行到回归判断">
+  <div class="screen hero-screen" data-number="06">
+    <p class="eyebrow">Module 6 · Reproducible evidence</p>
+    <h2>Eval Log 是评测黑匣子</h2>
+    <p class="lede">学完这一节，你能判断一份日志是否足以支持回归结论：不只看 accuracy，还核对任务、模型、数据集、Scorer、Sandbox、源码 revision、样本状态和错误。</p>
+    <p><dfn data-definition="Eval Log 是 Inspect 保存的一次评测身份、计划、样本、分数、指标、用量、错误与状态记录。">Eval Log</dfn> 像飞行记录器；<dfn data-definition="回归是系统在可比条件下，相对已冻结基线出现可重复的能力或行为退化。">回归</dfn> 不是“这次分数比上次低”这么简单。</p>
+    <div class="callout"><strong>可归因比较：</strong>先冻结 Task、样本、模型与生成参数、grader、Sandbox、源码 revision，再比较结果与轨迹。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Identity before outcome</p>
+    <h3>日志先记录“这次到底跑了什么”</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/_eval/task/log.py" data-lines="280-319">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        # create eval spec
+        self.eval = EvalSpec(
+            eval_set_id=eval_set_id,
+            run_id=run_id,
+            created=iso_now(),
+            task=f"{task_name}",
+            task_id=task_id if task_id else uuid(),
+            task_version=task_version,
+            task_file=task_file,
+            task_registry_name=task_registry_name,
+            task_display_name=task_display_name,
+            task_attribs=task_attribs,
+            task_args=task_args,
+            task_args_passed=task_args_passed,
+            solver=solver.solver if solver else None,
+            tags=tags,
+            solver_args=solver.args if solver else None,
+            solver_args_passed=solver.args_passed if solver else None,
+            model=f"{ModelName(model).api}/{model.name}",
+            model_generate_config=model.config,
+            model_base_url=model.explicit_base_url,
+            model_roles=model_roles_to_model_roles_config(model_roles),
+            dataset=EvalDataset(
+                name=dataset.name,
+                location=cwd_relative_path(dataset.location),
+                samples=len(dataset),
+                sample_ids=sample_ids,
+                shuffled=dataset.shuffled,
+            ),
+            scorers=eval_scorers,
+            metrics=eval_metrics,
+            headline_metric=headline_metric,
+            sandbox=sandbox,
+            model_args=model_args,
+            config=eval_config,
+            revision=revision,
+            packages=packages,
+            metadata=metadata,
+            viewer=viewer,
+        )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">EvalSpec</span> 保存任务身份与参数、Solver、模型、数据集及样本 ID、Scorer、Metric、Sandbox、运行配置、源码 revision 和包版本。没有这些，分数差异很难归因。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The black-box layout</p>
+    <h3>身份、计划、结果、统计与错误被分开保存</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/log/_log.py" data-lines="1218-1265">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class EvalLog(BaseModel):
+    """Evaluation log."""
+
+    # WARNING: The order of these fields is important for the log file format.
+    # Do not change the order of these fields without incrementing the version number,
+    # updating the log file read/write functionality (such as read_eval_log),
+    # and updating the tests.
+    version: int = Field(default=2)
+    """Eval log file format version."""
+
+    status: EvalStatus = Field(default="started")
+    """Status of evaluation (did it succeed or fail)."""
+
+    eval: EvalSpec
+    """Eval identity and configuration."""
+
+    plan: EvalPlan = Field(default_factory=EvalPlan)
+    """Eval plan (solvers and config)"""
+
+    results: EvalResults | None = None
+    """Eval results (scores and metrics)."""
+
+    stats: EvalStats = Field(default_factory=EvalStats)
+    """Eval stats (runtime, model usage)"""
+
+    error: EvalError | None = Field(default=None)
+    """Error that halted eval (if status=="error")"""
+
+    invalidated: bool = Field(default=False)
+    """Whether any samples were invalidated."""
+
+    log_updates: list[LogUpdate] | None = Field(default=None)
+    """Post-eval edits to tags and metadata."""
+
+    config_updates: list[ConfigUpdate] | None = Field(default=None)
+    """Mid-run configuration changes applied via the control channel (`inspect ctl config`)."""
+
+    tags: list[str] = Field(default_factory=list)
+    """Current tags (eval-time + edits). Do not set directly; use edit_eval_log()."""
+
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    """Current metadata (eval-time + edits). Do not set directly; use edit_eval_log()."""
+
+    samples: list[EvalSample] | None = Field(default=None)
+    """Samples processed by eval."""
+
+    reductions: list[EvalSampleReductions] | None = Field(default=None)
+    """Reduced sample values"""</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>顶层 status 不等于 accuracy；error、invalidated、samples、results 与 stats 各自回答不同问题。字段顺序还是日志格式的一部分，修改需要升版本并同步读写逻辑与测试。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Planned is not completed</p>
+    <h3>计划样本数与真正完成数必须一起看</h3>
+    <figure class="code-translation" data-source="src/inspect_ai/log/_log.py" data-lines="848-871">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class EvalResults(BaseModel):
+    """Scoring results from evaluation."""
+
+    total_samples: int = Field(default=0)
+    """Total samples in eval (dataset samples * epochs)"""
+
+    completed_samples: int = Field(default=0)
+    """Samples completed without error.
+
+    Will be equal to total_samples except when --fail-on-error is enabled
+    or when there is early stopping.
+    """
+
+    logged_samples: int | None = Field(default=None)
+    """Samples this log actually resolved (present in the log and not
+    cancelled), when a graceful task cancel or drain abandoned queued samples.
+
+    `total_samples` records the *planned* count, so a log finished by
+    `inspect ctl task drain` or `inspect ctl task cancel --action score|error`
+    would otherwise read complete to an eval set; the eval set's run-vs-reuse
+    check prefers this count when present so the abandoned remainder is
+    re-run by a later invocation. None on ordinary logs (and logs written by
+    older versions), which classify by `total_samples` as before.
+    """</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">total_samples</span> 是计划数；<span class="path-chip">completed_samples</span> 是无错误完成数；取消或 drain 时，<span class="path-chip">logged_samples</span> 还会指出本日志真正解决了多少。只看总数会把中途放弃误读成完整运行。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="Eval Log 从身份到回归判断的步骤">
+      <button type="button" class="flow-step is-active" data-detail="EvalSpec 冻结 Task、模型、数据集、Scorer、Sandbox、revision 与包版本。">1. 冻结身份</button>
+      <button type="button" class="flow-step" data-detail="EvalPlan 记录 Solver 步骤与生成配置。">2. 记录计划</button>
+      <button type="button" class="flow-step" data-detail="每个样本保存消息、事件、输出、分数、错误与用量。">3. 保存样本</button>
+      <button type="button" class="flow-step" data-detail="EvalResults 聚合 Score 与 Metric，并保留完成和记录计数。">4. 汇总结果</button>
+      <button type="button" class="flow-step" data-detail="EvalLog 以 success、error、cancelled 等状态完成，并保存统计。">5. 完成日志</button>
+      <button type="button" class="flow-step" data-detail="先验证条件可比，再比较总体分数、失败类型和工具轨迹。">6. 判断回归</button>
+      <p class="flow-detail" aria-live="polite">EvalSpec 冻结 Task、模型、数据集、Scorer、Sandbox、revision 与包版本。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Regression checklist</p>
+    <h3>先证明可比，再解释差异</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>身份一致吗？</h4><p>Task version、源码 revision、包版本、样本 ID 与 epochs。</p></article>
+      <article class="actor-card"><h4>模型一致吗？</h4><p>Provider、模型名、角色、生成参数与显式 model args。</p></article>
+      <article class="actor-card"><h4>测量一致吗？</h4><p>Scorer、grader、模板、reducer、Metric 与 unscored 处理。</p></article>
+      <article class="actor-card"><h4>执行一致吗？</h4><p>Sandbox、Skill、审批、网络、错误、完成数与工具轨迹。</p></article>
+    </div>
+    <div class="quiz" data-explanation="模型与源码 revision 同时变化时，分数下降可能来自任一变化；必须固定变量或做对照，才能归因于回归。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>accuracy 从 0.8 降到 0.6，但模型和源码 revision 都换了，能直接判定框架回归吗？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">不能；先恢复可比条件或建立逐变量对照</button>
+        <button type="button">能；任何降分都等于框架回归</button>
+        <button type="button">能；只要日志 status 是 success</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+    <details>
+      <summary>把这门课变成第一个可运行回归实验</summary>
+      <p>固定这五个 Sample、Inspect commit、Compose/镜像、Agent 与 grader 模型、生成参数和至少三次重复运行；保存完整 Eval Log。升级时只改一个变量，并同时比较 accuracy、stderr、unscored、错误分类、工具调用轨迹、token 与时延。</p>
+    </details>
+    <div class="callout warning"><strong>最终边界：</strong>本课验证的是静态调用链与课程本身。真实回归结论仍需要安装 Inspect、可用凭据、Docker、固定外部条件和重复运行证据。</div>
+  </div>
+</section></main>
+
+  <footer class="course-footer">
+    <p>源码摘录授权见 <a href="source-license.txt">上游许可</a>；课程工具许可见 <a href="tooling-license.txt">MIT</a>。</p>
+    <p>基于已检查的源码。摘录保留原文件与连续行号，学习结论可回到证据。</p>
+    <a href="#course-start">返回顶部 ↑</a>
+  </footer>
+  <script>(() => {
+  const modules = [...document.querySelectorAll('.course-module')];
+  const dots = [...document.querySelectorAll('.nav-dot')];
+  const progress = document.querySelector('#progress-bar');
+  const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let userReducedMotion = false;
+  try { userReducedMotion = localStorage.getItem('code-learning:reduce-motion') === 'true'; } catch (_) {}
+  let reduceMotion = systemReducedMotion || userReducedMotion;
+  const motionToggle = document.querySelector('#motion-toggle');
+  const applyMotion = () => {
+    reduceMotion = systemReducedMotion || userReducedMotion;
+    document.documentElement.dataset.reducedMotion = String(reduceMotion);
+    if (motionToggle) {
+      motionToggle.setAttribute('aria-pressed', String(reduceMotion));
+      motionToggle.disabled = systemReducedMotion;
+    }
+  };
+  applyMotion();
+  motionToggle?.addEventListener('click', () => {
+    userReducedMotion = !userReducedMotion;
+    try { localStorage.setItem('code-learning:reduce-motion', String(userReducedMotion)); } catch (_) {}
+    applyMotion();
+  });
+
+  let activeModuleId;
+  const setActiveModule = (id) => {
+    if (activeModuleId === id) return;
+    activeModuleId = id;
+    dots.forEach((dot) => {
+      const active = dot.dataset.target === id;
+      dot.classList.toggle('is-active', active);
+      if (active) dot.setAttribute('aria-current', 'step');
+      else dot.removeAttribute('aria-current');
+      const nav = dot.parentElement;
+      if (active && nav.scrollWidth > nav.clientWidth) {
+        nav.scrollTo({ left: dot.offsetLeft - nav.offsetLeft - (nav.clientWidth - dot.offsetWidth) / 2,
+          behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    });
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      document.getElementById(dot.dataset.target)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  });
+
+  const updateProgress = () => {
+    const available = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = available > 0 ? Math.min(1, Math.max(0, window.scrollY / available)) : 0;
+    if (progress) progress.style.width = `${ratio * 100}%`;
+    const current = currentModuleIndex();
+    if (modules.length) setActiveModule(current >= 0 ? modules[current].id : null);
+  };
+  document.addEventListener('scroll', updateProgress, { passive: true });
+
+  const currentModuleIndex = () => {
+    const center = window.scrollY + window.innerHeight * 0.45;
+    let best = -1;
+    modules.forEach((module, index) => {
+      if (module.offsetTop <= center) best = index;
+    });
+    return best;
+  };
+  updateProgress();
+
+  document.addEventListener('keydown', (event) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) return;
+    if (document.activeElement?.closest('[data-code-scroll], .table-scroll')) return;
+    const forward = event.key === 'j' || event.key === 'J' || event.key === 'ArrowDown';
+    const backward = event.key === 'k' || event.key === 'K' || event.key === 'ArrowUp';
+    if (!forward && !backward) return;
+    const offset = forward ? 1 : -1;
+    const target = modules[Math.min(modules.length - 1, Math.max(0, currentModuleIndex() + offset))];
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+  });
+
+  document.querySelectorAll('dfn[data-definition]').forEach((term) => {
+    term.tabIndex = 0;
+    term.setAttribute('aria-label', `${term.textContent}: ${term.dataset.definition}`);
+  });
+
+  document.querySelectorAll('.code-translation').forEach((translation) => {
+    const label = translation.querySelector('.source-label');
+    if (label) {
+      const range = (translation.dataset.lines || '').replace('-', '–');
+      label.textContent = `源码 · ${translation.dataset.source || 'unknown source'}:${range}`;
+    }
+    const code = translation.querySelector('pre');
+    if (code) {
+      code.tabIndex = 0;
+      code.setAttribute('data-code-scroll', '');
+      code.setAttribute('aria-label', '源码摘录，可用方向键滚动');
+    }
+  });
+
+  document.querySelectorAll('.table-scroll').forEach((table) => {
+    table.tabIndex = 0;
+    table.setAttribute('aria-label', '对照表，可用方向键横向滚动');
+  });
+
+  document.querySelectorAll('.quiz').forEach((quiz) => {
+    const choices = [...quiz.querySelectorAll('.quiz-options button')];
+    const feedback = quiz.querySelector('.quiz-feedback');
+    choices.forEach((choice) => {
+      choice.addEventListener('click', () => {
+        choices.forEach((item) => item.classList.remove('is-correct', 'is-wrong'));
+        const correct = choice.dataset.correct === 'true';
+        choice.classList.add(correct ? 'is-correct' : 'is-wrong');
+        feedback.textContent = `${correct ? '正确。' : '再想一想。'}${quiz.dataset.explanation || ''}`;
+      });
+    });
+  });
+
+  const playChat = (chat) => {
+    const messages = [...chat.querySelectorAll('.chat-message')];
+    messages.forEach((message) => message.classList.remove('is-visible'));
+    messages.forEach((message, index) => {
+      if (reduceMotion) message.classList.add('is-visible');
+      else window.setTimeout(() => message.classList.add('is-visible'), 180 + index * 520);
+    });
+  };
+
+  document.querySelectorAll('.component-chat').forEach((chat) => {
+    playChat(chat);
+    chat.querySelector('.replay-chat')?.addEventListener('click', () => playChat(chat));
+  });
+
+  document.querySelectorAll('.data-flow').forEach((flow) => {
+    const steps = [...flow.querySelectorAll('.flow-step')];
+    const detail = flow.querySelector('.flow-detail');
+    steps.forEach((step) => {
+      step.addEventListener('click', () => {
+        steps.forEach((item) => item.classList.remove('is-active'));
+        step.classList.add('is-active');
+        if (detail) detail.textContent = step.dataset.detail || '';
+      });
+    });
+  });
+
+  const panel = document.querySelector('.learning-panel');
+  if (panel) {
+    const conceptCards = [...panel.querySelectorAll('.concept-card')];
+    const conceptNames = new Map(conceptCards.map(card => [card.id.replace('concept-', ''), card.querySelector('summary')?.textContent]));
+    conceptCards.forEach(card => {
+      const prerequisites = [...card.children].find(el => el.tagName === 'P' && el.textContent.startsWith('前置概念:'));
+      if (!prerequisites) return;
+      const ids = prerequisites.textContent.replace('前置概念:', '').trim().split(',').map(id => id.trim());
+      if (!ids.every(id => conceptNames.has(id))) return;
+      prerequisites.replaceChildren(document.createTextNode('前置概念：'));
+      ids.forEach((id, index) => {
+        if (index) prerequisites.append(document.createTextNode('、'));
+        const link = document.createElement('a');
+        link.href = `#concept-${id}`;
+        link.textContent = conceptNames.get(id);
+        link.className = 'concept-prerequisite';
+        link.addEventListener('click', () => { document.getElementById(`concept-${id}`).open = true; });
+        prerequisites.append(link);
+      });
+    });
+    const storageKey = `code-learning:${panel.dataset.kitId}`;
+    const sourceRevision = document.querySelectorAll('.course-meta dd')[1]?.textContent || 'unknown';
+    const feedback = panel.querySelector('.notes-feedback');
+    const zh = document.documentElement.lang.startsWith('zh');
+    let notes = {};
+    try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) { notes = {}; }
+    if (!notes || typeof notes !== 'object' || Array.isArray(notes)) notes = {};
+    panel.querySelectorAll('.recall').forEach((recall) => {
+      const field = recall.querySelector('textarea');
+      const key = recall.dataset.recallId;
+      field.value = typeof notes[key]?.response === 'string' ? notes[key].response : '';
+      field.addEventListener('input', () => {
+        notes[key] = { response: field.value, sourceRevision, recordedAt: new Date().toISOString(), kind: 'provisional-recall' };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(notes));
+          if (feedback) feedback.textContent = zh ? '回忆已保存到本机浏览器；尚未评价掌握程度。' : 'Recall saved in this browser; mastery has not been assessed.';
+        } catch (_) {
+          if (feedback) feedback.textContent = zh ? '浏览器未允许保存；可导出本次记录。' : 'Browser storage is unavailable; export this session to keep it.';
+        }
+      });
+    });
+    let exportURL;
+    panel.querySelector('.export-learning-notes')?.addEventListener('click', () => {
+      const content = { kitId: panel.dataset.kitId, sourceRevision, assessment: 'unassessed', notes };
+      const text = JSON.stringify(content, null, 2);
+      const preview = panel.querySelector('.export-preview');
+      if (preview) {
+        preview.hidden = false;
+        preview.open = true;
+        preview.querySelector('textarea').value = text;
+        if (exportURL) URL.revokeObjectURL(exportURL);
+        exportURL = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+        preview.querySelector('.export-download').href = exportURL;
+        if (feedback) feedback.textContent = zh ? '记录已准备好：可以下载 JSON，或从下方文本框复制。' : 'Records are ready: download JSON or copy the text below.';
+      }
+    });
+    window.addEventListener('pagehide', () => { if (exportURL) URL.revokeObjectURL(exportURL); });
+  }
+})();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,2369 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="generator" content="codebase-to-mastery">
+  <title>读懂 mini-SWE-agent：极简循环如何修复代码并留下证据</title>
+  <style>:root {
+  --paper: #eef3f6; --paper-deep: #e3ecef; --ink: #172d3a; --muted: #536b79;
+  --line: #d4e0e6; --card: #fff; --code: #112630; --code-ink: #e6f4f7;
+  --accent: #147d92; --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
+  --good: #16745a; --bad: #ae394b; --shadow: 0 6px 22px rgba(23,45,58,.04);
+  --radius: 12px; --measure: 72rem; --rail-width: 228px;
+  --rail: #122936; --rail-ink: #edf7f8; --lime: #b8e3a4;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scroll-behavior: smooth; }
+html, body { overflow-x: clip; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: .2em; }
+button, textarea { font: inherit; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -.025em; }
+h1 { margin: 0; max-width: 22ch; font-size: clamp(2.4rem,5vw,4.6rem); font-weight: 750; }
+h2 { margin: 0; font-size: clamp(2rem,3.6vw,3.3rem); }
+h3 { margin: 0 0 1rem; font-size: clamp(1.35rem,2.5vw,2rem); }
+p { overflow-wrap: anywhere; }
+.progress { position: fixed; inset: 0 0 auto var(--rail-width); height: 3px; z-index: 50; background: var(--paper-deep); }
+.progress span { display: block; width: 0; height: 100%; background: var(--accent); transition: width 120ms linear; }
+.course-rail { position: fixed; inset: 0 auto 0 0; z-index: 30; width: var(--rail-width); display: flex; flex-direction: column; padding: 32px 18px 22px; color: var(--rail-ink); background: var(--rail); overflow-y: auto; }
+.course-mark { display: flex; align-items: center; gap: 12px; padding: 0 8px 26px; text-decoration: none; flex-shrink: 0; }
+.brand-emblem { display: flex; align-items: flex-end; gap: 3px; width: 34px; height: 34px; padding: 8px 6px; border-radius: 9px; background: var(--lime); }
+.brand-emblem i { display: block; width: 5px; background: var(--rail); border-radius: 1px; }
+.brand-emblem i:nth-child(1) { height: 7px; }
+.brand-emblem i:nth-child(2) { height: 12px; }
+.brand-emblem i:nth-child(3) { height: 18px; }
+.brand-name { font-size: 15px; font-weight: 700; line-height: 1.35; letter-spacing: -.01em; }
+.brand-name > span { display: block; color: var(--lime); }
+.overview-link { display: flex; justify-content: space-between; align-items: center; padding: 12px; font-size: 13px; text-decoration: none; border: 1px solid #35505e; border-radius: 8px; }
+.overview-link:hover { background: #203c4b; }
+.nav-label { margin: 28px 12px 10px; color: #a5bdc9; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.module-nav { display: grid; gap: 6px; }
+.nav-dot { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #c7d9e1; text-align: left; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.nav-title { min-width: 0; overflow-wrap: anywhere; }
+.nav-arrow { opacity: 0; color: var(--lime); }
+.nav-dot:hover { background: #203c4b; color: white; }
+.nav-dot.is-active { color: white; background: #244b5b; border-color: #416a7a; }
+.nav-dot.is-active .nav-arrow { opacity: 1; }
+.rail-source { display: grid; gap: 5px; margin: auto 8px 0; padding-top: 36px; font-size: 12px; overflow-wrap: anywhere; }
+.rail-source-label { color: #a5bdc9; font-size: 10px; letter-spacing: .08em; }
+.rail-source strong { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-weight: 500; }
+.key-hint { display: flex; align-items: center; gap: 5px; margin: 18px 8px 0; color: #a5bdc9; font-size: 10px; }
+.key-hint > span { margin-left: 5px; }
+kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px solid #4c6977; border-radius: 4px; text-align: center; font: 10px/1.5 ui-monospace,monospace; }
+.course-cover, .learning-panel, .course-module, .course-footer { margin-left: var(--rail-width); min-width: 0; }
+.course-cover { position: relative; display: grid; align-content: center; padding: 64px clamp(28px,4vw,64px) 46px; min-height: 520px; border-bottom: 1px solid var(--line); background: var(--card); }
+.cover-topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 32px; }
+.cover-kicker, .eyebrow, .pane-label, .quiz-kicker { margin: 0 0 10px; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.cover-topline .cover-kicker { margin: 0; }
+.format-tag, .stage-count { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.cover-subtitle, .lede { max-width: 48rem; margin: 20px 0; color: var(--muted); font-size: clamp(1rem,1.6vw,1.2rem); }
+.course-meta { display: flex; flex-wrap: wrap; gap: 16px 32px; margin: 16px 0 28px; }
+.course-meta div { min-width: 70px; }
+.course-meta dt { color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+.course-meta dd { margin: 5px 0 0; font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.cover-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.start-link { display: inline-flex; align-items: center; gap: 30px; width: fit-content; padding: 11px 16px; border-radius: 8px; background: var(--accent); color: white; text-decoration: none; font-size: 13px; font-weight: 700; }
+.motion-toggle { padding: 9px 13px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.motion-toggle[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.cover-route { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 38px; padding-top: 22px; border-top: 1px solid var(--line); font: 10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing: .12em; color: var(--muted); }
+.cover-route b { font-weight: 400; color: var(--accent); }
+.learning-panel { padding: 28px clamp(28px,4vw,64px) 56px; border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.panel-heading .eyebrow { margin: 0; }
+.learning-panel h2 { max-width: none; font-size: clamp(1.65rem,3vw,2.3rem); }
+.panel-scope { margin: 10px 0 18px; max-width: 66rem; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.learning-stages { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0; }
+.learning-stage { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.stage-topline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.stage-number { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; color: var(--accent); background: var(--accent-soft); font: 700 12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+.stage-kind { color: var(--muted); font: 9px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform: uppercase; letter-spacing: .08em; }
+.learning-stage h3 { margin: 0; font-size: 17px; line-height: 1.4; letter-spacing: -.02em; }
+.stage-outcome { margin: 8px 0 10px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.gate { margin: auto 0 0; padding: 8px 0 10px; border-top: 1px solid var(--line); }
+.gate > span { color: var(--accent); font-size: 10px; font-weight: 700; }
+.gate p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.stage-links { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--accent); font-weight: 650; }
+.stage-links a { overflow-wrap: anywhere; text-decoration: none; }
+.stage-links a:hover { text-decoration: underline; }
+.scope-note { margin: 18px 0 0; padding: 12px 16px; box-shadow: none; font-size: 12px; }
+.scope-note p { margin-bottom: 0; color: var(--muted); }
+.recall-heading { margin: 46px 0 24px; }
+.recall-heading h3 { font-size: 24px; margin-bottom: 8px; }
+.recall-heading > p:last-child { margin: 0; color: var(--muted); font-size: 12px; }
+.concept-card { padding: 18px; margin: 10px 0; min-width: 0; box-shadow: none; }
+.concept-card > summary { font-size: 14px; }
+.concept-card > p { color: var(--muted); font-size: 13px; }
+.concept-card details { min-width: 0; }
+.recall { margin: 22px 0; }
+.recall label { display: block; margin-bottom: 10px; font-size: 14px; font-weight: 650; }
+.recall textarea { display: block; width: 100%; resize: vertical; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); font-size: 13px; }
+.recall-answer { margin: 12px 0; padding: 14px; background: var(--accent-soft); border: 0; box-shadow: none; font-size: 13px; }
+.export-learning-notes { margin-top: 16px; padding: 11px 16px; border: 0; border-radius: 8px; background: var(--accent); color: white; font-size: 12px; cursor: pointer; }
+.notes-feedback { font-size: 12px; color: var(--muted); }
+.export-preview { margin: 16px 0; padding: 16px; }
+.export-preview label { display: block; margin: 12px 0; font-size: 12px; }
+.export-preview textarea { width: 100%; color: var(--ink); background: #f7fafb; font: 12px/1.6 ui-monospace,monospace; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.course-module { border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+.course-module:nth-child(odd) { background: #f8fafb; }
+.screen { display: grid; grid-template-columns: minmax(0,1fr); align-content: center; min-height: 550px; max-width: var(--measure); margin: 0 auto; padding: 64px clamp(28px,4vw,64px); }
+.hero-screen { position: relative; }
+.hero-screen > p:not(.eyebrow):not(.lede) { max-width: 58rem; font-size: 15px; color: var(--muted); }
+.actor-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(14rem,100%),1fr)); gap: 14px; }
+.actor-card, .callout, .quiz, .data-flow, .component-chat, details { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); }
+.actor-card, .callout, details { padding: 20px; }
+.actor-card h4 { margin: 0 0 8px; font-size: 16px; }
+.actor-card p { margin: 0; color: var(--muted); font-size: 14px; }
+.callout { border-left: 3px solid var(--accent); font-size: 14px; }
+.callout.warning { border-left-color: var(--bad); }
+.path-chip { display: inline-flex; max-width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--accent); font: 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap: anywhere; }
+.code-translation { min-width: 0; contain: inline-size; display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); margin: 24px 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.code-pane { min-width: 0; padding: 22px; color: var(--code-ink); background: var(--code); }
+.code-pane .pane-label { color: #8cd4d9; font-family: ui-monospace,monospace; text-transform: none; letter-spacing: 0; }
+pre { margin: 0; max-width: 100%; overflow: auto; tab-size: 2; }
+pre > code { display: block; min-width: 100%; }
+code { font: 12px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.code-translation figcaption { min-width: 0; padding: 22px; background: white; font-size: 14px; }
+.quiz, .data-flow, .component-chat { padding: 24px; }
+.quiz h3 { font-size: 24px; line-height: 1.45; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-options button, .flow-step, .replay-chat { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #f7fafb; color: var(--ink); text-align: left; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+.quiz-options button:hover, .quiz-options button:focus-visible, .flow-step:hover, .flow-step:focus-visible { border-color: var(--accent); }
+.quiz-options button.is-correct { border-color: var(--good); background: color-mix(in srgb,var(--good) 8%,white); }
+.quiz-options button.is-wrong { border-color: var(--bad); background: color-mix(in srgb,var(--bad) 7%,white); }
+.quiz-feedback { min-height: 1.6em; margin-bottom: 0; font-size: 13px; font-weight: 600; }
+.component-chat { display: grid; gap: 12px; }
+.chat-message { width: min(34rem,85%); padding: 14px; border-radius: 10px 10px 10px 2px; background: var(--paper); font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 260ms ease, transform 260ms ease; }
+.chat-message::before { content: attr(data-speaker); display: block; margin-bottom: 4px; color: var(--muted); font: 700 10px ui-monospace,monospace; text-transform: uppercase; }
+.chat-message:nth-child(even) { justify-self: end; border-radius: 10px 10px 2px 10px; background: var(--accent-soft); }
+.chat-message.is-visible { opacity: 1; transform: none; }
+.replay-chat { width: fit-content; justify-self: center; margin-top: 6px; }
+.data-flow { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(10rem,100%),1fr)); gap: 10px; }
+.flow-step { text-align: center; }
+.flow-step.is-active { background: var(--accent); border-color: var(--accent); color: white; }
+.flow-detail { grid-column: 1 / -1; margin: 6px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+dfn { position: relative; border-bottom: 2px dotted var(--accent); font-style: normal; cursor: help; }
+dfn::after { content: attr(data-definition); position: absolute; left: 0; bottom: calc(100% + 10px); z-index: 40; width: min(18rem,70vw); padding: 12px; border-radius: 8px; color: white; background: var(--rail); box-shadow: var(--shadow); font-size: 12px; font-weight: 400; opacity: 0; pointer-events: none; transform: translateY(5px); transition: opacity 140ms ease, transform 140ms ease; }
+dfn:hover::after, dfn:focus::after { opacity: 1; transform: none; }
+details { margin-top: 16px; }
+summary { cursor: pointer; font-weight: 650; }
+.course-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 28px clamp(28px,4vw,64px); color: var(--muted); background: white; font-size: 12px; }
+.course-footer p { max-width: 40rem; margin: 0; }
+.course-footer a { color: var(--accent); }
+:focus-visible { outline: 3px solid #57b6c5; outline-offset: 4px; }
+html[data-reduced-motion="true"] *, html[data-reduced-motion="true"] *::before, html[data-reduced-motion="true"] *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+html[data-reduced-motion="true"] { scroll-behavior: auto !important; }
+html[data-reduced-motion="true"] .chat-message { opacity: 1; transform: none; }
+@media (max-width:1050px) {
+  :root { --rail-width: 204px; }
+  .learning-stages { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  :root { --rail-width: 0px; }
+  .progress { inset: 0 0 auto; }
+  .course-rail { inset: 0 0 auto; width: auto; height: 116px; padding: 12px 16px 10px; overflow: hidden; }
+  .course-mark { padding: 0; gap: 8px; width: fit-content; }
+  .brand-emblem { width: 28px; height: 28px; padding: 5px 3px; }
+  .brand-name { display: flex; gap: 4px; font-size: 13px; }
+  .brand-name > span { display: inline; }
+  .overview-link { position: absolute; right: 16px; top: 12px; padding: 5px 8px; gap: 10px; font-size: 10px; }
+  .nav-label, .key-hint, .rail-source { display: none; }
+  .module-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 13px; padding: 3px; }
+  .nav-dot { flex: 0 0 auto; width: auto; max-width: 220px; min-height: 35px; padding: 7px 10px; font-size: 11px; white-space: nowrap; border-color: #35505e; }
+  .nav-arrow { display: none; }
+  .course-cover { margin-top: 116px; min-height: auto; padding: 30px 20px; scroll-margin-top: 116px; }
+  .cover-topline { margin-bottom: 24px; }
+  .cover-kicker { font-size: 10px; }
+  .format-tag { font-size: 10px; padding: 4px 7px; }
+  h1 { font-size: 36px; }
+  h2 { font-size: 32px; }
+  .cover-subtitle { font-size: 14px; }
+  .course-meta { gap: 16px 22px; }
+  .cover-route { gap: 12px; font-size: 9px; }
+  .learning-panel { padding: 28px 20px 40px; scroll-margin-top: 132px; }
+  .learning-panel h2 { font-size: 27px; }
+  .panel-heading { align-items: flex-start; }
+  .stage-count { font-size: 10px; padding: 4px 7px; }
+  .learning-stages { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .learning-stage { padding: 18px; }
+  .learning-stage h3 { font-size: 18px; }
+  .stage-outcome { font-size: 13px; }
+  .course-module { scroll-margin-top: 132px; }
+  .concept-card { scroll-margin-top: 132px; }
+  .screen { min-height: auto; padding: 44px 20px; }
+  .hero-screen { min-height: 420px; }
+  .code-translation { grid-template-columns: minmax(0,1fr); }
+  .code-pane, .code-translation figcaption { padding: 18px; }
+  .quiz, .data-flow, .component-chat { padding: 18px; }
+  .quiz h3 { font-size: 20px; }
+  .course-footer { padding: 26px 20px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+  .chat-message { opacity: 1; transform: none; }
+}
+@media print {
+  :root { --rail-width: 0px; }
+  .course-rail, .progress, .start-link, .replay-chat, .motion-toggle, .cover-route { display: none !important; }
+  .course-cover { margin-top: 0; }
+  .course-cover, .screen { min-height: auto; page-break-after: always; }
+  .chat-message { opacity: 1; transform: none; }
+  body { background: white; }
+}
+
+/* Source tables scroll inside the lesson, so narrow screens retain every cell. */
+.table-scroll { max-width: 100%; overflow-x: auto; margin: 22px 0; border: 1px solid #d3dce5; border-radius: 8px; }
+.table-scroll table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.table-scroll th, .table-scroll td { padding: 13px 16px; border-bottom: 1px solid #dbe3ea; text-align: left; vertical-align: top; line-height: 1.7; overflow-wrap: anywhere; }
+.table-scroll th { color: #153747; background: #edf5f7; font-weight: 700; }
+.table-scroll tr:last-child td { border-bottom: 0; }
+.table-scroll:focus-visible, .code-pane pre:focus-visible { outline: 3px solid #069db0; outline-offset: 3px; }
+</style>
+</head>
+<body style="--accent: #167A72">
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+  <aside class="course-rail" aria-label="Course navigation">
+    <a class="course-mark" href="#course-start" aria-label="Codebase to Mastery">
+      <span class="brand-emblem" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-name">Codebase<span>to Mastery</span></span>
+    </a>
+    <a class="overview-link" href="#course-start">学习总览 <span aria-hidden="true">↗</span></a>
+    <p class="nav-label">课程目录</p>
+    <nav class="module-nav" aria-label="课程目录"><button class="nav-dot" type="button" data-target="module-01" aria-label="进入 从 mini 命令到三个组件" title="从 mini 命令到三个组件"><span class="nav-title">从 mini 命令到三个组件</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-02" aria-label="进入 Model、Agent、Environment：三个协议插头" title="Model、Agent、Environment：三个协议插头"><span class="nav-title">Model、Agent、Environment：三个协议插头</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-03" aria-label="进入 极简 Agent loop：消息如何推动行动" title="极简 Agent loop：消息如何推动行动"><span class="nav-title">极简 Agent loop：消息如何推动行动</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-04" aria-label="进入 Bash 与安全闸门：命令在哪里执行" title="Bash 与安全闸门：命令在哪里执行"><span class="nav-title">Bash 与安全闸门：命令在哪里执行</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-05" aria-label="进入 退出协议与 trajectory：失败也要留下证据" title="退出协议与 trajectory：失败也要留下证据"><span class="nav-title">退出协议与 trajectory：失败也要留下证据</span><span class="nav-arrow" aria-hidden="true">↗</span></button>
+      <button class="nav-dot" type="button" data-target="module-06" aria-label="进入 从单次修复到 SWE-bench 批量评测" title="从单次修复到 SWE-bench 批量评测"><span class="nav-title">从单次修复到 SWE-bench 批量评测</span><span class="nav-arrow" aria-hidden="true">↗</span></button></nav>
+    <div class="rail-source"><span class="rail-source-label">学习源码</span><strong>roadmap-mini-swe-agent-course-source</strong></div>
+    <p class="key-hint"><kbd>J</kbd><kbd>K</kbd><span>切换章节</span></p>
+  </aside>
+
+  <header class="course-cover" id="course-start">
+    <div class="cover-topline"><p class="cover-kicker">源码掌握工坊</p><span class="format-tag">离线交互课</span></div>
+    <h1>读懂 mini-SWE-agent：极简循环如何修复代码并留下证据</h1>
+    <p class="cover-subtitle">沿真实源码，从 mini 命令、三个协议插头与线性 Agent loop，一路追到 Bash 安全边界、trajectory 与 SWE-bench 批量运行器。</p>
+    <dl class="course-meta">
+      <div><dt>学习源码</dt><dd>roadmap-mini-swe-agent-course-source</dd></div>
+      <div><dt>源码版本</dt><dd>04d809ceab9d</dd></div>
+      <div><dt>章节</dt><dd>6</dd></div>
+    </dl>
+    <div class="cover-actions"><a class="start-link" href="#learning-path">开始学习 <span aria-hidden="true">→</span></a>
+    <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">减少动效</button></div>
+    <div class="cover-route" aria-hidden="true"><span>READ</span><b>→</b><span>TRACE</span><b>→</b><span>REASON</span><b>→</b><span>TEACH BACK</span></div>
+  </header>
+
+  <section id="learning-path" class="learning-panel" data-kit-id="0bc79809-d52d-43d1-af3a-232afb997a5d"><div class="panel-heading"><p class="eyebrow">The mastery path</p><span class="stage-count">4 个学习阶段</span></div><h2>由浅入深的学习路径</h2><p class="panel-scope">CLI 合并配置→Model/Environment/Agent 工厂→线性消息循环→Bash 解析与确认→终止信号→trajectory→批量预测文件</p><div class="learning-stages"><article class="learning-stage"><div class="stage-topline"><span class="stage-number">01</span><span class="stage-kind">orient</span></div><h3>建立地图</h3><p class="stage-outcome">解释入口、角色和控制面。</p><div class="gate"><span>先想一想</span><p>画出主线并指出真正开始执行的位置。</p></div><div class="stage-links"><a href="#module-01">进入课程</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">02</span><span class="stage-kind">trace</span></div><h3>逐步追踪</h3><p class="stage-outcome">追踪调用、数据与状态变化。</p><div class="gate"><span>先想一想</span><p>从一个输入写出调用和状态表，并定位源码。</p></div><div class="stage-links"><a href="#module-02">Model、Agent、Environment：三个协议插头</a> <a href="#module-03">极简 Agent loop：消息如何推动行动</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">03</span><span class="stage-kind">reason</span></div><h3>解释边界</h3><p class="stage-outcome">分析许可、失败、持久化与恢复。</p><div class="gate"><span>先想一想</span><p>解释两个不同层级的故障，并给出证据与反例。</p></div><div class="stage-links"><a href="#module-04">Bash 与安全闸门：命令在哪里执行</a> <a href="#module-05">退出协议与 trajectory：失败也要留下证据</a><span aria-hidden="true">→</span></div></article><article class="learning-stage"><div class="stage-topline"><span class="stage-number">04</span><span class="stage-kind">teach-back</span></div><h3>复述与迁移</h3><p class="stage-outcome">将契约迁移到自建 Agent 与评测系统。</p><div class="gate"><span>先想一想</span><p>不看答案写出完整主线与未验证边界，再对照评分依据。</p></div><div class="stage-links"><a href="#module-06">进入课程</a><span aria-hidden="true">→</span></div></article></div><details class="scope-note"><summary>实践范围与边界</summary><p>局部重建配置覆盖和终止 sentinel 判定；随后扩展超时观察保留，暂缓模型、容器和真实 SWE-bench。</p></details><div class="recall-heading"><p class="eyebrow">Recall &amp; connect</p><h3>概念地图与主动回忆</h3><p>回答保存在本机浏览器；阅读和自评不代表已掌握。</p></div><details class="concept-card" id="concept-c01-01"><summary>命令入口不是循环本体</summary><p>mini 是安装后的脚本入口，指向 run.mini 的 CLI app。先从命令定位配置与对象构造，再读 Agent.run；把所有运行行为归到命令入口，会忽略实际选择的 Agent 类。
+
+本课固定提交中，交互入口默认的组件组合与裸 DefaultAgent 并不完全相同。阅读示例时应列出最终 model_class、environment_class、agent_class，而不是依靠文件名猜测。</p><p>前置概念: —</p><a href="#module-01">能够解释“命令入口不是循环本体”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-01-0"><label for="recall-c01-01-0">安装 mini 后输入任务，哪个位置决定 Agent 行为？</label><textarea id="recall-c01-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 pyproject.toml:89-92，对照状态、身份、异常和保存边界。</li></ul><p>命令入口负责组织配置；工厂解析 agent_class 并实例化，随后该对象的 run/step 决定循环。对照实际最终配置。</p><ul><li>明确本题契约：命令入口不是循环本体</li><li>依据源码解释原因：命令入口负责组织配置；工厂解析 agent_class 并实例化，随后该对象的 run/step 决定循环。对照实际最终配置。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">pyproject.toml:89-92</p><p>白话翻译
+        用户敲 mini 或 mini-swe-agent，都会进入 minisweagent.run.mini:app。真正的装配逻辑在 run script，不在安装器里。</p><pre><code>[project.scripts]
+mini = &quot;minisweagent.run.mini:app&quot;
+mini-swe-agent = &quot;minisweagent.run.mini:app&quot;
+mini-extra = &quot;minisweagent.run.utilities.mini_extra:main&quot;</code></pre></details></details><details class="concept-card" id="concept-c01-02"><summary>递归覆盖与未设置值</summary><p>配置从左到右递归合并，后项覆盖前项；嵌套字段的合并让 CLI 可以只改 cost_limit 而保留模型其他参数。UNSET 表达未提供，不能随意换成 None。
+
+例如文件配置 cost_limit=3，CLI 未传该项应保留3；显式传0则可能表示关闭该限制。缺失、空值和零是三个不同输入，适配器若混为一谈会悄悄改变运行范围。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“递归覆盖与未设置值”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-02-0"><label for="recall-c01-02-0">CLI 没传超时，能把 None 作为覆盖值吗？</label><textarea id="recall-c01-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/utils/serialize.py:6-29，对照状态、身份、异常和保存边界。</li></ul><p>不能把未设置等同显式空值。保留 UNSET 语义并验证递归合并；显式0或None是否有效取决于字段契约。</p><ul><li>明确本题契约：递归覆盖与未设置值</li><li>依据源码解释原因：不能把未设置等同显式空值。保留 UNSET 语义并验证递归合并；显式0或None是否有效取决于字段契约。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/utils/serialize.py:6-29</p><p>白话翻译
+        每个配置字典从左到右叠加；嵌套字典继续逐层合并。CLI 没显式设置的项用 UNSET，因此不会意外抹掉 YAML 中的值。</p><pre><code>def recursive_merge(*dictionaries: dict | None) -&gt; dict:
+    &quot;&quot;&quot;Merge multiple dictionaries recursively.
+
+    Later dictionaries take precedence over earlier ones.
+    Nested dictionaries are merged recursively.
+    UNSET values are skipped.
+    &quot;&quot;&quot;
+    if not dictionaries:
+        return {}
+    result: dict[str, Any] = {}
+    for d in dictionaries:
+        if d is None:
+            continue
+        for key, value in d.items():
+            if value is UNSET:
+                continue
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = recursive_merge(result[key], value)
+            elif isinstance(value, dict):
+                # Recursively merge dict values to filter out nested UNSET values
+                result[key] = recursive_merge(value)
+            else:
+                result[key] = value
+    return result</code></pre></details></details><details class="concept-card" id="concept-c01-03"><summary>构造顺序帮助定位启动失败</summary><p>入口先获得模型、环境，再实例化 Agent，最后进入任务运行。工厂失败、容器启动失败与模型在循环内失败发生在不同阶段。
+
+诊断应记录最后成功阶段、配置来源与异常，而不是把没有 trajectory 的启动错误误判为 Agent 回答失败。构造不证明工具执行，也不证明环境具有隔离。</p><p>前置概念: c01-01</p><a href="#module-01">能够解释“构造顺序帮助定位启动失败”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c01-03-0"><label for="recall-c01-03-0">还没有第一条 assistant 消息就报错，先查什么？</label><textarea id="recall-c01-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/run/mini.py:94-105，对照状态、身份、异常和保存边界。</li></ul><p>先确认配置合并和组件工厂是否完成、环境是否成功构造；再看是否进入 run。不要先把错误归因于模型输出。</p><ul><li>明确本题契约：构造顺序帮助定位启动失败</li><li>依据源码解释原因：先确认配置合并和组件工厂是否完成、环境是否成功构造；再看是否进入 run。不要先把错误归因于模型输出。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/run/mini.py:94-105</p><p>白话翻译
+        没有任务就询问用户；随后依次构造模型、环境和代理。CLI 的默认选择明确是 local 环境与 interactive Agent，而不是裸 DefaultAgent。</p><pre><code>    if (run_task := config.get(&quot;run&quot;, {}).get(&quot;task&quot;, UNSET)) is UNSET:
+        console.print(&quot;[bold yellow]What do you want to do?&quot;)
+        run_task = _multiline_prompt()
+        console.print(&quot;[bold green]Got that, thanks![/bold green]&quot;)
+
+    model = get_model(config=config.get(&quot;model&quot;, {}))
+    env = get_environment(config.get(&quot;environment&quot;, {}), default_type=&quot;local&quot;)
+    agent = get_agent(model, env, config.get(&quot;agent&quot;, {}), default_type=&quot;interactive&quot;)
+    agent.run(run_task)
+    if (output_path := config.get(&quot;agent&quot;, {}).get(&quot;output_path&quot;)):
+        console.print(f&quot;Saved trajectory to [bold green]&#x27;{output_path}&#x27;[/bold green]&quot;)
+    return agent</code></pre></details></details><details class="concept-card" id="concept-c02-01"><summary>协议比聊天字符串更宽</summary><p>Model 协议同时负责查询、消息格式化、观察格式化、模板与配置。Agent 操作的是结构化消息集合，不是任意字符串列表。
+
+替换模型实现时，只适配 query 返回正文往往不够：动作字段、费用字段和观察编码仍须满足循环预期。源码接口是最低可替换契约，质量与供应商兼容要另外实测。</p><p>前置概念: c01-01</p><a href="#module-02">能够解释“协议比聊天字符串更宽”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-01-0"><label for="recall-c02-01-0">自定义模型返回一段 bash 文本就能接入吗？</label><textarea id="recall-c02-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/__init__.py:43-58，对照状态、身份、异常和保存边界。</li></ul><p>先满足 Model 的方法与消息结构契约，再对照 Agent 使用的动作、费用和观察字段；正文相似不足以证明可替换。</p><ul><li>明确本题契约：协议比聊天字符串更宽</li><li>依据源码解释原因：先满足 Model 的方法与消息结构契约，再对照 Agent 使用的动作、费用和观察字段；正文相似不足以证明可替换。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/__init__.py:43-58</p><p>白话翻译
+        Model 不只“生成文本”。它还负责消息格式、action 解析后的 observation 格式、模板变量与自身配置序列化。</p><pre><code>class Model(Protocol):
+    &quot;&quot;&quot;Protocol for language models.&quot;&quot;&quot;
+
+    config: Any
+
+    def query(self, messages: list[dict[str, str]], **kwargs) -&gt; dict: ...
+
+    def format_message(self, **kwargs) -&gt; dict: ...
+
+    def format_observation_messages(
+        self, message: dict, outputs: list[dict], template_vars: dict | None = None
+    ) -&gt; list[dict]: ...
+
+    def get_template_vars(self, **kwargs) -&gt; dict[str, Any]: ...
+
+    def serialize(self) -&gt; dict: ...</code></pre></details></details><details class="concept-card" id="concept-c02-02"><summary>Environment 是执行接口</summary><p>Environment.execute 把动作交给运行环境；Agent.run/save 管理任务和轨迹。三个协议分工使模型、策略、执行位置可以独立更换。
+
+接口统一不意味着安全属性统一。Local 与 Docker 都能执行 Bash，但执行位置、文件可见性、进程寿命和隔离能力不同。必须把环境类型列为实验变量。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“Environment 是执行接口”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-02-0"><label for="recall-c02-02-0">同一 Agent 换 Local 为 Docker，哪些结论不能沿用？</label><textarea id="recall-c02-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/__init__.py:61-80，对照状态、身份、异常和保存边界。</li></ul><p>文件与进程边界、环境变量、生命周期和隔离保证需重验；消息循环契约可复用，但环境接口相同不代表安全相同。</p><ul><li>明确本题契约：Environment 是执行接口</li><li>依据源码解释原因：文件与进程边界、环境变量、生命周期和隔离保证需重验；消息循环契约可复用，但环境接口相同不代表安全相同。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/__init__.py:61-80</p><p>白话翻译
+        Environment 的关键动作只有 execute；Agent 的外部入口只有 run 与 save。循环因此不必知道 Docker 命令或模型 SDK。</p><pre><code>class Environment(Protocol):
+    &quot;&quot;&quot;Protocol for execution environments.&quot;&quot;&quot;
+
+    config: Any
+
+    def execute(self, action: dict, cwd: str = &quot;&quot;) -&gt; dict[str, Any]: ...
+
+    def get_template_vars(self, **kwargs) -&gt; dict[str, Any]: ...
+
+    def serialize(self) -&gt; dict: ...
+
+
+class Agent(Protocol):
+    &quot;&quot;&quot;Protocol for agents.&quot;&quot;&quot;
+
+    config: Any
+
+    def run(self, task: str, **kwargs) -&gt; dict: ...
+
+    def save(self, path: Path | None, *extra_dicts) -&gt; dict: ...</code></pre></details></details><details class="concept-card" id="concept-c02-03"><summary>名称、类别与默认来源</summary><p>model_name 指具体模型标识，model_class 指适配器实现。工厂还涉及显式参数、配置和环境变量等默认来源；缺失必要名称会在构造阶段失败。
+
+调试“为什么调用了另一供应商”时，冻结最终解析后的配置以及来源优先级。不得把真实密钥写到教程或轨迹摘要；名称足够解释选择，凭据只在运行时读取。</p><p>前置概念: c02-01</p><a href="#module-02">能够解释“名称、类别与默认来源”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c02-03-0"><label for="recall-c02-03-0">模型名正确却走错适配器，检查哪两个字段？</label><textarea id="recall-c02-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/models/__init__.py:45-62，对照状态、身份、异常和保存边界。</li></ul><p>同时检查 model_name 与 model_class，以及显式参数、配置、环境默认的选择顺序；只看名称不能确认实现。</p><ul><li>明确本题契约：名称、类别与默认来源</li><li>依据源码解释原因：同时检查 model_name 与 model_class，以及显式参数、配置、环境默认的选择顺序；只看名称不能确认实现。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/models/__init__.py:45-62</p><p>白话翻译
+        先得到最终模型名，再选择实现类，并可能按模型名补默认配置。显式 model_class 与模型名是两个不同旋钮。</p><pre><code>def get_model(input_model_name: str | None = None, config: dict | None = None) -&gt; Model:
+    &quot;&quot;&quot;Get an initialized model object from any kind of user input or settings.&quot;&quot;&quot;
+    resolved_model_name = get_model_name(input_model_name, config)
+    if config is None:
+        config = {}
+    config = copy.deepcopy(config)
+    config[&quot;model_name&quot;] = resolved_model_name
+
+    model_class = get_model_class(resolved_model_name, config.pop(&quot;model_class&quot;, &quot;&quot;))
+
+    if (
+        any(s in resolved_model_name.lower() for s in [&quot;anthropic&quot;, &quot;sonnet&quot;, &quot;opus&quot;, &quot;claude&quot;])
+        and &quot;set_cache_control&quot; not in config
+    ):
+        # Select cache control for Anthropic models by default
+        config[&quot;set_cache_control&quot;] = &quot;default_end&quot;
+
+    return model_class(**config)</code></pre></details></details><details class="concept-card" id="concept-c03-01"><summary>每次 run 的消息起点</summary><p>run 初始化任务消息，加入 system 与 user 后进入循环。step 把完整历史交给模型，再将 assistant、环境观察依次追加。这个版本的基本路径是线性历史。
+
+追踪一轮应画出查询前的消息长度、返回后新增 assistant、每个动作生成的观察。不要把工具输出当下一条用户输入，也不要从线性历史推导自动分支恢复。</p><p>前置概念: c02-01</p><a href="#module-03">能够解释“每次 run 的消息起点”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-01-0"><label for="recall-c03-01-0">一轮工具返回后，下次查询只看工具输出吗？</label><textarea id="recall-c03-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/agents/default.py:88-124，对照状态、身份、异常和保存边界。</li></ul><p>基本循环传入完整消息集合；本轮 assistant 与环境观察追加到历史，下一轮可见此前 system、user 与往返消息。</p><ul><li>明确本题契约：每次 run 的消息起点</li><li>依据源码解释原因：基本循环传入完整消息集合；本轮 assistant 与环境观察追加到历史，下一轮可见此前 system、user 与往返消息。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/agents/default.py:88-124</p><p>白话翻译
+        每次运行先清空旧历史并写入两条起始消息。循环中，格式错误可作为反馈继续；控制流异常把自带消息追加；普通异常留现场后再抛出。只有最后一条消息角色是 exit 才停止。</p><pre><code>    def run(self, task: str = &quot;&quot;, **kwargs) -&gt; dict:
+        &quot;&quot;&quot;Run step() until agent is finished. Returns dictionary with exit_status, submission keys.&quot;&quot;&quot;
+        self.extra_template_vars |= {&quot;task&quot;: task, **kwargs}
+        self.messages = []
+        self.add_messages(
+            self.model.format_message(role=&quot;system&quot;, content=self._render_template(self.config.system_template)),
+            self.model.format_message(role=&quot;user&quot;, content=self._render_template(self.config.instance_template)),
+        )
+        while True:
+            try:
+                self.step()
+                self.n_consecutive_format_errors = 0  # reset on any clean step
+            except FormatError as e:
+                # The call was billed before parsing failed, so query() never got to charge it.
+                self.cost += e.messages[0].get(&quot;extra&quot;, {}).get(&quot;cost&quot;, 0.0)
+                self.n_consecutive_format_errors += 1
+                if 0 &lt; self.config.max_consecutive_format_errors &lt;= self.n_consecutive_format_errors:
+                    self.add_messages(
+                        *e.messages,
+                        {
+                            &quot;role&quot;: &quot;exit&quot;,
+                            &quot;content&quot;: &quot;RepeatedFormatError&quot;,
+                            &quot;extra&quot;: {&quot;exit_status&quot;: &quot;RepeatedFormatError&quot;, &quot;submission&quot;: &quot;&quot;},
+                        },
+                    )
+                else:
+                    self.add_messages(*e.messages)
+            except InterruptAgentFlow as e:
+                self.add_messages(*e.messages)
+            except Exception as e:
+                self.handle_uncaught_exception(e)
+                raise
+            finally:
+                self.save(self.config.output_path)
+            if self.messages[-1].get(&quot;role&quot;) == &quot;exit&quot;:
+                break
+        return self.messages[-1].get(&quot;extra&quot;, {})</code></pre></details></details><details class="concept-card" id="concept-c03-02"><summary>限制在查询边界检查</summary><p>查询前检查步数、费用和时间，响应回来后才知道本次真实花费并累加。因此费用上限不是供应商调用内部的精确中断预算。
+
+假设费用接近上限，一次请求可能让累计值越过阈值，下轮才阻止继续。研究报告应写检查时点，不能把配置 cost_limit 宣称为绝对不会超额。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“限制在查询边界检查”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-02-0"><label for="recall-c03-02-0">上限1美元，累计0.99，下一次请求可能超额吗？</label><textarea id="recall-c03-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/agents/default.py:126-157，对照状态、身份、异常和保存边界。</li></ul><p>可能。检查发生在请求前，费用在响应后加入。应用若要求硬预算，还需更保守的预留、供应商限制或独立控制。</p><ul><li>明确本题契约：限制在查询边界检查</li><li>依据源码解释原因：可能。检查发生在请求前，费用在响应后加入。应用若要求硬预算，还需更保守的预留、供应商限制或独立控制。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/agents/default.py:126-157</p><p>白话翻译
+        query() 先检查限制，把完整 messages 交给 Model，再追加 assistant message；execute_actions() 执行其中每个 action，并把格式化 observation 追加回同一列表。</p><pre><code>    def step(self) -&gt; list[dict]:
+        &quot;&quot;&quot;Query the LM, execute actions.&quot;&quot;&quot;
+        return self.execute_actions(self.query())
+
+    def query(self) -&gt; dict:
+        &quot;&quot;&quot;Query the model and return model messages. Override to add hooks.&quot;&quot;&quot;
+        if 0 &lt; self.config.step_limit &lt;= self.n_calls or 0 &lt; self.config.cost_limit &lt;= self.cost:
+            raise LimitsExceeded(
+                {
+                    &quot;role&quot;: &quot;exit&quot;,
+                    &quot;content&quot;: &quot;LimitsExceeded&quot;,
+                    &quot;extra&quot;: {&quot;exit_status&quot;: &quot;LimitsExceeded&quot;, &quot;submission&quot;: &quot;&quot;},
+                }
+            )
+        if 0 &lt; self.config.wall_time_limit_seconds &lt;= int(time.time() - self._start_time):
+            raise TimeExceeded(
+                {
+                    &quot;role&quot;: &quot;exit&quot;,
+                    &quot;content&quot;: &quot;TimeExceeded&quot;,
+                    &quot;extra&quot;: {&quot;exit_status&quot;: &quot;TimeExceeded&quot;, &quot;submission&quot;: &quot;&quot;},
+                }
+            )
+        self.n_calls += 1
+        message = self.model.query(self.messages)
+        self.cost += message.get(&quot;extra&quot;, {}).get(&quot;cost&quot;, 0.0)
+        self.add_messages(message)
+        return message
+
+    def execute_actions(self, message: dict) -&gt; list[dict]:
+        &quot;&quot;&quot;Execute actions in message, add observation messages, return them.&quot;&quot;&quot;
+        outputs = [self.env.execute(action) for action in message.get(&quot;extra&quot;, {}).get(&quot;actions&quot;, [])]
+        return self.add_messages(*self.model.format_observation_messages(message, outputs, self.get_template_vars()))</code></pre></details></details><details class="concept-card" id="concept-c03-03"><summary>格式错误也可能已经花钱</summary><p>模型响应的解析与计费有关联：无效动作不意味着没有远程调用，费用仍应计入。FormatError 被反馈给模型重试时，历史会记录失败与纠正。
+
+把解析失败丢弃会同时失去成本与故障证据；把原始回复直接执行则越过动作契约。应保留回复、解析原因和累计费用，执行只发生在格式通过之后。</p><p>前置概念: c03-01</p><a href="#module-03">能够解释“格式错误也可能已经花钱”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c03-03-0"><label for="recall-c03-03-0">JSON 动作解析失败，这轮费用能删除吗？</label><textarea id="recall-c03-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/models/litellm_model.py:81-106，对照状态、身份、异常和保存边界。</li></ul><p>不能仅因格式失败抹掉已发生调用成本。保留响应与 FormatError，按策略反馈重试；环境不能执行未解析通过的动作。</p><ul><li>明确本题契约：格式错误也可能已经花钱</li><li>依据源码解释原因：不能仅因格式失败抹掉已发生调用成本。保留响应与 FormatError，按策略反馈重试；环境不能执行未解析通过的动作。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/models/litellm_model.py:81-106</p><p>白话翻译
+        Model adapter 把供应商响应转成统一 message；即使 action 格式解析失败，也先把被计费响应与成本塞进错误消息。成功时同样保存 actions、原响应、成本和时间。</p><pre><code>    def query(self, messages: list[dict[str, str]], **kwargs) -&gt; dict:
+        for attempt in retry(logger=logger, abort_exceptions=self.abort_exceptions):
+            with attempt:
+                response = self._query(self._prepare_messages_for_api(messages), **kwargs)
+        cost_output = self._calculate_cost(response)
+        GLOBAL_MODEL_STATS.add(cost_output[&quot;cost&quot;])
+        # Note: all model.query() implementations must persist the response and cost on FormatError.
+        try:
+            actions = self._parse_actions(response)
+        except FormatError as e:
+            e.messages[0][&quot;extra&quot;].update(cost_output)
+            try:
+                e.messages[0][&quot;extra&quot;][&quot;response&quot;] = response.model_dump(mode=&quot;json&quot;)
+            except Exception:
+                # model_dump failed (e.g. unserializable object); fall back to repr
+                # so the spec contract (&quot;response MUST be persisted&quot;) holds unconditionally.
+                e.messages[0][&quot;extra&quot;][&quot;response&quot;] = repr(response)
+            raise
+        message = response.choices[0].message.model_dump()
+        message[&quot;extra&quot;] = {
+            &quot;actions&quot;: actions,
+            &quot;response&quot;: response.model_dump(),
+            **cost_output,
+            &quot;timestamp&quot;: time.time(),
+        }
+        return message</code></pre></details></details><details class="concept-card" id="concept-c04-01"><summary>Schema 与动作解析两道门</summary><p>工具 schema 告诉模型只调用 bash，参数中 command 必须是字符串；实际解析仍验证工具名、JSON 形状和字段类型。模型看到 schema 不等于永远遵守。
+
+执行应位于解析成功之后。缺字段、错误工具名或损坏 JSON 应走 FormatError，而不是尝试从正文抽取一段看起来像命令的文本。</p><p>前置概念: c03-01</p><a href="#module-04">能够解释“Schema 与动作解析两道门”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-01-0"><label for="recall-c04-01-0">模型说“已经执行 rm”，如何确认？</label><textarea id="recall-c04-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/models/utils/actions_toolcall.py:40-76，对照状态、身份、异常和保存边界。</li></ul><p>检查结构化 tool call 是否通过解析、确认闸门是否允许、环境 execute 是否发生以及对应观察。模型正文不是执行证据。</p><ul><li>明确本题契约：Schema 与动作解析两道门</li><li>依据源码解释原因：检查结构化 tool call 是否通过解析、确认闸门是否允许、环境 execute 是否发生以及对应观察。模型正文不是执行证据。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/models/utils/actions_toolcall.py:40-76</p><p>白话翻译
+        没有 tool call、工具名不是 bash、JSON 无法解析或缺 command，都会变成可回送模型的 FormatError；通过检查后才产出统一 action 字典。</p><pre><code>    if not tool_calls:
+        raise FormatError(
+            {
+                &quot;role&quot;: &quot;user&quot;,
+                &quot;content&quot;: Template(format_error_template, undefined=StrictUndefined).render(
+                    error=&quot;No tool calls found in the response. Every response MUST include at least one tool call.&quot;,
+                    actions=[],
+                    has_tool_calls=False,
+                    **template_kwargs,
+                ),
+                &quot;extra&quot;: {&quot;interrupt_type&quot;: &quot;FormatError&quot;},
+            }
+        )
+    actions = []
+    for tool_call in tool_calls:
+        error_msg = &quot;&quot;
+        args = {}
+        try:
+            args = json.loads(tool_call.function.arguments)
+        except Exception as e:
+            error_msg = f&quot;Error parsing tool call arguments: {e}.&quot;
+        if tool_call.function.name != &quot;bash&quot;:
+            error_msg += f&quot;Unknown tool &#x27;{tool_call.function.name}&#x27;.&quot;
+        if not isinstance(args, dict) or &quot;command&quot; not in args:
+            error_msg += &quot;Missing &#x27;command&#x27; argument in bash tool call.&quot;
+        if error_msg:
+            raise FormatError(
+                {
+                    &quot;role&quot;: &quot;user&quot;,
+                    &quot;content&quot;: Template(format_error_template, undefined=StrictUndefined).render(
+                        actions=[], error=error_msg.strip(), has_tool_calls=True, **template_kwargs
+                    ),
+                    &quot;extra&quot;: {&quot;interrupt_type&quot;: &quot;FormatError&quot;},
+                }
+            )
+        actions.append({&quot;command&quot;: args[&quot;command&quot;], &quot;tool_call_id&quot;: tool_call.id})
+    return actions</code></pre></details></details><details class="concept-card" id="concept-c04-02"><summary>确认模式决定行动许可</summary><p>InteractiveAgent 可以逐条确认、处理白名单或 yolo 配置。确认失败与格式错误不同：动作可合法却未获执行许可。
+
+一次回复包含多个动作时，已执行观察和后续未执行项必须分清。用户拒绝第二条，不应让下一轮误以为两条都运行；也不应因为“工具可用”自动批准所有命令。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“确认模式决定行动许可”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-02-0"><label for="recall-c04-02-0">同轮第二个命令被拒绝，下一轮应看见什么？</label><textarea id="recall-c04-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/agents/interactive.py:162-182，对照状态、身份、异常和保存边界。</li></ul><p>保留已经执行的输出，并明确后续动作未执行及拒绝原因。能力描述、解析有效与用户许可分别记录。</p><ul><li>明确本题契约：确认模式决定行动许可</li><li>依据源码解释原因：保留已经执行的输出，并明确后续动作未执行及拒绝原因。能力描述、解析有效与用户许可分别记录。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/agents/interactive.py:162-182</p><p>白话翻译
+        只有 confirm 模式且 action 未匹配白名单时才询问；空输入或 /y 放行，/u 切到 human，其余文字作为拒绝反馈。yolo 会绕过这道人工闸门。</p><pre><code>    def _should_ask_confirmation(self, action: str) -&gt; bool:
+        return self.config.mode == &quot;confirm&quot; and not any(re.match(r, action) for r in self.config.whitelist_actions)
+
+    def _ask_confirmation_or_interrupt(self, commands: list[str]) -&gt; None:
+        if not any(self._should_ask_confirmation(c) for c in commands):
+            return
+        prompt = (
+            f&quot;[bold yellow]Execute {len(commands)} action(s)?[/] [green][bold]Enter[/] to confirm[/], &quot;
+            &quot;[red]type [bold]comment[/] to reject[/], or [blue][bold]/h[/] to show available commands[/]\n&quot;
+            &quot;[bold yellow]&gt;[/bold yellow] &quot;
+        )
+        match user_input := self._prompt_and_handle_slash_commands(prompt).strip():
+            case &quot;&quot; | &quot;/y&quot;:
+                pass  # confirmed, do nothing
+            case &quot;/u&quot;:  # Skip execution action and get back to query
+                self._interrupt(&quot;Commands not executed. Switching to human mode&quot;, itype=&quot;UserRejection&quot;)
+            case _:
+                self._interrupt(
+                    f&quot;Commands not executed. The user rejected your commands with the following message: {user_input}&quot;,
+                    itype=&quot;UserRejection&quot;,
+                )</code></pre></details></details><details class="concept-card" id="concept-c04-03"><summary>新 subprocess 不保存 shell 状态</summary><p>Local 环境为动作启动新的进程；cwd 和环境变量来自配置。上一条命令里的 cd 或 export 不会自动成为下一条进程的持久状态。
+
+需要连续行为时，把 cd 与目标命令放进同一次命令，或使用显式 cwd 配置。Local 直接访问主机，不能因为有超时和进程组清理就声称它是沙箱。</p><p>前置概念: c04-01</p><a href="#module-04">能够解释“新 subprocess 不保存 shell 状态”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c04-03-0"><label for="recall-c04-03-0">第一条 cd /tmp，第二条 pwd 会一直在 /tmp 吗？</label><textarea id="recall-c04-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/environments/local.py:72-92，对照状态、身份、异常和保存边界。</li></ul><p>不能这样假设。两次动作是不同子进程；使用同一命令中的 cd &amp;&amp; pwd 或明确设置工作目录，并区分进程管理与隔离。</p><ul><li>明确本题契约：新 subprocess 不保存 shell 状态</li><li>依据源码解释原因：不能这样假设。两次动作是不同子进程；使用同一命令中的 cd &amp;&amp; pwd 或明确设置工作目录，并区分进程管理与隔离。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/environments/local.py:72-92</p><p>白话翻译
+        每个 action 新建一个 shell 子进程；超时会杀掉进程组并保存已有 stdout。它不是持续 shell，因此上一条命令里的 cd 或临时 export 不会自动留到下一条。</p><pre><code>def _run(command: str, cwd: str, env: dict[str, str], timeout: int) -&gt; subprocess.CompletedProcess[str]:
+    &quot;&quot;&quot;Like subprocess.run, but kills the whole process group on timeout so no children are orphaned.&quot;&quot;&quot;
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        text=True,
+        cwd=cwd,
+        env=env,
+        encoding=&quot;utf-8&quot;,
+        errors=&quot;replace&quot;,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        start_new_session=os.name == &quot;posix&quot;,
+    )
+    try:
+        stdout, _ = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL) if os.name == &quot;posix&quot; else process.kill()
+        stdout, _ = process.communicate()
+        raise subprocess.TimeoutExpired(command, timeout, output=stdout)
+    return subprocess.CompletedProcess(command, process.returncode, stdout=stdout)</code></pre></details></details><details class="concept-card" id="concept-c05-01"><summary>终止协议看第一行和退出码</summary><p>完成标志是输出协议：返回码为0，且去除首尾空白后的第一行精确符合 sentinel，后续行才作为提交内容。输出中任意位置出现词语不构成完成。
+
+这避免模型引用说明文本时提前终止。失败命令即使打印了标志也不能正常提交。教学实验故意比较“包含关键词”和精确协议的不同结果。</p><p>前置概念: c04-01</p><a href="#module-05">能够解释“终止协议看第一行和退出码”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-01-0"><label for="recall-c05-01-0">日志第三行出现完成标志，可以终止吗？</label><textarea id="recall-c05-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/environments/local.py:45-56，对照状态、身份、异常和保存边界。</li></ul><p>不行。按当前实现验证返回码和第一行精确匹配，再取后续提交；引用、子串与失败返回码都不能替代协议。</p><ul><li>明确本题契约：终止协议看第一行和退出码</li><li>依据源码解释原因：不行。按当前实现验证返回码和第一行精确匹配，再取后续提交；引用、子串与失败返回码都不能替代协议。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/environments/local.py:45-56</p><p>白话翻译
+        环境先去掉开头空白，把 stdout 拆成行。首行必须精确匹配 sentinel，且命令成功；后续所有行才成为 submission，并随一条 exit message 抛回 Agent。</p><pre><code>    def _check_finished(self, output: dict):
+        &quot;&quot;&quot;Raises Submitted if the output indicates task completion.&quot;&quot;&quot;
+        lines = output.get(&quot;output&quot;, &quot;&quot;).lstrip().splitlines(keepends=True)
+        if lines and lines[0].strip() == &quot;COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT&quot; and output[&quot;returncode&quot;] == 0:
+            submission = &quot;&quot;.join(lines[1:])
+            raise Submitted(
+                {
+                    &quot;role&quot;: &quot;exit&quot;,
+                    &quot;content&quot;: submission,
+                    &quot;extra&quot;: {&quot;exit_status&quot;: &quot;Submitted&quot;, &quot;submission&quot;: submission},
+                }
+            )</code></pre></details></details><details class="concept-card" id="concept-c05-02"><summary>finally 保存故障现场</summary><p>循环通过控制流异常表达提交、限制、超时等退出；finally 路径尝试保存轨迹。格式错误可作为可恢复反馈，其计数和最终状态仍应保留。
+
+保存是证据机制，文件存在不等于修复成功。路径没配置或文件写入失败也有边界；报告应区分 Agent 退出原因与轨迹持久化是否完成。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“finally 保存故障现场”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-02-0"><label for="recall-c05-02-0">trajectory.json 存在，能说修复成功吗？</label><textarea id="recall-c05-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/agents/default.py:96-124，对照状态、身份、异常和保存边界。</li></ul><p>不能。核对 exit_status、submission、消息和错误；轨迹保存与任务质量分别验收，真实修复还要独立测试。</p><ul><li>明确本题契约：finally 保存故障现场</li><li>依据源码解释原因：不能。核对 exit_status、submission、消息和错误；轨迹保存与任务质量分别验收，真实修复还要独立测试。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/agents/default.py:96-124</p><p>白话翻译
+        FormatError 有机会成为下一轮反馈，连续过多才转成 exit；其他控制流异常直接追加自带消息。无论哪条路，finally 都先尝试保存轨迹。</p><pre><code>        while True:
+            try:
+                self.step()
+                self.n_consecutive_format_errors = 0  # reset on any clean step
+            except FormatError as e:
+                # The call was billed before parsing failed, so query() never got to charge it.
+                self.cost += e.messages[0].get(&quot;extra&quot;, {}).get(&quot;cost&quot;, 0.0)
+                self.n_consecutive_format_errors += 1
+                if 0 &lt; self.config.max_consecutive_format_errors &lt;= self.n_consecutive_format_errors:
+                    self.add_messages(
+                        *e.messages,
+                        {
+                            &quot;role&quot;: &quot;exit&quot;,
+                            &quot;content&quot;: &quot;RepeatedFormatError&quot;,
+                            &quot;extra&quot;: {&quot;exit_status&quot;: &quot;RepeatedFormatError&quot;, &quot;submission&quot;: &quot;&quot;},
+                        },
+                    )
+                else:
+                    self.add_messages(*e.messages)
+            except InterruptAgentFlow as e:
+                self.add_messages(*e.messages)
+            except Exception as e:
+                self.handle_uncaught_exception(e)
+                raise
+            finally:
+                self.save(self.config.output_path)
+            if self.messages[-1].get(&quot;role&quot;) == &quot;exit&quot;:
+                break
+        return self.messages[-1].get(&quot;extra&quot;, {})</code></pre></details></details><details class="concept-card" id="concept-c05-03"><summary>可读截断与原始输出</summary><p>长工具输出可在模型可见消息中截断，而额外字段保留 raw_output。两种视图分别服务上下文预算与复盘证据。
+
+调试缺失报错时，先确认是进程未产生输出、收集失败，还是给模型的可读文本被截断。不要把截断后的片段当完整命令结果，归档也要遵守敏感数据边界。</p><p>前置概念: c05-01</p><a href="#module-05">能够解释“可读截断与原始输出”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c05-03-0"><label for="recall-c05-03-0">模型没看到堆栈尾部，是否说明进程没有堆栈？</label><textarea id="recall-c05-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/models/utils/actions_toolcall.py:87-104，对照状态、身份、异常和保存边界。</li></ul><p>不一定。检查原始输出与格式化截断规则，分别记录执行结果和模型可见内容；保留证据不等于向模型发送全部文本。</p><ul><li>明确本题契约：可读截断与原始输出</li><li>依据源码解释原因：不一定。检查原始输出与格式化截断规则，分别记录执行结果和模型可见内容；保留证据不等于向模型发送全部文本。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/models/utils/actions_toolcall.py:87-104</p><p>白话翻译
+        observation 的 content 由模板渲染，默认配置会截短过长输出；消息 extra 另存完整 raw_output、returncode、时间与异常。部分 action 未执行时也有明确占位。</p><pre><code>    &quot;&quot;&quot;Format execution outputs into tool result messages.&quot;&quot;&quot;
+    not_executed = {&quot;output&quot;: &quot;&quot;, &quot;returncode&quot;: -1, &quot;exception_info&quot;: &quot;action was not executed&quot;}
+    padded_outputs = outputs + [not_executed] * (len(actions) - len(outputs))
+    results = []
+    for action, output in zip(actions, padded_outputs):
+        content = Template(observation_template, undefined=StrictUndefined).render(
+            output=output, **(template_vars or {})
+        )
+        msg = {
+            &quot;content&quot;: content,
+            &quot;extra&quot;: {
+                &quot;raw_output&quot;: output.get(&quot;output&quot;, &quot;&quot;),
+                &quot;returncode&quot;: output.get(&quot;returncode&quot;),
+                &quot;timestamp&quot;: time.time(),
+                &quot;exception_info&quot;: output.get(&quot;exception_info&quot;),
+                **output.get(&quot;extra&quot;, {}),
+            },
+        }</code></pre></details></details><details class="concept-card" id="concept-c06-01"><summary>样本拥有独立运行对象</summary><p>批量运行器为每个实例组织任务、模型、环境、Agent 和输出文件。配置进度包装器不会改变基类循环，但样本隔离仍依赖对象和环境生命周期。
+
+并发实例不能共享消息历史或随意复用工作目录。静态阅读只能确认构造意图，真实容器隔离、资源回收和压力表现仍未验证。</p><p>前置概念: c05-01</p><a href="#module-06">能够解释“样本拥有独立运行对象”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-01-0"><label for="recall-c06-01-0">批量提速时共享一个 Agent 安全吗？</label><textarea id="recall-c06-01-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/run/benchmarks/swebench.py:122-156，对照状态、身份、异常和保存边界。</li></ul><p>先证明历史、计费、任务状态和环境均不串样本；当前按实例构造的主线不支持直接推导任意共享方案安全。</p><ul><li>明确本题契约：样本拥有独立运行对象</li><li>依据源码解释原因：先证明历史、计费、任务状态和环境均不串样本；当前按实例构造的主线不支持直接推导任意共享方案安全。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/run/benchmarks/swebench.py:122-156</p><p>白话翻译
+        单例开始时先清理旧预测与旧 trajectory，创建独立 Model 和 Environment，再把 problem statement 交给进度版 DefaultAgent。循环结束后只取 exit status 与 submission。</p><pre><code>def process_instance(
+    instance: dict,
+    output_dir: Path,
+    config: dict,
+    progress_manager: RunBatchProgressManager,
+) -&gt; None:
+    &quot;&quot;&quot;Process a single SWEBench instance.&quot;&quot;&quot;
+    instance_id = instance[&quot;instance_id&quot;]
+    instance_dir = output_dir / instance_id
+    # avoid inconsistent state if something here fails and there&#x27;s leftover previous files
+    remove_from_preds_file(output_dir / &quot;preds.json&quot;, instance_id)
+    (instance_dir / f&quot;{instance_id}.traj.json&quot;).unlink(missing_ok=True)
+    model = get_model(config=config.get(&quot;model&quot;, {}))
+    task = instance[&quot;problem_statement&quot;]
+
+    progress_manager.on_instance_start(instance_id)
+    progress_manager.update_instance_status(instance_id, &quot;Pulling/starting environment&quot;)
+
+    agent = None
+    exit_status = None
+    result = None
+    extra_info = {}
+
+    try:
+        env = get_sb_environment(config, instance)
+        agent = ProgressTrackingAgent(
+            model,
+            env,
+            progress_manager=progress_manager,
+            instance_id=instance_id,
+            **config.get(&quot;agent&quot;, {}),
+        )
+        info = agent.run(task)
+        exit_status = info.get(&quot;exit_status&quot;)
+        result = info.get(&quot;submission&quot;)</code></pre></details></details><details class="concept-card" id="concept-c06-02"><summary>预测写入不是 resolved</summary><p>预测文件以实例ID保存模型名和补丁内容，锁保护读改写过程。该字段没有自动证明补丁通过 SWE-bench 的测试。
+
+异常仍可能留下空提交和失败信息；resume 按已有ID跳过时，存在记录也不等于有效结果。应另列运行成功数、有效补丁数与独立评测 resolved 数。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“预测写入不是 resolved”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-02-0"><label for="recall-c06-02-0">preds 中有100条记录，就是解决100题吗？</label><textarea id="recall-c06-02-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/run/benchmarks/swebench.py:97-108，对照状态、身份、异常和保存边界。</li></ul><p>不是。记录可能为空或失败；resolved 必须来自独立评测。分别报告计划、预测、有效补丁和测试通过数。</p><ul><li>明确本题契约：预测写入不是 resolved</li><li>依据源码解释原因：不是。记录可能为空或失败；resolved 必须来自独立评测。分别报告计划、预测、有效补丁和测试通过数。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/run/benchmarks/swebench.py:97-108</p><p>白话翻译
+        共享 preds.json 用锁保护“读—改—写”，每个 instance 记录模型名、ID 与 model patch。这里没有 score、resolved 或测试结果字段。</p><pre><code>def update_preds_file(output_path: Path, instance_id: str, model_name: str, result: str):
+    &quot;&quot;&quot;Update the output JSON file with results from a single instance.&quot;&quot;&quot;
+    with _OUTPUT_FILE_LOCK:
+        output_data = {}
+        if output_path.exists():
+            output_data = json.loads(output_path.read_text())
+        output_data[instance_id] = {
+            &quot;model_name_or_path&quot;: model_name,
+            &quot;instance_id&quot;: instance_id,
+            &quot;model_patch&quot;: result,
+        }
+        output_path.write_text(json.dumps(output_data, indent=2))</code></pre></details></details><details class="concept-card" id="concept-c06-03"><summary>并发取消不是瞬间终止所有任务</summary><p>线程池提交样本，异常与中断时会处理 future。取消待运行任务和等待已运行任务的结果是不同操作；已经启动的工作不会只因 cancel 请求立刻消失。
+
+设计可恢复批处理时应冻结完成判定、写入原子性和错误策略，再验证中途退出后的重跑。把“文件有键就跳过”当成功标准会将失败固化。</p><p>前置概念: c06-01</p><a href="#module-06">能够解释“并发取消不是瞬间终止所有任务”，定位责任与失败，回答迁移问题。</a><div class="recall" data-recall-id="c06-03-0"><label for="recall-c06-03-0">恢复时如何避免空失败结果永久被跳过？</label><textarea id="recall-c06-03-0" rows="3" placeholder="先写下你的预测"></textarea><details class="recall-answer"><summary>查看提示、答案与评价标准</summary><ul><li>先标出输入、实际执行与输出三个时点。</li><li>回到 src/minisweagent/run/benchmarks/swebench.py:245-271，对照状态、身份、异常和保存边界。</li></ul><p>先定义有效完成条件与失败重试策略，核对提交和状态；保留历史错误，明确重跑集合，不能只按记录键存在判定成功。</p><ul><li>明确本题契约：并发取消不是瞬间终止所有任务</li><li>依据源码解释原因：先定义有效完成条件与失败重试策略，核对提交和状态；保留历史错误，明确重跑集合，不能只按记录键存在判定成功。</li><li>区分已确认事实、推断与尚需运行的验证。</li></ul></details></div><details><summary>精确源码锚点</summary><p class="path-chip">src/minisweagent/run/benchmarks/swebench.py:245-271</p><p>白话翻译
+        workers 决定线程数；每个 future 对应一个 instance ID。Ctrl-C 只取消尚未开始的任务，正在运行与已完成 future 仍由收尾逻辑处理。</p><pre><code>    def process_futures(futures: dict[concurrent.futures.Future, str]):
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except concurrent.futures.CancelledError:
+                pass
+            except Exception as e:
+                instance_id = futures[future]
+                logger.error(f&quot;Error in future for instance {instance_id}: {e}&quot;, exc_info=True)
+                progress_manager.on_uncaught_exception(instance_id, e)
+
+    with Live(progress_manager.render_group, refresh_per_second=4):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(process_instance, instance, output_path, config, progress_manager): instance[
+                    &quot;instance_id&quot;
+                ]
+                for instance in instances
+            }
+            try:
+                process_futures(futures)
+            except KeyboardInterrupt:
+                logger.info(&quot;Cancelling all pending jobs. Press ^C again to exit immediately.&quot;)
+                for future in futures:
+                    if not future.running() and not future.done():
+                        future.cancel()
+                process_futures(futures)</code></pre></details></details><button type="button" class="export-learning-notes">导出回忆记录</button><p class="notes-feedback" aria-live="polite"></p><details class="export-preview" hidden><summary>可复制的导出记录</summary><label for="export-data">尚未评价的回忆记录（JSON）</label><textarea id="export-data" readonly rows="6"></textarea><a class="export-download" download="code-learning-recall.json">下载 JSON</a></details></section>
+  <main id="course"><section class="course-module" id="module-01" data-title="从 mini 命令到三个组件">
+  <div class="screen hero-screen" data-number="01">
+    <p class="eyebrow">Module 1 · Entry &amp; assembly</p>
+    <h2><code>mini</code> 是配电箱，不是整台机器</h2>
+    <p class="lede">学完这一节，你能从一条命令追到最终装配的 Model、Environment 与 Agent，并判断一个行为来自默认 YAML、额外配置还是命令行覆盖。</p>
+    <p><dfn data-definition="入口点是安装后暴露给用户的命令，以及它映射到的程序对象。">入口点</dfn> 接住命令；<dfn data-definition="递归合并会逐层合并嵌套配置，后出现的有效值覆盖先出现的值。">递归合并</dfn> 决定每根线路最后接到哪里。</p>
+    <div class="callout"><strong>先记住：</strong><code>mini</code> 自己不实现模型推理或命令执行。它读取配置、选择三个组件，然后调用 <code>agent.run(task)</code>。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The front door</p>
+    <h3>安装脚本把 <code>mini</code> 指向同一个 Typer app</h3>
+    <figure class="code-translation" data-source="pyproject.toml" data-lines="89-92">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>[project.scripts]
+mini = "minisweagent.run.mini:app"
+mini-swe-agent = "minisweagent.run.mini:app"
+mini-extra = "minisweagent.run.utilities.mini_extra:main"</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>用户敲 <span class="path-chip">mini</span> 或 <span class="path-chip">mini-swe-agent</span>，都会进入 <span class="path-chip">minisweagent.run.mini:app</span>。真正的装配逻辑在 run script，不在安装器里。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/run/mini.py" data-lines="22-23">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>DEFAULT_CONFIG_FILE = Path(os.getenv("MSWEA_MINI_CONFIG_PATH", builtin_config_dir / "mini.yaml"))
+DEFAULT_OUTPUT_FILE = global_config_dir / "last_mini_run.traj.json"</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>默认从内置 <span class="path-chip">mini.yaml</span> 取配置，运行轨迹默认写到全局配置目录。环境变量可以替换默认配置路径，但这里没有读取任何任务内容。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Layered settings</p>
+    <h3>配置像透明胶片：后放上去的有效值遮住前一层</h3>
+    <figure class="code-translation" data-source="src/minisweagent/utils/serialize.py" data-lines="6-29">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def recursive_merge(*dictionaries: dict | None) -&gt; dict:
+    """Merge multiple dictionaries recursively.
+
+    Later dictionaries take precedence over earlier ones.
+    Nested dictionaries are merged recursively.
+    UNSET values are skipped.
+    """
+    if not dictionaries:
+        return {}
+    result: dict[str, Any] = {}
+    for d in dictionaries:
+        if d is None:
+            continue
+        for key, value in d.items():
+            if value is UNSET:
+                continue
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = recursive_merge(result[key], value)
+            elif isinstance(value, dict):
+                # Recursively merge dict values to filter out nested UNSET values
+                result[key] = recursive_merge(value)
+            else:
+                result[key] = value
+    return result</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>每个配置字典从左到右叠加；嵌套字典继续逐层合并。CLI 没显式设置的项用 <span class="path-chip">UNSET</span>，因此不会意外抹掉 YAML 中的值。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/run/mini.py" data-lines="68-92">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    configure_if_first_time()
+
+    # Build the config from the command line arguments
+    console.print(f"Building agent config from specs: [bold green]{config_spec}[/bold green]")
+    configs = [get_config_from_spec(spec) for spec in config_spec]
+    configs.append({
+        "run": {
+            "task": task or UNSET,
+        },
+        "agent": {
+            "agent_class": agent_class or UNSET,
+            "mode": "yolo" if yolo else UNSET,
+            "cost_limit": cost_limit if cost_limit is not None else UNSET,
+            "confirm_exit": False if exit_immediately else UNSET,
+            "output_path": output or UNSET,
+        },
+        "model": {
+            "model_class": model_class or UNSET,
+            "model_name": model_name or UNSET,
+        },
+        "environment": {
+            "environment_class": environment_class or UNSET,
+        },
+    })
+    config = recursive_merge(*configs)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>先读取所有 <span class="path-chip">-c</span> 配置，再把 CLI 参数作为最后一层。于是 <span class="path-chip">--yolo</span>、成本上限、模型或环境类都能精确覆盖对应分支。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Assembly line</p>
+    <h3>合并完成后，才选择组件并点火</h3>
+    <figure class="code-translation" data-source="src/minisweagent/run/mini.py" data-lines="94-105">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    if (run_task := config.get("run", {}).get("task", UNSET)) is UNSET:
+        console.print("[bold yellow]What do you want to do?")
+        run_task = _multiline_prompt()
+        console.print("[bold green]Got that, thanks![/bold green]")
+
+    model = get_model(config=config.get("model", {}))
+    env = get_environment(config.get("environment", {}), default_type="local")
+    agent = get_agent(model, env, config.get("agent", {}), default_type="interactive")
+    agent.run(run_task)
+    if (output_path := config.get("agent", {}).get("output_path")):
+        console.print(f"Saved trajectory to [bold green]'{output_path}'[/bold green]")
+    return agent</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>没有任务就询问用户；随后依次构造模型、环境和代理。CLI 的默认选择明确是 <span class="path-chip">local</span> 环境与 <span class="path-chip">interactive</span> Agent，而不是裸 <span class="path-chip">DefaultAgent</span>。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="mini 命令装配数据流">
+      <button type="button" class="flow-step is-active" data-detail="默认 mini.yaml 提供系统提示、限制、confirm 模式和 observation 模板。">1. 默认 YAML</button>
+      <button type="button" class="flow-step" data-detail="每个 -c 可以是配置文件、内置文件名或键值覆盖；显式使用 -c 时要自己包含所需默认配置。">2. 配置 specs</button>
+      <button type="button" class="flow-step" data-detail="CLI 参数作为最后一层，仅非 UNSET 的值覆盖前面配置。">3. CLI 覆盖</button>
+      <button type="button" class="flow-step" data-detail="三个工厂依据最终配置构造 Model、Environment 与 Agent。">4. 三个工厂</button>
+      <button type="button" class="flow-step" data-detail="最终只把 task 交给 agent.run；随后控制权进入 Agent loop。">5. agent.run</button>
+      <p class="flow-detail" aria-live="polite">默认 mini.yaml 提供系统提示、限制、confirm 模式和 observation 模板。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Steering checklist</p>
+    <h3>行为不对，先查“最终接线图”</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>任务不对</h4><p>查 <code>run.task</code>、<code>--task</code> 与交互输入，别先怀疑模型。</p></article>
+      <article class="actor-card"><h4>风险模式不对</h4><p>查 <code>agent.mode</code>、<code>--yolo</code> 与配置叠加顺序。</p></article>
+      <article class="actor-card"><h4>执行位置不对</h4><p>查 <code>environment.environment_class</code>；CLI 缺省是 local。</p></article>
+      <article class="actor-card"><h4>轨迹没找到</h4><p>查最终 <code>agent.output_path</code>，以及保存目录是否可写。</p></article>
+    </div>
+    <div class="quiz" data-explanation="源码帮助文字明确提醒：一旦显式提供 -c，默认配置文件不会自动补回；应在 config specs 中显式包含 mini.yaml，再叠加覆盖。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>你只写了 <code>-c model.model_kwargs.temperature=0</code>，结果缺少系统提示配置。最先修哪里？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">在配置 specs 中显式加入 <code>mini.yaml</code>，再追加温度覆盖</button>
+        <button type="button">修改 Docker 镜像名</button>
+        <button type="button">把 trajectory 文件改名</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-02" data-title="Model、Agent、Environment：三个协议插头">
+  <div class="screen hero-screen" data-number="02">
+    <p class="eyebrow">Module 2 · Contracts</p>
+    <h2>三个插头，让循环不绑死实现</h2>
+    <p class="lede">学完这一节，你能用职责而不是品牌名描述 Model、Agent、Environment，并找到换模型、换控制流或换执行场地的最小接缝。</p>
+    <p><dfn data-definition="Protocol 在这里描述对象应提供哪些方法；只要形状匹配，具体类可以替换。">Protocol</dfn> 像插头规格；<dfn data-definition="Factory 根据配置名或完整导入路径选择具体类并负责构造对象。">factory</dfn> 像仓库领料员。</p>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>Model</h4><p>把消息送给语言模型，解析 action，并把执行输出翻回 observation。</p></article>
+      <article class="actor-card"><h4>Agent</h4><p>决定何时问模型、何时执行、何时停止，以及保留哪条消息历史。</p></article>
+      <article class="actor-card"><h4>Environment</h4><p>接收 action，在某个场地执行，再返回 output、returncode 与错误信息。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Socket shapes</p>
+    <h3>源码把职责压缩成很小的接口</h3>
+    <figure class="code-translation" data-source="src/minisweagent/__init__.py" data-lines="43-58">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class Model(Protocol):
+    """Protocol for language models."""
+
+    config: Any
+
+    def query(self, messages: list[dict[str, str]], **kwargs) -&gt; dict: ...
+
+    def format_message(self, **kwargs) -&gt; dict: ...
+
+    def format_observation_messages(
+        self, message: dict, outputs: list[dict], template_vars: dict | None = None
+    ) -&gt; list[dict]: ...
+
+    def get_template_vars(self, **kwargs) -&gt; dict[str, Any]: ...
+
+    def serialize(self) -&gt; dict: ...</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Model 不只“生成文本”。它还负责消息格式、action 解析后的 observation 格式、模板变量与自身配置序列化。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/__init__.py" data-lines="61-80">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class Environment(Protocol):
+    """Protocol for execution environments."""
+
+    config: Any
+
+    def execute(self, action: dict, cwd: str = "") -&gt; dict[str, Any]: ...
+
+    def get_template_vars(self, **kwargs) -&gt; dict[str, Any]: ...
+
+    def serialize(self) -&gt; dict: ...
+
+
+class Agent(Protocol):
+    """Protocol for agents."""
+
+    config: Any
+
+    def run(self, task: str, **kwargs) -&gt; dict: ...
+
+    def save(self, path: Path | None, *extra_dicts) -&gt; dict: ...</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Environment 的关键动作只有 <span class="path-chip">execute</span>；Agent 的外部入口只有 <span class="path-chip">run</span> 与 <span class="path-chip">save</span>。循环因此不必知道 Docker 命令或模型 SDK。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Agent factory</p>
+    <h3>短名先查映射，完整路径也能直达自定义类</h3>
+    <figure class="code-translation" data-source="src/minisweagent/agents/__init__.py" data-lines="8-28">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>_AGENT_MAPPING = {
+    "default": "minisweagent.agents.default.DefaultAgent",
+    "interactive": "minisweagent.agents.interactive.InteractiveAgent",
+}
+
+
+def get_agent_class(spec: str) -&gt; type[Agent]:
+    full_path = _AGENT_MAPPING.get(spec, spec)
+    try:
+        module_name, class_name = full_path.rsplit(".", 1)
+        module = importlib.import_module(module_name)
+        return getattr(module, class_name)
+    except (ValueError, ImportError, AttributeError):
+        msg = f"Unknown agent type: {spec} (resolved to {full_path}, available: {_AGENT_MAPPING})"
+        raise ValueError(msg)
+
+
+def get_agent(model: Model, env: Environment, config: dict, *, default_type: str = "") -&gt; Agent:
+    config = copy.deepcopy(config)
+    agent_class = get_agent_class(config.pop("agent_class", default_type))
+    return agent_class(model, env, **config)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>工厂复制配置，拿走只用于选类的 <span class="path-chip">agent_class</span>，再把剩余参数连同 Model、Environment 交给具体 Agent。未知短名或导入失败会在这里显式报错。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/environments/__init__.py" data-lines="8-16">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>_ENVIRONMENT_MAPPING = {
+    "docker": "minisweagent.environments.docker.DockerEnvironment",
+    "singularity": "minisweagent.environments.singularity.SingularityEnvironment",
+    "local": "minisweagent.environments.local.LocalEnvironment",
+    "swerex_docker": "minisweagent.environments.extra.swerex_docker.SwerexDockerEnvironment",
+    "swerex_modal": "minisweagent.environments.extra.swerex_modal.SwerexModalEnvironment",
+    "bubblewrap": "minisweagent.environments.extra.bubblewrap.BubblewrapEnvironment",
+    "contree": "minisweagent.environments.extra.contree.ContreeEnvironment",
+}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>同一 <span class="path-chip">execute(action)</span> 插口后面可以是宿主机、Docker、Singularity 或额外后端。这个清单证明“可选择”，不证明每个后端已在你的机器运行成功。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Model resolution</p>
+    <h3>模型名先被解析，模型类再被选择</h3>
+    <figure class="code-translation" data-source="src/minisweagent/models/__init__.py" data-lines="45-62">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def get_model(input_model_name: str | None = None, config: dict | None = None) -&gt; Model:
+    """Get an initialized model object from any kind of user input or settings."""
+    resolved_model_name = get_model_name(input_model_name, config)
+    if config is None:
+        config = {}
+    config = copy.deepcopy(config)
+    config["model_name"] = resolved_model_name
+
+    model_class = get_model_class(resolved_model_name, config.pop("model_class", ""))
+
+    if (
+        any(s in resolved_model_name.lower() for s in ["anthropic", "sonnet", "opus", "claude"])
+        and "set_cache_control" not in config
+    ):
+        # Select cache control for Anthropic models by default
+        config["set_cache_control"] = "default_end"
+
+    return model_class(**config)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>先得到最终模型名，再选择实现类，并可能按模型名补默认配置。显式 <span class="path-chip">model_class</span> 与模型名是两个不同旋钮。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/models/__init__.py" data-lines="65-75">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def get_model_name(input_model_name: str | None = None, config: dict | None = None) -&gt; str:
+    """Get a model name from any kind of user input or settings."""
+    if config is None:
+        config = {}
+    if input_model_name:
+        return input_model_name
+    if from_config := config.get("model_name"):
+        return from_config
+    if from_env := os.getenv("MSWEA_MODEL_NAME"):
+        return from_env
+    raise ValueError("No default model set. Please run `mini-extra config setup` to set one.")</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>模型名优先取函数输入，其次配置，再其次环境变量；三处都没有就停止。源码没有一个可凭空使用的模型名。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Component conversation</p>
+    <h3>四个角色只交换约定好的形状</h3>
+    <div class="component-chat" aria-label="CLI、Agent、Model 与 Environment 的组件对话">
+      <div class="chat-message" data-speaker="CLI">我已经合并配置；这是具体 Model、Environment 和 task。</div>
+      <div class="chat-message" data-speaker="Agent">我维护消息与循环。Model，请根据当前 messages 给出下一条 message 和 actions。</div>
+      <div class="chat-message" data-speaker="Model">这里是 assistant message；actions 放在 extra 中，并保留响应与成本元数据。</div>
+      <div class="chat-message" data-speaker="Agent → Environment">请执行每个 action；我不假设你是本地进程还是容器。</div>
+      <div class="chat-message" data-speaker="Environment → Agent">这是 output、returncode 与 exception_info；请让 Model 把它格式化为 observation。</div>
+      <button type="button" class="replay-chat">重放组件对话</button>
+    </div>
+    <div class="callout"><strong>为什么这有助于排错：</strong>“模型没产生 action”“Agent 没执行 action”“环境执行失败”是三条不同故障链，应该在各自接缝取证。</div>
+    <div class="quiz" data-explanation="核心循环依赖 Environment 的 execute、模板变量和 serialize 协议；新后端保持这些形状，就能通过工厂接入而不必重写 Agent loop。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>要增加一个远程执行环境，同时尽量不改 Agent loop，最关键的兼容点是什么？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">实现 Environment 协议，尤其让 <code>execute(action)</code> 返回约定的结果字典</button>
+        <button type="button">把所有模型都改成同一个名字</button>
+        <button type="button">删除 Agent 的消息历史</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-03" data-title="极简 Agent loop：消息如何推动行动">
+  <div class="screen hero-screen" data-number="03">
+    <p class="eyebrow">Module 3 · The loop</p>
+    <h2>一本只追加的维修账本，就是控制流</h2>
+    <p class="lede">学完这一节，你能沿 <code>messages</code> 找到一次模型调用、Bash action、执行结果与下一轮 observation，并判断循环卡在 query 还是 execute。</p>
+    <p><dfn data-definition="Message history 是按顺序保存的 system、user、assistant、tool 与 exit 消息列表。">message history</dfn> 既是下一轮模型输入，也是调试轨迹；<dfn data-definition="Observation 是环境执行 action 后，经 Model 格式化并追加回历史的结果消息。">observation</dfn> 是工具把现实反馈给模型的方式。</p>
+    <div class="callout"><strong>极简的含义：</strong>没有隐藏的工作流图去改写历史；核心循环不断在同一列表尾部追加消息。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The ledger</p>
+    <h3>状态集中在几项可读字段里</h3>
+    <figure class="code-translation" data-source="src/minisweagent/agents/default.py" data-lines="38-50">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class DefaultAgent:
+    def __init__(self, model: Model, env: Environment, *, config_class: type = AgentConfig, **kwargs):
+        """See the `AgentConfig` class for permitted keyword arguments."""
+        self.config = config_class(**kwargs)
+        self.messages: list[dict] = []
+        self.model = model
+        self.env = env
+        self.extra_template_vars = {}
+        self.logger = logging.getLogger("agent")
+        self.cost = 0.0
+        self.n_calls = 0
+        self.n_consecutive_format_errors = 0
+        self._start_time = time.time()</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Agent 持有两个插头、一条消息列表、成本、调用次数、连续格式错误数和开始时间。没有独立的任务 DAG 或常驻 shell 状态藏在这里。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/agents/default.py" data-lines="69-72">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def add_messages(self, *messages: dict) -&gt; list[dict]:
+        self.logger.debug(messages)  # set log level to debug to see
+        self.messages.extend(messages)
+        return list(messages)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>新增消息只有一个动作：追加。要解释“模型下一轮看到了什么”，优先读这条列表，而不是从最终文件差异倒推。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Run until exit</p>
+    <h3>先写 system 与 user，再一圈圈调用 <code>step()</code></h3>
+    <figure class="code-translation" data-source="src/minisweagent/agents/default.py" data-lines="88-124">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def run(self, task: str = "", **kwargs) -&gt; dict:
+        """Run step() until agent is finished. Returns dictionary with exit_status, submission keys."""
+        self.extra_template_vars |= {"task": task, **kwargs}
+        self.messages = []
+        self.add_messages(
+            self.model.format_message(role="system", content=self._render_template(self.config.system_template)),
+            self.model.format_message(role="user", content=self._render_template(self.config.instance_template)),
+        )
+        while True:
+            try:
+                self.step()
+                self.n_consecutive_format_errors = 0  # reset on any clean step
+            except FormatError as e:
+                # The call was billed before parsing failed, so query() never got to charge it.
+                self.cost += e.messages[0].get("extra", {}).get("cost", 0.0)
+                self.n_consecutive_format_errors += 1
+                if 0 &lt; self.config.max_consecutive_format_errors &lt;= self.n_consecutive_format_errors:
+                    self.add_messages(
+                        *e.messages,
+                        {
+                            "role": "exit",
+                            "content": "RepeatedFormatError",
+                            "extra": {"exit_status": "RepeatedFormatError", "submission": ""},
+                        },
+                    )
+                else:
+                    self.add_messages(*e.messages)
+            except InterruptAgentFlow as e:
+                self.add_messages(*e.messages)
+            except Exception as e:
+                self.handle_uncaught_exception(e)
+                raise
+            finally:
+                self.save(self.config.output_path)
+            if self.messages[-1].get("role") == "exit":
+                break
+        return self.messages[-1].get("extra", {})</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>每次运行先清空旧历史并写入两条起始消息。循环中，格式错误可作为反馈继续；控制流异常把自带消息追加；普通异常留现场后再抛出。只有最后一条消息角色是 <span class="path-chip">exit</span> 才停止。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">One step</p>
+    <h3>一圈只有两拍：先 query，再 execute</h3>
+    <figure class="code-translation" data-source="src/minisweagent/agents/default.py" data-lines="126-157">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def step(self) -&gt; list[dict]:
+        """Query the LM, execute actions."""
+        return self.execute_actions(self.query())
+
+    def query(self) -&gt; dict:
+        """Query the model and return model messages. Override to add hooks."""
+        if 0 &lt; self.config.step_limit &lt;= self.n_calls or 0 &lt; self.config.cost_limit &lt;= self.cost:
+            raise LimitsExceeded(
+                {
+                    "role": "exit",
+                    "content": "LimitsExceeded",
+                    "extra": {"exit_status": "LimitsExceeded", "submission": ""},
+                }
+            )
+        if 0 &lt; self.config.wall_time_limit_seconds &lt;= int(time.time() - self._start_time):
+            raise TimeExceeded(
+                {
+                    "role": "exit",
+                    "content": "TimeExceeded",
+                    "extra": {"exit_status": "TimeExceeded", "submission": ""},
+                }
+            )
+        self.n_calls += 1
+        message = self.model.query(self.messages)
+        self.cost += message.get("extra", {}).get("cost", 0.0)
+        self.add_messages(message)
+        return message
+
+    def execute_actions(self, message: dict) -&gt; list[dict]:
+        """Execute actions in message, add observation messages, return them."""
+        outputs = [self.env.execute(action) for action in message.get("extra", {}).get("actions", [])]
+        return self.add_messages(*self.model.format_observation_messages(message, outputs, self.get_template_vars()))</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">query()</span> 先检查限制，把完整 messages 交给 Model，再追加 assistant message；<span class="path-chip">execute_actions()</span> 执行其中每个 action，并把格式化 observation 追加回同一列表。</p>
+      </figcaption>
+    </figure>
+    <div class="data-flow" aria-label="Agent 单步数据流">
+      <button type="button" class="flow-step is-active" data-detail="Agent 把当前完整 messages 交给 Model。">1. messages</button>
+      <button type="button" class="flow-step" data-detail="Model 返回 assistant message，并把解析后的 Bash actions 放在 extra 中。">2. query</button>
+      <button type="button" class="flow-step" data-detail="Agent 逐个把 action 交给 Environment.execute。">3. execute</button>
+      <button type="button" class="flow-step" data-detail="Environment 返回 output、returncode 和 exception_info。">4. output</button>
+      <button type="button" class="flow-step" data-detail="Model 把 output 格式化为 tool/user observation；Agent 追加它，下一圈再读。">5. observation</button>
+      <p class="flow-detail" aria-live="polite">Agent 把当前完整 messages 交给 Model。</p>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Model-side evidence</p>
+    <h3>action、原始响应、成本与时间一起挂在消息旁</h3>
+    <figure class="code-translation" data-source="src/minisweagent/models/litellm_model.py" data-lines="81-106">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def query(self, messages: list[dict[str, str]], **kwargs) -&gt; dict:
+        for attempt in retry(logger=logger, abort_exceptions=self.abort_exceptions):
+            with attempt:
+                response = self._query(self._prepare_messages_for_api(messages), **kwargs)
+        cost_output = self._calculate_cost(response)
+        GLOBAL_MODEL_STATS.add(cost_output["cost"])
+        # Note: all model.query() implementations must persist the response and cost on FormatError.
+        try:
+            actions = self._parse_actions(response)
+        except FormatError as e:
+            e.messages[0]["extra"].update(cost_output)
+            try:
+                e.messages[0]["extra"]["response"] = response.model_dump(mode="json")
+            except Exception:
+                # model_dump failed (e.g. unserializable object); fall back to repr
+                # so the spec contract ("response MUST be persisted") holds unconditionally.
+                e.messages[0]["extra"]["response"] = repr(response)
+            raise
+        message = response.choices[0].message.model_dump()
+        message["extra"] = {
+            "actions": actions,
+            "response": response.model_dump(),
+            **cost_output,
+            "timestamp": time.time(),
+        }
+        return message</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>Model adapter 把供应商响应转成统一 message；即使 action 格式解析失败，也先把被计费响应与成本塞进错误消息。成功时同样保存 actions、原响应、成本和时间。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>卡在 query 前</h4><p>查 step / cost / wall-time 限制与模型名、鉴权、重试。</p></article>
+      <article class="actor-card"><h4>query 有回复，无 action</h4><p>查 tool call 格式与 FormatError feedback。</p></article>
+      <article class="actor-card"><h4>action 已有，无 output</h4><p>查人工确认与 Environment.execute。</p></article>
+      <article class="actor-card"><h4>output 有了，下一轮看不到</h4><p>查 observation formatter 与 add_messages。</p></article>
+    </div>
+    <div class="quiz" data-explanation="执行结果必须先经 Model.format_observation_messages 转成消息，再由 add_messages 追加；缺任一环，下一轮传给模型的 history 就没有这份反馈。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>命令确实执行成功，但模型下一轮像没看到输出。最先检查哪条回路？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true"><code>format_observation_messages()</code> 的结果是否被 <code>add_messages()</code> 追加</button>
+        <button type="button">README 的项目徽章</button>
+        <button type="button">把 worker 数量加倍</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-04" data-title="Bash 与安全闸门：命令在哪里执行">
+  <div class="screen hero-screen" data-number="04">
+    <p class="eyebrow">Module 4 · Execution boundary</p>
+    <h2>先过气闸，再进工坊</h2>
+    <p class="lede">学完这一节，你能区分 Bash 工具票据、confirm / human / yolo 模式、宿主子进程与 Docker 容器，并据此提出真正安全的运行要求。</p>
+    <p><dfn data-definition="Tool schema 是交给模型的工具名称、参数形状和必填字段说明。">tool schema</dfn> 规定模型怎样写 action；<dfn data-definition="Sandbox 是把命令副作用限制在受控边界内的执行环境，而不是一个确认按钮。">sandbox</dfn> 决定 action 能碰到什么。</p>
+    <div class="callout warning"><strong>两个独立问题：</strong>“谁批准命令”由 InteractiveAgent 控制；“命令在哪里、以什么权限运行”由 Environment 控制。confirm 不是 sandbox。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">One tool</p>
+    <h3>模型面前只有一张 Bash 工单</h3>
+    <figure class="code-translation" data-source="src/minisweagent/models/utils/actions_toolcall.py" data-lines="11-27">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>BASH_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "bash",
+        "description": "Execute a bash command",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "The bash command to execute",
+                }
+            },
+            "required": ["command"],
+        },
+    },
+}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>没有专用读文件、编辑或测试工具：模型只能调用名为 <span class="path-chip">bash</span> 的函数，并提供字符串 <span class="path-chip">command</span>。能力大小因此取决于后面的 shell 与执行环境。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/models/utils/actions_toolcall.py" data-lines="40-76">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    if not tool_calls:
+        raise FormatError(
+            {
+                "role": "user",
+                "content": Template(format_error_template, undefined=StrictUndefined).render(
+                    error="No tool calls found in the response. Every response MUST include at least one tool call.",
+                    actions=[],
+                    has_tool_calls=False,
+                    **template_kwargs,
+                ),
+                "extra": {"interrupt_type": "FormatError"},
+            }
+        )
+    actions = []
+    for tool_call in tool_calls:
+        error_msg = ""
+        args = {}
+        try:
+            args = json.loads(tool_call.function.arguments)
+        except Exception as e:
+            error_msg = f"Error parsing tool call arguments: {e}."
+        if tool_call.function.name != "bash":
+            error_msg += f"Unknown tool '{tool_call.function.name}'."
+        if not isinstance(args, dict) or "command" not in args:
+            error_msg += "Missing 'command' argument in bash tool call."
+        if error_msg:
+            raise FormatError(
+                {
+                    "role": "user",
+                    "content": Template(format_error_template, undefined=StrictUndefined).render(
+                        actions=[], error=error_msg.strip(), has_tool_calls=True, **template_kwargs
+                    ),
+                    "extra": {"interrupt_type": "FormatError"},
+                }
+            )
+        actions.append({"command": args["command"], "tool_call_id": tool_call.id})
+    return actions</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>没有 tool call、工具名不是 bash、JSON 无法解析或缺 command，都会变成可回送模型的 FormatError；通过检查后才产出统一 action 字典。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Human airlock</p>
+    <h3>InteractiveAgent 在执行前决定放行还是把拒绝写回历史</h3>
+    <figure class="code-translation" data-source="src/minisweagent/agents/interactive.py" data-lines="124-139">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def execute_actions(self, message: dict) -&gt; list[dict]:
+        # Override to handle user confirmation and confirm_exit, with try/finally to preserve partial outputs
+        actions = message.get("extra", {}).get("actions", [])
+        commands = [action["command"] for action in actions]
+        outputs = []
+        try:
+            self._ask_confirmation_or_interrupt(commands)
+            for action in actions:
+                outputs.append(self.env.execute(action))
+        except Submitted as e:
+            self._check_for_new_task_or_submit(e)
+        finally:
+            result = self.add_messages(
+                *self.model.format_observation_messages(message, outputs, self.get_template_vars())
+            )
+        return result</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>先集中提取 commands，再询问是否执行。无论中途 submit 或只完成了部分 action，<span class="path-chip">finally</span> 都会把已有 outputs 与“未执行”占位格式化回消息历史。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/agents/interactive.py" data-lines="162-182">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def _should_ask_confirmation(self, action: str) -&gt; bool:
+        return self.config.mode == "confirm" and not any(re.match(r, action) for r in self.config.whitelist_actions)
+
+    def _ask_confirmation_or_interrupt(self, commands: list[str]) -&gt; None:
+        if not any(self._should_ask_confirmation(c) for c in commands):
+            return
+        prompt = (
+            f"[bold yellow]Execute {len(commands)} action(s)?[/] [green][bold]Enter[/] to confirm[/], "
+            "[red]type [bold]comment[/] to reject[/], or [blue][bold]/h[/] to show available commands[/]\n"
+            "[bold yellow]&gt;[/bold yellow] "
+        )
+        match user_input := self._prompt_and_handle_slash_commands(prompt).strip():
+            case "" | "/y":
+                pass  # confirmed, do nothing
+            case "/u":  # Skip execution action and get back to query
+                self._interrupt("Commands not executed. Switching to human mode", itype="UserRejection")
+            case _:
+                self._interrupt(
+                    f"Commands not executed. The user rejected your commands with the following message: {user_input}",
+                    itype="UserRejection",
+                )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>只有 confirm 模式且 action 未匹配白名单时才询问；空输入或 <span class="path-chip">/y</span> 放行，<span class="path-chip">/u</span> 切到 human，其余文字作为拒绝反馈。yolo 会绕过这道人工闸门。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Local workshop</p>
+    <h3>LocalEnvironment 直接把命令交给宿主 shell</h3>
+    <figure class="code-translation" data-source="src/minisweagent/environments/local.py" data-lines="19-43">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class LocalEnvironment:
+    def __init__(self, *, config_class: type = LocalEnvironmentConfig, **kwargs):
+        """This class executes bash commands directly on the local machine."""
+        self.config = config_class(**kwargs)
+
+    def execute(self, action: dict, cwd: str = "", *, timeout: int | None = None) -&gt; dict[str, Any]:
+        """Execute a command in the local environment and return the result as a dict."""
+        command = action.get("command", "")
+        cwd = cwd or self.config.cwd or os.getcwd()
+        try:
+            result = _run(command, cwd, os.environ | self.config.env, timeout or self.config.timeout)
+            output = {"output": result.stdout, "returncode": result.returncode, "exception_info": ""}
+        except Exception as e:
+            raw_output = getattr(e, "output", None)
+            raw_output = (
+                raw_output.decode("utf-8", errors="replace") if isinstance(raw_output, bytes) else (raw_output or "")
+            )
+            output = {
+                "output": raw_output,
+                "returncode": -1,
+                "exception_info": f"An error occurred while executing the command: {e}",
+                "extra": {"exception_type": type(e).__name__, "exception": str(e)},
+            }
+        self._check_finished(output)
+        return output</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>docstring 直接写明“在本机执行”。当前目录来自 action 参数、配置或进程 cwd；环境变量是宿主环境与配置的并集。捕获异常会变成结构化 output，但不会把本地执行变成隔离执行。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/environments/local.py" data-lines="72-92">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def _run(command: str, cwd: str, env: dict[str, str], timeout: int) -&gt; subprocess.CompletedProcess[str]:
+    """Like subprocess.run, but kills the whole process group on timeout so no children are orphaned."""
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        text=True,
+        cwd=cwd,
+        env=env,
+        encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        start_new_session=os.name == "posix",
+    )
+    try:
+        stdout, _ = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL) if os.name == "posix" else process.kill()
+        stdout, _ = process.communicate()
+        raise subprocess.TimeoutExpired(command, timeout, output=stdout)
+    return subprocess.CompletedProcess(command, process.returncode, stdout=stdout)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>每个 action 新建一个 shell 子进程；超时会杀掉进程组并保存已有 stdout。它不是持续 shell，因此上一条命令里的 <span class="path-chip">cd</span> 或临时 export 不会自动留到下一条。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Container workshop</p>
+    <h3>DockerEnvironment 换了场地，没有换 action 协议</h3>
+    <figure class="code-translation" data-source="src/minisweagent/environments/docker.py" data-lines="74-99">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def _start_container(self):
+        """Start the Docker container and return the container ID."""
+        container_name = f"minisweagent-{uuid.uuid4().hex[:8]}"
+        cmd = [
+            self.config.executable,
+            "run",
+            "-d",
+            "--name",
+            container_name,
+            "-w",
+            self.config.cwd,
+            *self.config.run_args,
+            self.config.image,
+            "sleep",
+            self.config.container_timeout,
+        ]
+        self.logger.debug(f"Starting container with command: {shlex.join(cmd)}")
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=self.config.pull_timeout,  # docker pull might take a while
+            check=True,
+        )
+        self.logger.info(f"Started container {container_name} with ID {result.stdout.strip()}")
+        self.container_id = result.stdout.strip()</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>初始化时先启动一个随机命名的长驻容器，并记录容器 ID。镜像、工作目录、run args 与最大存活时间来自 Environment 配置。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/environments/docker.py" data-lines="101-125">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def execute(self, action: dict, cwd: str = "", *, timeout: int | None = None) -&gt; dict[str, Any]:
+        """Execute a command in the Docker container and return the result as a dict."""
+        command = action.get("command", "")
+        cwd = cwd or self.config.cwd
+        assert self.container_id, "Container not started"
+
+        cmd = [self.config.executable, "exec", "-w", cwd]
+        for key in self.config.forward_env:
+            if (value := os.getenv(key)) is not None:
+                cmd.extend(["-e", f"{key}={value}"])
+        for key, value in self.config.env.items():
+            cmd.extend(["-e", f"{key}={value}"])
+        cmd.extend([self.container_id, *self.config.interpreter, command])
+
+        try:
+            result = subprocess.run(
+                cmd,
+                text=True,
+                timeout=timeout or self.config.timeout,
+                encoding="utf-8",
+                errors="replace",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            output = {"output": result.stdout, "returncode": result.returncode, "exception_info": ""}</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>同一 command 被包装为 <span class="path-chip">docker exec</span>，只转发明确列入 <span class="path-chip">forward_env</span> 的宿主变量，再加入容器专用 env。调用者仍只看到统一 output 字典。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Two controls, four questions</p>
+    <h3>安全审查要同时问门禁与场地</h3>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>谁发出命令？</h4><p>human 是用户；confirm / yolo 是模型。</p></article>
+      <article class="actor-card"><h4>谁批准命令？</h4><p>confirm 中未命中白名单才询问；yolo 不询问。</p></article>
+      <article class="actor-card"><h4>命令在哪执行？</h4><p>local 是宿主 shell；docker 是容器内解释器。</p></article>
+      <article class="actor-card"><h4>状态如何延续？</h4><p>文件副作用可延续；每个 action 的 shell 进程与临时 <code>cd</code> / export 不延续。</p></article>
+    </div>
+    <figure class="code-translation" data-source="src/minisweagent/config/mini.yaml" data-lines="35-42">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    **CRITICAL REQUIREMENTS:**
+
+    - Your response SHOULD include reasoning text explaining what you're doing
+    - Your response MUST include AT LEAST ONE bash tool call
+    - Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+    - However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir &amp;&amp; ...` or write/load environment variables from files
+    - Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+      Do not combine it with any other command. &lt;important&gt;After this command, you cannot continue working on this task.&lt;/important&gt;</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>默认提示明确告知模型：每个 action 都是新 subshell，要在同一条命令中显式携带 cwd 或环境。提示是行为约束，不是 OS 权限边界。</p>
+      </figcaption>
+    </figure>
+    <div class="quiz" data-explanation="confirm 只决定是否在执行前询问；一旦放行，LocalEnvironment 会直接在宿主机以当前进程权限运行。隔离需要选择并正确配置 Docker 等受控 Environment。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>已经启用 confirm 模式，为什么处理不可信仓库时仍可能需要 Docker？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">确认只是一道人工门禁；LocalEnvironment 放行后仍在宿主机执行</button>
+        <button type="button">因为 Docker 会自动判断 patch 正确</button>
+        <button type="button">因为 confirm 会删除所有环境变量</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-05" data-title="退出协议与 trajectory：失败也要留下证据">
+  <div class="screen hero-screen" data-number="05">
+    <p class="eyebrow">Module 5 · Stops &amp; evidence</p>
+    <h2>“停了”有多种出口，trajectory 是飞行记录器</h2>
+    <p class="lede">学完这一节，你能区分 Submitted、LimitsExceeded、TimeExceeded、FormatError 与普通异常，并从 trajectory 核对退出状态、成本、配置、消息和 submission。</p>
+    <p><dfn data-definition="Sentinel 是一段约定好的特殊输出；检测到它时，普通命令结果会被解释为控制信号。">sentinel</dfn> 把 Bash 输出变成提交协议；<dfn data-definition="Trajectory 是一次运行的序列化记录，包含配置、消息、成本、退出状态与环境信息。">trajectory</dfn> 保存过程证据。</p>
+    <div class="callout"><strong>证据原则：</strong>停止原因、提交内容、过程消息和运行配置要分开核对；“进程结束”本身不是成功结论。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">The green exit</p>
+    <h3>只有首行 sentinel 且返回码为 0，才解释为 Submitted</h3>
+    <figure class="code-translation" data-source="src/minisweagent/environments/local.py" data-lines="45-56">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def _check_finished(self, output: dict):
+        """Raises Submitted if the output indicates task completion."""
+        lines = output.get("output", "").lstrip().splitlines(keepends=True)
+        if lines and lines[0].strip() == "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT" and output["returncode"] == 0:
+            submission = "".join(lines[1:])
+            raise Submitted(
+                {
+                    "role": "exit",
+                    "content": submission,
+                    "extra": {"exit_status": "Submitted", "submission": submission},
+                }
+            )</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>环境先去掉开头空白，把 stdout 拆成行。首行必须精确匹配 sentinel，且命令成功；后续所有行才成为 submission，并随一条 exit message 抛回 Agent。</p>
+      </figcaption>
+    </figure>
+    <div class="callout warning"><strong>Submitted 不等于修复正确：</strong>它只证明 Agent 按协议交出了一段内容。测试是否通过、patch 是否适用仍需外部评测。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Colored exits</p>
+    <h3>控制流异常携带“应追加的消息”</h3>
+    <figure class="code-translation" data-source="src/minisweagent/exceptions.py" data-lines="1-26">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class InterruptAgentFlow(Exception):
+    """Raised to interrupt the agent flow and add messages."""
+
+    def __init__(self, *messages: dict):
+        self.messages = messages
+        super().__init__()
+
+
+class Submitted(InterruptAgentFlow):
+    """Raised when the agent has completed its task."""
+
+
+class LimitsExceeded(InterruptAgentFlow):
+    """Raised when the agent has exceeded its cost or step limit."""
+
+
+class TimeExceeded(LimitsExceeded):
+    """Raised when the agent has exceeded its wall-clock time limit."""
+
+
+class UserInterruption(InterruptAgentFlow):
+    """Raised when the user interrupts the agent."""
+
+
+class FormatError(InterruptAgentFlow):
+    """Raised when the LM's output is not in the expected format."""</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>这些异常不是单纯报错字符串；它们把一组 message 带回主循环。Submitted、限制、超时、人工中断和格式错误因此能留下不同、可序列化的现场。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/agents/default.py" data-lines="96-124">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>        while True:
+            try:
+                self.step()
+                self.n_consecutive_format_errors = 0  # reset on any clean step
+            except FormatError as e:
+                # The call was billed before parsing failed, so query() never got to charge it.
+                self.cost += e.messages[0].get("extra", {}).get("cost", 0.0)
+                self.n_consecutive_format_errors += 1
+                if 0 &lt; self.config.max_consecutive_format_errors &lt;= self.n_consecutive_format_errors:
+                    self.add_messages(
+                        *e.messages,
+                        {
+                            "role": "exit",
+                            "content": "RepeatedFormatError",
+                            "extra": {"exit_status": "RepeatedFormatError", "submission": ""},
+                        },
+                    )
+                else:
+                    self.add_messages(*e.messages)
+            except InterruptAgentFlow as e:
+                self.add_messages(*e.messages)
+            except Exception as e:
+                self.handle_uncaught_exception(e)
+                raise
+            finally:
+                self.save(self.config.output_path)
+            if self.messages[-1].get("role") == "exit":
+                break
+        return self.messages[-1].get("extra", {})</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>FormatError 有机会成为下一轮反馈，连续过多才转成 exit；其他控制流异常直接追加自带消息。无论哪条路，<span class="path-chip">finally</span> 都先尝试保存轨迹。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Budget exits</p>
+    <h3>步数、成本与墙钟在下一次模型调用前检查</h3>
+    <figure class="code-translation" data-source="src/minisweagent/agents/default.py" data-lines="19-35">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class AgentConfig(BaseModel):
+    """Check the config files in minisweagent/config for example settings."""
+
+    system_template: str
+    """Template for the system message (the first message)."""
+    instance_template: str
+    """Template for the first user message specifying the task (the second message overall)."""
+    step_limit: int = 0
+    """Maximum number of steps the agent can take."""
+    cost_limit: float = 3.0
+    """Stop agent after exceeding (!) this cost."""
+    wall_time_limit_seconds: int = 0
+    """Stop agent after this many seconds of wall-clock time. 0 means no limit."""
+    max_consecutive_format_errors: int = 3
+    """Exit after this many format errors in a row (0 = no limit)."""
+    output_path: Path | None = None
+    """Save the trajectory to this path."""</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>三个数值限制和连续格式错误阈值彼此独立；0 对 step 与 wall-time 表示不设限。输出路径同样属于 Agent 配置，因此应把它和限制一起冻结。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/agents/default.py" data-lines="130-152">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def query(self) -&gt; dict:
+        """Query the model and return model messages. Override to add hooks."""
+        if 0 &lt; self.config.step_limit &lt;= self.n_calls or 0 &lt; self.config.cost_limit &lt;= self.cost:
+            raise LimitsExceeded(
+                {
+                    "role": "exit",
+                    "content": "LimitsExceeded",
+                    "extra": {"exit_status": "LimitsExceeded", "submission": ""},
+                }
+            )
+        if 0 &lt; self.config.wall_time_limit_seconds &lt;= int(time.time() - self._start_time):
+            raise TimeExceeded(
+                {
+                    "role": "exit",
+                    "content": "TimeExceeded",
+                    "extra": {"exit_status": "TimeExceeded", "submission": ""},
+                }
+            )
+        self.n_calls += 1
+        message = self.model.query(self.messages)
+        self.cost += message.get("extra", {}).get("cost", 0.0)
+        self.add_messages(message)
+        return message</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>限制在发出下一次模型请求前检查。成本是上一条模型消息返回后累加的，所以源码注释中的“exceeding”语义需要在实验口径里保留，不能假定精确卡在阈值之前。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Flight recorder</p>
+    <h3>轨迹把结果、过程和复现条件分层保存</h3>
+    <figure class="code-translation" data-source="src/minisweagent/agents/default.py" data-lines="159-190">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def serialize(self, *extra_dicts) -&gt; dict:
+        """Serialize agent state to a json-compatible nested dictionary for saving."""
+        last_message = self.messages[-1] if self.messages else {}
+        last_extra = last_message.get("extra", {})
+        agent_data = {
+            "info": {
+                "model_stats": {
+                    "instance_cost": self.cost,
+                    "api_calls": self.n_calls,
+                },
+                "config": {
+                    "agent": self.config.model_dump(mode="json"),
+                    "agent_type": f"{self.__class__.__module__}.{self.__class__.__name__}",
+                },
+                "mini_version": __version__,
+                "exit_status": last_extra.get("exit_status", ""),
+                "submission": last_extra.get("submission", ""),
+            },
+            "messages": self.messages,
+            "trajectory_format": "mini-swe-agent-1.1",
+        }
+        return recursive_merge(agent_data, self.model.serialize(), self.env.serialize(), *extra_dicts)
+
+    def save(self, path: Path | None, *extra_dicts) -&gt; dict:
+        """Save the trajectory of the agent to a file if path is given. Returns full serialized data.
+        You can pass additional dictionaries with extra data to be (recursively) merged into the output data.
+        """
+        data = self.serialize(*extra_dicts)
+        if path:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(data, indent=2))
+        return data</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">info</span> 放成本、调用数、Agent 配置、版本、退出状态和 submission；<span class="path-chip">messages</span> 放全过程；Model 与 Environment 再合并各自类型和配置。给了 path 才真正写 JSON。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Rendered vs raw</p>
+    <h3>模型看到的 observation 与审计用 raw output 可以不同</h3>
+    <figure class="code-translation" data-source="src/minisweagent/models/utils/actions_toolcall.py" data-lines="87-104">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    """Format execution outputs into tool result messages."""
+    not_executed = {"output": "", "returncode": -1, "exception_info": "action was not executed"}
+    padded_outputs = outputs + [not_executed] * (len(actions) - len(outputs))
+    results = []
+    for action, output in zip(actions, padded_outputs):
+        content = Template(observation_template, undefined=StrictUndefined).render(
+            output=output, **(template_vars or {})
+        )
+        msg = {
+            "content": content,
+            "extra": {
+                "raw_output": output.get("output", ""),
+                "returncode": output.get("returncode"),
+                "timestamp": time.time(),
+                "exception_info": output.get("exception_info"),
+                **output.get("extra", {}),
+            },
+        }</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>observation 的 content 由模板渲染，默认配置会截短过长输出；消息 extra 另存完整 <span class="path-chip">raw_output</span>、returncode、时间与异常。部分 action 未执行时也有明确占位。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>身份</h4><p><code>mini_version</code>、Agent / Model / Environment 类型与配置。</p></article>
+      <article class="actor-card"><h4>预算</h4><p><code>instance_cost</code>、<code>api_calls</code> 与冻结的限制。</p></article>
+      <article class="actor-card"><h4>过程</h4><p>完整 messages、actions、响应、raw outputs 与时间。</p></article>
+      <article class="actor-card"><h4>结局</h4><p><code>exit_status</code> 与 <code>submission</code>；仍不包含外部正确性判定。</p></article>
+    </div>
+    <div class="quiz" data-explanation="Submitted 证明 sentinel 协议被满足并产生 submission；它不执行测试，也不判定 patch 是否修复问题。正确性需要独立 evaluator 或可复查测试证据。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>trajectory 的 <code>exit_status</code> 是 <code>Submitted</code>，你现在能安全断言什么？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">Agent 按提交协议交出了内容；正确性仍待外部评测</button>
+        <button type="button">所有测试已经通过</button>
+        <button type="button">该 patch 一定能应用到目标仓库</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<section class="course-module" id="module-06" data-title="从单次修复到 SWE-bench 批量评测">
+  <div class="screen hero-screen" data-number="06">
+    <p class="eyebrow">Module 6 · Batch inference</p>
+    <h2>把同一个维修循环放上批量工单线</h2>
+    <p class="lede">学完这一节，你能追踪一个 SWE-bench instance 如何选镜像、运行同一 Agent loop、保存 patch 与 trajectory，并区分“生成预测”与“官方评分”。</p>
+    <p><dfn data-definition="Instance 是 benchmark 中一条有唯一 ID、问题描述和环境信息的任务记录。">instance</dfn> 是一张维修工单；<dfn data-definition="Prediction 是提交给评测器的候选输出；在这里是 instance ID 与 model patch 等字段。">prediction</dfn> 是装箱后的候选 patch，不是合格证。</p>
+    <div class="callout warning"><strong>范围边界：</strong>这份 runner 生产并记录预测；本章检查到的调用链没有在这里执行 SWE-bench 正确性评分。出现 <code>preds.json</code> 不等于 resolved。</div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">One work cell</p>
+    <h3>每张工单先匹配自己的执行镜像</h3>
+    <figure class="code-translation" data-source="src/minisweagent/run/benchmarks/swebench.py" data-lines="68-94">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def get_swebench_docker_image_name(instance: dict) -&gt; str:
+    """Get the image name for a SWEBench instance."""
+    image_name = instance.get("image_name", None) or instance.get("docker_image", None)
+    if image_name is None:
+        # Docker doesn't allow double underscore, so we replace them with a magic token
+        iid = instance["instance_id"]
+        id_docker_compatible = iid.replace("__", "_1776_")
+        image_name = f"docker.io/swebench/sweb.eval.x86_64.{id_docker_compatible}:latest".lower()
+    return image_name
+
+
+def get_sb_environment(config: dict, instance: dict) -&gt; Environment:
+    env_config = {**config.get("environment", {})}
+    env_config["environment_class"] = env_config.get("environment_class", "docker")
+    image_name = get_swebench_docker_image_name(instance)
+    if env_config["environment_class"] in ["docker", "swerex_modal"]:
+        env_config["image"] = image_name
+    elif env_config["environment_class"] in ["singularity", "contree"]:
+        env_config["image"] = "docker://" + image_name
+
+    env = get_environment(env_config)
+    if startup_command := config.get("run", {}).get("env_startup_command"):
+        startup_command = Template(startup_command, undefined=StrictUndefined).render(**instance)
+        out = env.execute({"command": startup_command})
+        if out["returncode"] != 0:
+            raise RuntimeError(f"Error executing startup command: {out}")
+    return env</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>优先使用 instance 自带镜像名，否则从 instance ID 推导。默认环境是 Docker；可选 startup command 会先用工单字段渲染并执行，非零返回码立即使该实例失败。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Reuse, don't fork</p>
+    <h3>批量 Agent 只在 <code>step()</code> 前多报一次进度</h3>
+    <figure class="code-translation" data-source="src/minisweagent/run/benchmarks/utils/common.py" data-lines="7-17">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>class ProgressTrackingAgent(DefaultAgent):
+    """Agent that reports per-step progress via :class:`RunBatchProgressManager`."""
+
+    def __init__(self, *args, progress_manager: RunBatchProgressManager, instance_id: str = "", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.progress_manager = progress_manager
+        self.instance_id = instance_id
+
+    def step(self) -&gt; dict:
+        self.progress_manager.update_instance_status(self.instance_id, f"Step {self.n_calls + 1:3d} (${self.cost:.2f})")
+        return super().step()</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>SWE-bench 没复制另一套 Agent loop；它继承 DefaultAgent，只在每步前报告 instance ID、下一步编号和当前成本，然后回到同一个核心 <span class="path-chip">step()</span>。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/run/benchmarks/swebench.py" data-lines="122-156">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def process_instance(
+    instance: dict,
+    output_dir: Path,
+    config: dict,
+    progress_manager: RunBatchProgressManager,
+) -&gt; None:
+    """Process a single SWEBench instance."""
+    instance_id = instance["instance_id"]
+    instance_dir = output_dir / instance_id
+    # avoid inconsistent state if something here fails and there's leftover previous files
+    remove_from_preds_file(output_dir / "preds.json", instance_id)
+    (instance_dir / f"{instance_id}.traj.json").unlink(missing_ok=True)
+    model = get_model(config=config.get("model", {}))
+    task = instance["problem_statement"]
+
+    progress_manager.on_instance_start(instance_id)
+    progress_manager.update_instance_status(instance_id, "Pulling/starting environment")
+
+    agent = None
+    exit_status = None
+    result = None
+    extra_info = {}
+
+    try:
+        env = get_sb_environment(config, instance)
+        agent = ProgressTrackingAgent(
+            model,
+            env,
+            progress_manager=progress_manager,
+            instance_id=instance_id,
+            **config.get("agent", {}),
+        )
+        info = agent.run(task)
+        exit_status = info.get("exit_status")
+        result = info.get("submission")</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>单例开始时先清理旧预测与旧 trajectory，创建独立 Model 和 Environment，再把 problem statement 交给进度版 DefaultAgent。循环结束后只取 exit status 与 submission。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Evidence package</p>
+    <h3>成功或失败，finally 都尽量装箱</h3>
+    <figure class="code-translation" data-source="src/minisweagent/run/benchmarks/swebench.py" data-lines="157-177">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    except Exception as e:
+        logger.error(f"Error processing instance {instance_id}: {e}", exc_info=True)
+        exit_status, result = type(e).__name__, ""
+        extra_info = {"traceback": traceback.format_exc(), "exception_str": str(e)}
+    finally:
+        if agent is not None:
+            traj_path = instance_dir / f"{instance_id}.traj.json"
+            agent.save(
+                traj_path,
+                {
+                    "info": {
+                        "exit_status": exit_status,
+                        "submission": result,
+                        **extra_info,
+                    },
+                    "instance_id": instance_id,
+                },
+            )
+            logger.info(f"Saved trajectory to '{traj_path}'")
+        update_preds_file(output_dir / "preds.json", instance_id, model.config.model_name, result)
+        progress_manager.on_instance_end(instance_id, exit_status)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>未捕获错误会变成异常类型、空结果、traceback 和错误字符串。只要 Agent 已构造，就保存实例轨迹；随后仍更新共享预测文件并登记退出状态。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/run/benchmarks/swebench.py" data-lines="97-108">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>def update_preds_file(output_path: Path, instance_id: str, model_name: str, result: str):
+    """Update the output JSON file with results from a single instance."""
+    with _OUTPUT_FILE_LOCK:
+        output_data = {}
+        if output_path.exists():
+            output_data = json.loads(output_path.read_text())
+        output_data[instance_id] = {
+            "model_name_or_path": model_name,
+            "instance_id": instance_id,
+            "model_patch": result,
+        }
+        output_path.write_text(json.dumps(output_data, indent=2))</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>共享 <span class="path-chip">preds.json</span> 用锁保护“读—改—写”，每个 instance 记录模型名、ID 与 model patch。这里没有 score、resolved 或测试结果字段。</p>
+      </figcaption>
+    </figure>
+    <div class="actor-grid">
+      <article class="actor-card"><h4>preds.json</h4><p>提交给后续 evaluator 的候选 patch 索引。</p></article>
+      <article class="actor-card"><h4>*.traj.json</h4><p>每实例的配置、消息、成本、退出状态和异常现场。</p></article>
+      <article class="actor-card"><h4>exit_statuses_*.yaml</h4><p>按退出状态汇总实例 ID，方便看运行完成度。</p></article>
+      <article class="actor-card"><h4>minisweagent.log</h4><p>批量 runner 的运行日志；不是正确率报告。</p></article>
+    </div>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">Resume and fan-out</p>
+    <h3>先筛选与跳过，再把实例分发给线程池</h3>
+    <figure class="code-translation" data-source="src/minisweagent/run/benchmarks/swebench.py" data-lines="217-243">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    output_path = Path(output)
+    output_path.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Results will be saved to {output_path}")
+    add_file_handler(output_path / "minisweagent.log")
+
+    from datasets import load_dataset
+
+    dataset_path = DATASET_MAPPING.get(subset, subset)
+    logger.info(f"Loading dataset {dataset_path}, split {split}...")
+    instances = list(load_dataset(dataset_path, split=split))
+
+    instances = filter_instances(instances, filter_spec=filter_spec, slice_spec=slice_spec, shuffle=shuffle)
+    if not redo_existing and (output_path / "preds.json").exists():
+        existing_instances = list(json.loads((output_path / "preds.json").read_text()).keys())
+        logger.info(f"Skipping {len(existing_instances)} existing instances")
+        instances = [instance for instance in instances if instance["instance_id"] not in existing_instances]
+    logger.info(f"Running on {len(instances)} instances...")
+
+    logger.info(f"Building agent config from specs: {config_spec}")
+    configs = [get_config_from_spec(spec) for spec in config_spec]
+    configs.append({
+        "environment": {"environment_class": environment_class or UNSET},
+        "model": {"model_name": model or UNSET, "model_class": model_class or UNSET},
+    })
+    config = recursive_merge(*configs)
+
+    progress_manager = RunBatchProgressManager(len(instances), output_path / f"exit_statuses_{time.time()}.yaml")</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p>数据集先按 subset / split 载入，再过滤、切片或洗牌。默认根据 preds.json 的 key 跳过已有实例；这是一种续跑机制，但不会自动验证旧预测完整或正确。</p>
+      </figcaption>
+    </figure>
+    <figure class="code-translation" data-source="src/minisweagent/run/benchmarks/swebench.py" data-lines="245-271">
+      <div class="code-pane">
+        <p class="pane-label source-label"></p>
+        <pre><code>    def process_futures(futures: dict[concurrent.futures.Future, str]):
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except concurrent.futures.CancelledError:
+                pass
+            except Exception as e:
+                instance_id = futures[future]
+                logger.error(f"Error in future for instance {instance_id}: {e}", exc_info=True)
+                progress_manager.on_uncaught_exception(instance_id, e)
+
+    with Live(progress_manager.render_group, refresh_per_second=4):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(process_instance, instance, output_path, config, progress_manager): instance[
+                    "instance_id"
+                ]
+                for instance in instances
+            }
+            try:
+                process_futures(futures)
+            except KeyboardInterrupt:
+                logger.info("Cancelling all pending jobs. Press ^C again to exit immediately.")
+                for future in futures:
+                    if not future.running() and not future.done():
+                        future.cancel()
+                process_futures(futures)</code></pre>
+      </div>
+      <figcaption>
+        <p class="pane-label">白话翻译</p>
+        <p><span class="path-chip">workers</span> 决定线程数；每个 future 对应一个 instance ID。Ctrl-C 只取消尚未开始的任务，正在运行与已完成 future 仍由收尾逻辑处理。</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="screen">
+    <p class="eyebrow">End-to-end audit</p>
+    <h3>生成、记录、评分是三件事</h3>
+    <div class="data-flow" aria-label="SWE-bench 批量推理数据流">
+      <button type="button" class="flow-step is-active" data-detail="从映射名或自定义路径加载 dataset 与 split，得到 instances。">1. Dataset</button>
+      <button type="button" class="flow-step" data-detail="按 regex、slice、固定 shuffle 规则筛选，并默认跳过 preds.json 已有 ID。">2. Select</button>
+      <button type="button" class="flow-step" data-detail="为每个 instance 选择镜像并创建独立 Environment 与 Model。">3. Work cell</button>
+      <button type="button" class="flow-step" data-detail="ProgressTrackingAgent 复用 DefaultAgent 的模型—action—observation 循环。">4. Agent loop</button>
+      <button type="button" class="flow-step" data-detail="保存 model patch、trajectory、退出状态和日志；错误也尽量留证。">5. Artifacts</button>
+      <button type="button" class="flow-step" data-detail="正确性评分需要把 predictions 交给独立 SWE-bench evaluator；本 runner 片段没有完成这一步。">6. Evaluate later</button>
+      <p class="flow-detail" aria-live="polite">从映射名或自定义路径加载 dataset 与 split，得到 instances。</p>
+    </div>
+    <div class="callout"><strong>复核顺序：</strong>先确认目标 instance 与镜像，再看 exit status 和 trajectory，接着核对 preds.json patch，最后才读独立 evaluator 的 resolved / tests 结果。</div>
+    <div class="quiz" data-explanation="preds.json 的本地写入函数只保存模型名、instance ID 和 model patch。是否 resolved 必须由独立 SWE-bench evaluator 运行测试后判定。">
+      <p class="quiz-kicker">Try it</p>
+      <h3>一个 instance 已出现在 <code>preds.json</code>。这最直接证明了什么？</h3>
+      <div class="quiz-options">
+        <button type="button" data-correct="true">runner 已为该 ID 写入一条候选 prediction；是否修复仍未判定</button>
+        <button type="button">该实例已经 resolved</button>
+        <button type="button">该 patch 已通过所有隐藏测试</button>
+      </div>
+      <p class="quiz-feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</section></main>
+
+  <footer class="course-footer">
+    <p>源码摘录授权见 <a href="source-license.txt">上游许可</a>；课程工具许可见 <a href="tooling-license.txt">MIT</a>。</p>
+    <p>基于已检查的源码。摘录保留原文件与连续行号，学习结论可回到证据。</p>
+    <a href="#course-start">返回顶部 ↑</a>
+  </footer>
+  <script>(() => {
+  const modules = [...document.querySelectorAll('.course-module')];
+  const dots = [...document.querySelectorAll('.nav-dot')];
+  const progress = document.querySelector('#progress-bar');
+  const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let userReducedMotion = false;
+  try { userReducedMotion = localStorage.getItem('code-learning:reduce-motion') === 'true'; } catch (_) {}
+  let reduceMotion = systemReducedMotion || userReducedMotion;
+  const motionToggle = document.querySelector('#motion-toggle');
+  const applyMotion = () => {
+    reduceMotion = systemReducedMotion || userReducedMotion;
+    document.documentElement.dataset.reducedMotion = String(reduceMotion);
+    if (motionToggle) {
+      motionToggle.setAttribute('aria-pressed', String(reduceMotion));
+      motionToggle.disabled = systemReducedMotion;
+    }
+  };
+  applyMotion();
+  motionToggle?.addEventListener('click', () => {
+    userReducedMotion = !userReducedMotion;
+    try { localStorage.setItem('code-learning:reduce-motion', String(userReducedMotion)); } catch (_) {}
+    applyMotion();
+  });
+
+  let activeModuleId;
+  const setActiveModule = (id) => {
+    if (activeModuleId === id) return;
+    activeModuleId = id;
+    dots.forEach((dot) => {
+      const active = dot.dataset.target === id;
+      dot.classList.toggle('is-active', active);
+      if (active) dot.setAttribute('aria-current', 'step');
+      else dot.removeAttribute('aria-current');
+      const nav = dot.parentElement;
+      if (active && nav.scrollWidth > nav.clientWidth) {
+        nav.scrollTo({ left: dot.offsetLeft - nav.offsetLeft - (nav.clientWidth - dot.offsetWidth) / 2,
+          behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    });
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      document.getElementById(dot.dataset.target)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  });
+
+  const updateProgress = () => {
+    const available = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = available > 0 ? Math.min(1, Math.max(0, window.scrollY / available)) : 0;
+    if (progress) progress.style.width = `${ratio * 100}%`;
+    const current = currentModuleIndex();
+    if (modules.length) setActiveModule(current >= 0 ? modules[current].id : null);
+  };
+  document.addEventListener('scroll', updateProgress, { passive: true });
+
+  const currentModuleIndex = () => {
+    const center = window.scrollY + window.innerHeight * 0.45;
+    let best = -1;
+    modules.forEach((module, index) => {
+      if (module.offsetTop <= center) best = index;
+    });
+    return best;
+  };
+  updateProgress();
+
+  document.addEventListener('keydown', (event) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) return;
+    if (document.activeElement?.closest('[data-code-scroll], .table-scroll')) return;
+    const forward = event.key === 'j' || event.key === 'J' || event.key === 'ArrowDown';
+    const backward = event.key === 'k' || event.key === 'K' || event.key === 'ArrowUp';
+    if (!forward && !backward) return;
+    const offset = forward ? 1 : -1;
+    const target = modules[Math.min(modules.length - 1, Math.max(0, currentModuleIndex() + offset))];
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+  });
+
+  document.querySelectorAll('dfn[data-definition]').forEach((term) => {
+    term.tabIndex = 0;
+    term.setAttribute('aria-label', `${term.textContent}: ${term.dataset.definition}`);
+  });
+
+  document.querySelectorAll('.code-translation').forEach((translation) => {
+    const label = translation.querySelector('.source-label');
+    if (label) {
+      const range = (translation.dataset.lines || '').replace('-', '–');
+      label.textContent = `源码 · ${translation.dataset.source || 'unknown source'}:${range}`;
+    }
+    const code = translation.querySelector('pre');
+    if (code) {
+      code.tabIndex = 0;
+      code.setAttribute('data-code-scroll', '');
+      code.setAttribute('aria-label', '源码摘录，可用方向键滚动');
+    }
+  });
+
+  document.querySelectorAll('.table-scroll').forEach((table) => {
+    table.tabIndex = 0;
+    table.setAttribute('aria-label', '对照表，可用方向键横向滚动');
+  });
+
+  document.querySelectorAll('.quiz').forEach((quiz) => {
+    const choices = [...quiz.querySelectorAll('.quiz-options button')];
+    const feedback = quiz.querySelector('.quiz-feedback');
+    choices.forEach((choice) => {
+      choice.addEventListener('click', () => {
+        choices.forEach((item) => item.classList.remove('is-correct', 'is-wrong'));
+        const correct = choice.dataset.correct === 'true';
+        choice.classList.add(correct ? 'is-correct' : 'is-wrong');
+        feedback.textContent = `${correct ? '正确。' : '再想一想。'}${quiz.dataset.explanation || ''}`;
+      });
+    });
+  });
+
+  const playChat = (chat) => {
+    const messages = [...chat.querySelectorAll('.chat-message')];
+    messages.forEach((message) => message.classList.remove('is-visible'));
+    messages.forEach((message, index) => {
+      if (reduceMotion) message.classList.add('is-visible');
+      else window.setTimeout(() => message.classList.add('is-visible'), 180 + index * 520);
+    });
+  };
+
+  document.querySelectorAll('.component-chat').forEach((chat) => {
+    playChat(chat);
+    chat.querySelector('.replay-chat')?.addEventListener('click', () => playChat(chat));
+  });
+
+  document.querySelectorAll('.data-flow').forEach((flow) => {
+    const steps = [...flow.querySelectorAll('.flow-step')];
+    const detail = flow.querySelector('.flow-detail');
+    steps.forEach((step) => {
+      step.addEventListener('click', () => {
+        steps.forEach((item) => item.classList.remove('is-active'));
+        step.classList.add('is-active');
+        if (detail) detail.textContent = step.dataset.detail || '';
+      });
+    });
+  });
+
+  const panel = document.querySelector('.learning-panel');
+  if (panel) {
+    const conceptCards = [...panel.querySelectorAll('.concept-card')];
+    const conceptNames = new Map(conceptCards.map(card => [card.id.replace('concept-', ''), card.querySelector('summary')?.textContent]));
+    conceptCards.forEach(card => {
+      const prerequisites = [...card.children].find(el => el.tagName === 'P' && el.textContent.startsWith('前置概念:'));
+      if (!prerequisites) return;
+      const ids = prerequisites.textContent.replace('前置概念:', '').trim().split(',').map(id => id.trim());
+      if (!ids.every(id => conceptNames.has(id))) return;
+      prerequisites.replaceChildren(document.createTextNode('前置概念：'));
+      ids.forEach((id, index) => {
+        if (index) prerequisites.append(document.createTextNode('、'));
+        const link = document.createElement('a');
+        link.href = `#concept-${id}`;
+        link.textContent = conceptNames.get(id);
+        link.className = 'concept-prerequisite';
+        link.addEventListener('click', () => { document.getElementById(`concept-${id}`).open = true; });
+        prerequisites.append(link);
+      });
+    });
+    const storageKey = `code-learning:${panel.dataset.kitId}`;
+    const sourceRevision = document.querySelectorAll('.course-meta dd')[1]?.textContent || 'unknown';
+    const feedback = panel.querySelector('.notes-feedback');
+    const zh = document.documentElement.lang.startsWith('zh');
+    let notes = {};
+    try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) { notes = {}; }
+    if (!notes || typeof notes !== 'object' || Array.isArray(notes)) notes = {};
+    panel.querySelectorAll('.recall').forEach((recall) => {
+      const field = recall.querySelector('textarea');
+      const key = recall.dataset.recallId;
+      field.value = typeof notes[key]?.response === 'string' ? notes[key].response : '';
+      field.addEventListener('input', () => {
+        notes[key] = { response: field.value, sourceRevision, recordedAt: new Date().toISOString(), kind: 'provisional-recall' };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(notes));
+          if (feedback) feedback.textContent = zh ? '回忆已保存到本机浏览器；尚未评价掌握程度。' : 'Recall saved in this browser; mastery has not been assessed.';
+        } catch (_) {
+          if (feedback) feedback.textContent = zh ? '浏览器未允许保存；可导出本次记录。' : 'Browser storage is unavailable; export this session to keep it.';
+        }
+      });
+    });
+    let exportURL;
+    panel.querySelector('.export-learning-notes')?.addEventListener('click', () => {
+      const content = { kitId: panel.dataset.kitId, sourceRevision, assessment: 'unassessed', notes };
+      const text = JSON.stringify(content, null, 2);
+      const preview = panel.querySelector('.export-preview');
+      if (preview) {
+        preview.hidden = false;
+        preview.open = true;
+        preview.querySelector('textarea').value = text;
+        if (exportURL) URL.revokeObjectURL(exportURL);
+        exportURL = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+        preview.querySelector('.export-download').href = exportURL;
+        if (feedback) feedback.textContent = zh ? '记录已准备好：可以下载 JSON，或从下方文本框复制。' : 'Records are ready: download JSON or copy the text below.';
+      }
+    });
+    window.addEventListener('pagehide', () => { if (exportURL) URL.revokeObjectURL(exportURL); });
+  }
+})();
+</script>
+</body>
+</html>
+
